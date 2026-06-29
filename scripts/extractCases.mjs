@@ -77,7 +77,7 @@ const SYSTEM = `你是八字命理案例提取专家。分析给定文本，提�
 - era: 民国/近代/古代/当代/""
 - 若文本不含任何命造案例（纯理论/目录/序言/注释），返回 {"cases":[]}`;
 
-const chunks = JSON.parse(fs.readFileSync("knowledge/chunks.json", "utf-8"));
+const chunks = JSON.parse(fs.readFileSync(path.join(process.cwd(), "knowledge", "chunks.json"), "utf-8"));
 
 // Filter to case books only
 const filtered = chunks.filter(c =>
@@ -95,16 +95,6 @@ const indexPath = path.join(CASES_DIR, "index.json");
 let existingIndex = [];
 try { existingIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8")); } catch { /* empty */ }
 const existingIds = new Set(existingIndex.map(e => e.id));
-
-// Pre-populate counters from existing index so we don't reuse IDs
-for (const entry of existingIndex) {
-  const parts = entry.id.match(/^(.+)-(\d+)$/);
-  if (parts) {
-    const slug = parts[1];
-    const num = parseInt(parts[2]);
-    bookCounters[slug] = Math.max(bookCounters[slug] ?? 0, num);
-  }
-}
 
 const newCases = [];
 let processed = 0, extracted = 0, skipped = 0, errors = 0;
@@ -148,7 +138,7 @@ for (const chunk of filtered) {
 
   for (const c of cases) {
     if (!c.rizi || typeof c.rizi !== "string") continue;
-    if (!c.analysis || c.analysis.length < 20) continue;
+    if (!c.analysis || c.analysis.length < 30) continue;
 
     bookCounters[bookSlug]++;
     const id = `${bookSlug}-${String(bookCounters[bookSlug]).padStart(3, "0")}`;
