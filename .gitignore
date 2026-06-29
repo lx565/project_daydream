@@ -16,6 +16,3 @@
 .superpowers/
 .env*
 
-# Case files (individual cases gitignored; only index tracked)
-content/cases/*.json
-!content/cases/index.json
