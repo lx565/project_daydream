@@ -1,0 +1,21 @@
+# deps
+/node_modules
+
+# Next.js
+/.next/
+/out/
+
+# env
+.env.local
+.env*.local
+
+# Vercel
+.vercel
+
+# superpowers
+.superpowers/
+.env*
+
+# Case files (individual cases gitignored; only index tracked)
+content/cases/*.json
+!content/cases/index.json
