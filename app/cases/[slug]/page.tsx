@@ -3,6 +3,8 @@ import { SOURCE_BOOKS } from "@/lib/sourcesData";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import LibraryNav from "@/components/LibraryNav";
+import JsonLd from "@/components/JsonLd";
+import { articleSchema } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const dynamic = "force-static";
@@ -42,6 +44,24 @@ export default async function CaseDetailPage(
     (b) => b.slug === c.source || b.title === c.source
   );
   const sourceUrlSlug = sourceBook?.urlSlug ?? null;
+
+  // JSON-LD: extract author name before 《 in sourceLabel, e.g. "韦千里" from "韦千里《千里命稿》"
+  const authorName = c.sourceLabel.includes("《")
+    ? c.sourceLabel.split("《")[0].trim()
+    : "命理大师";
+  const pageTitle = `${c.rizi}${c.geju ? `·${c.geju}` : ""}命造 | ${c.sourceLabel}`;
+  const jsonld = articleSchema({
+    headline: pageTitle,
+    description: c.analysis.slice(0, 100),
+    path: `/cases/${c.slug}`,
+    section: "命造案例",
+  });
+  // Override author with the classical master's name
+  const jsonldWithAuthor = {
+    ...jsonld,
+    author: { "@type": "Person", name: authorName },
+    inLanguage: "zh-CN",
+  };
 
   return (
     <>
@@ -136,6 +156,7 @@ export default async function CaseDetailPage(
             </div>
           </section>
         )}
+        <JsonLd data={jsonldWithAuthor} />
       </main>
     </>
   );
