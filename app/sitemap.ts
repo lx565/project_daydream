@@ -30,7 +30,7 @@ const BASE = "https://www.mingli.study";
 
 // Stable lastmod — bump this when content meaningfully changes. Using a fixed date
 // (vs new Date()) keeps lastmod truthful; Google ignores always-"now" timestamps.
-const LAST_CONTENT_UPDATE = new Date("2026-06-22");
+const LAST_CONTENT_UPDATE = new Date("2026-06-30");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const starOverviews = MAJOR_STARS.map(s => ({

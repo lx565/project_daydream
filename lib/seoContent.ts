@@ -1389,6 +1389,8 @@ export async function getShenshaContent(entry: ShenshaEntry, revisionNote?: stri
 
   const system = BAZI_BASE_RULES + `
 
+【严格限制】本文讲八字神煞，不是紫微斗数。若"典籍参考"中出现紫微斗数（命宫/夫妻宫/疾厄宫/紫微/天机/天同等宫位星曜）的内容，一律忽略，不得引用、不得混入。只采用八字（子平命理）相关的内容（天干地支/八字四柱/神煞/格局/用神/大运）。若典籍参考全部无关，请基于八字命理通论严谨撰写，不得引入紫微概念。
+
 这是一篇八字神煞科普文章，主题为「${entry.name}」（${entry.category}类）。
 
 【推算方法务必准确】${entry.derivation}
