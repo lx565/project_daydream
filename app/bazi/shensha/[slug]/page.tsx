@@ -1,0 +1,182 @@
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { SHENSHA, getShensha } from "@/lib/shenshaData";
+import { getShenshaContent } from "@/lib/seoContent";
+import JsonLd from "@/components/JsonLd";
+import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import SeoMarkdown from "@/components/SeoMarkdown";
+import VoteWidget from "@/components/VoteWidget";
+import LikeButton from "@/components/LikeButton";
+import ToolCTA from "@/components/ToolCTA";
+import LibraryNav from "@/components/LibraryNav";
+
+export const maxDuration = 60;
+export const revalidate = 604800;
+
+export async function generateStaticParams() {
+  return SHENSHA.map(s => ({ slug: s.urlSlug }));
+}
+
+interface PageParams { slug: string }
+
+export async function generateMetadata(
+  { params }: { params: Promise<PageParams> }
+): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const urlSlug = decodeURIComponent(rawSlug);
+  const entry = getShensha(urlSlug);
+  if (!entry) return {};
+
+  const title = `${entry.name}详解：八字神煞完全指南 — 命里`;
+  const description = entry.intro.slice(0, 120) + "…";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://www.mingli.study/bazi/shensha/${entry.urlSlug}`,
+      siteName: "命里",
+      locale: "zh_CN",
+      type: "article",
+    },
+    alternates: {
+      canonical: `https://www.mingli.study/bazi/shensha/${entry.urlSlug}`,
+    },
+  };
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  "贵人": "吉神贵人",
+  "凶煞": "凶煞",
+  "杂煞": "杂煞",
+};
+
+export default async function ShenshaPage(
+  { params }: { params: Promise<PageParams> }
+) {
+  const { slug: rawSlug } = await params;
+  const urlSlug = decodeURIComponent(rawSlug);
+  const entry = getShensha(urlSlug);
+  if (!entry) notFound();
+
+  const { markdown, refs } = await getShenshaContent(entry);
+  const hasContent = markdown.trim().length > 0;
+  const relatedEntries = entry.related
+    .map(slug => getShensha(slug))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  const pagePath = `/bazi/shensha/${entry.urlSlug}`;
+
+  return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命里", path: "/" },
+          { name: "知识库", path: "/library" },
+          { name: "八字", path: "/bazi" },
+          { name: entry.name, path: pagePath },
+        ]),
+        articleSchema({
+          headline: `${entry.name}详解 · 八字神煞`,
+          description: entry.subtitle,
+          path: pagePath,
+          section: "八字命理",
+        }),
+      ]} />
+
+      <main className="min-h-screen bg-parchment">
+        <LibraryNav category="bazi" currentTitle={entry.name} />
+
+        <div className="max-w-2xl mx-auto px-4 pb-16 space-y-6">
+
+          {/* Hero */}
+          <div className="text-center pt-8 pb-4 space-y-2">
+            <p className="text-xs text-ink-4 tracking-widest">
+              八字神煞 · {CATEGORY_LABEL[entry.category] ?? entry.category}
+            </p>
+            <h1
+              className="text-4xl font-bold text-gold leading-snug"
+              style={{ fontFamily: "var(--font-serif)", letterSpacing: "0.1em" }}
+            >
+              {entry.name}
+            </h1>
+            <p className="text-xs text-ink-4 tracking-widest">{entry.subtitle}</p>
+            <div className="flex items-center gap-3 justify-center pt-1">
+              <div className="h-px w-16 bg-gold/20" />
+              <div className="w-1.5 h-1.5 rounded-full bg-gold/40" />
+              <div className="h-px w-16 bg-gold/20" />
+            </div>
+          </div>
+
+          {/* Intro */}
+          <div className="paper-card rounded-2xl border border-border-warm p-5">
+            <p className="text-sm text-ink-2 leading-[1.9]">{entry.intro}</p>
+          </div>
+
+          {/* Derivation */}
+          <div className="paper-card rounded-2xl border border-border-warm p-5 bg-amber-50/30">
+            <p className="text-xs font-semibold text-ink-3 mb-1.5">如何推算</p>
+            <p className="text-sm text-ink-2 leading-relaxed">{entry.derivation}</p>
+          </div>
+
+          <ToolCTA variant="slim" label="排你的八字 · AI 详解命中神煞与格局 →" />
+
+          {/* Synthesized article */}
+          {hasContent && (
+            <div className="paper-card rounded-2xl border border-border-warm p-5 space-y-4">
+              <SeoMarkdown>{markdown}</SeoMarkdown>
+            </div>
+          )}
+
+          {/* Refs */}
+          {refs.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-ink-4 font-medium">参考典籍</p>
+              <div className="flex flex-wrap gap-2">
+                {refs.map((ref, i) => (
+                  <span
+                    key={i}
+                    className="text-[11px] text-ink-4 bg-paper-2 border border-border-light px-2 py-0.5 rounded"
+                  >
+                    {ref.school} · {ref.book}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[11px] text-ink-4/80 leading-relaxed">
+                本文由命里 AI 综合典籍整理，仅供学习参考。
+              </p>
+            </div>
+          )}
+
+          <LikeButton />
+          <VoteWidget />
+
+          <ToolCTA variant="card" sub="推算之外，更要看你自己命局里的神煞组合。AI 为你逐项详批命中神煞与大运应期。" label="生成我的八字神煞详批" />
+
+          {/* Related 神煞 */}
+          {relatedEntries.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-ink-4 font-medium">相关神煞</p>
+              <div className="grid grid-cols-2 gap-2">
+                {relatedEntries.map(s => (
+                  <Link
+                    key={s.urlSlug}
+                    href={`/bazi/shensha/${s.urlSlug}`}
+                    className="paper-card rounded-xl border border-border-warm p-3 text-sm text-ink-2 hover:border-gold/40 hover:text-gold transition-colors"
+                  >
+                    {s.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <ToolCTA variant="slim" label="八字 + 紫微双系统 · AI 依据逾百部典籍为你详批 →" />
+
+        </div>
+      </main>
+    </>
+  );
+}
