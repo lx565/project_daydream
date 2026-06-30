@@ -22,6 +22,7 @@ import { BAZI_HUNYIN } from "@/lib/baziHunyinData";
 import { BAZI_SHIYE } from "@/lib/baziShiyeData";
 import { BAZI_CAIYUN } from "@/lib/baziCaiyunData";
 import { BAZI_JIBING } from "@/lib/baziJibingData";
+import { SHENSHA } from "@/lib/shenshaData";
 import { SOURCE_BOOKS } from "@/lib/sourcesData";
 import { loadCaseIndex } from "@/lib/casesData";
 
@@ -71,6 +72,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const casePages = loadCaseIndex().map((c) => ({
     url: `${BASE}/cases/${c.slug}`,
+    lastModified: LAST_CONTENT_UPDATE,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
+  }));
+
+  const shenshaArticles = SHENSHA.map(s => ({
+    url: `${BASE}/bazi/shensha/${s.urlSlug}`,
     lastModified: LAST_CONTENT_UPDATE,
     changeFrequency: "monthly" as const,
     priority: 0.75,
@@ -281,6 +289,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...baziCaiyunPages,
     { url: `${BASE}/bazi/jibing`, changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },
     ...baziJibingPages,
+    { url: `${BASE}/bazi/shensha`, changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },
+    ...shenshaArticles,
     { url: `${BASE}/star`,     changeFrequency: "monthly" as const, priority: 0.8, lastModified: LAST_CONTENT_UPDATE },
     { url: `${BASE}/palace`,   changeFrequency: "monthly" as const, priority: 0.8, lastModified: LAST_CONTENT_UPDATE },
     ...guidePages,
