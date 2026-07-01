@@ -8,8 +8,6 @@ import type { ZiweiResult } from "@/lib/ziwei";
 import { calcCoupleScoreV2 } from "@/lib/couple";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
 import { useSSEStream } from "@/lib/useSSEStream";
-import { usePaywall } from "@/lib/usePaywall";
-import PaywallLock from "./PaywallLock";
 import { parseModernBlocks } from "@/lib/modernBlocks";
 import ZiweiChart from "./ZiweiChart";
 import ChatInterface from "./ChatInterface";
@@ -157,26 +155,15 @@ export default function CoupleResultView({ baziA, ziweiA, nameA, genderA, baziB,
   const labelB = nameB || (genderB === "male" ? "乙方（男）" : "乙方（女）");
 
   const coupleChartId = `${sessionId}_couple`;
-  const paywall = usePaywall(coupleChartId);
-  const gated = paywall.enabled && !paywall.unlocked;
-
-  const preview = useSSEStream("/api/reading/couple/preview", `${coupleChartId}_preview`);
   const full = useSSEStream("/api/reading/couple", coupleChartId);
 
-  // Free preview always runs; full reading only when not gated.
+  // 合盘免费 — single reading call, auto-start on mount.
   useEffect(() => {
-    if (preview.status === "idle") {
-      preview.start({ baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType: cfg.key });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!paywall.loading && !gated && full.status === "idle") {
+    if (full.status === "idle") {
       full.start({ baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType: cfg.key });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paywall.loading, gated]);
+  }, []);
 
   const coupleContext = `合盘追问 — ${labelA}（${baziA.summary}）与 ${labelB}（${baziB.summary}）。请专注于两人之间的感情互动、相处模式与具体建议。`;
 
@@ -216,52 +203,24 @@ export default function CoupleResultView({ baziA, ziweiA, nameA, genderA, baziB,
         </p>
       </div>
 
-      {/* Free preview — always shown */}
+      {/* 合盘 AI 解读 — 免费 */}
       <div>
         <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
           <span className="w-px h-3 bg-vermillion inline-block" />
-          <span className="text-vermillion">合盘 · 抢先看</span>
+          <span className="text-vermillion">合盘 AI 解读</span>
         </p>
         <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-          {(preview.status === "streaming" || preview.status === "idle") && <CoupleLoadingSkeleton />}
-          {preview.status === "done" && <div className="animate-fade-in"><CoupleReadingText text={preview.text} /></div>}
-          {preview.status === "error" && <p className="text-sm text-vermillion">{preview.errorMsg}</p>}
+          {(full.status === "streaming" || full.status === "idle") && <CoupleLoadingSkeleton />}
+          {full.status === "done" && <div className="animate-fade-in"><CoupleFullReading text={full.text} /></div>}
+          {full.status === "error" && (
+            <div className="space-y-2">
+              <p className="text-sm text-vermillion">{full.errorMsg}</p>
+              <button
+                onClick={() => full.start({ baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType: cfg.key })}
+                className="text-xs text-gold underline">重试</button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Full reading — gated behind paywall */}
-      <div>
-        <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
-          <span className="w-px h-3 bg-gold inline-block" />
-          <span className="text-gold">合盘 · 完整解读</span>
-        </p>
-        {gated ? (
-          <PaywallLock
-            chartId={coupleChartId}
-            sectionLabel="合盘完整解读"
-            included={[
-              "四维缘分 · 逐项详解",
-              "双方在这段关系中的模式",
-              "飞化互入 · 彼此牵动的领域",
-              cfg.hasPastLife ? "前世缘分 · 命理故事" : "三方四正 · 深度合观",
-              "缘分时机 · 大运高峰与考验",
-              "相处之道 · 可操作建议",
-            ]}
-          />
-        ) : (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-            {(full.status === "streaming" || full.status === "idle") && <CoupleLoadingSkeleton />}
-            {full.status === "done" && <div className="animate-fade-in"><CoupleFullReading text={full.text} /></div>}
-            {full.status === "error" && (
-              <div className="space-y-2">
-                <p className="text-sm text-vermillion">{full.errorMsg}</p>
-                <button
-                  onClick={() => full.start({ baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType: cfg.key })}
-                  className="text-xs text-gold underline">重试</button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Two charts side-by-side */}
