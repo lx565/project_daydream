@@ -738,19 +738,28 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             {renderContent()}
           </>
         )}
-        {/* 問命 — always mounted so conversation history survives tab switches */}
-        <div className={activeTab === "wenming" ? undefined : "hidden"}>
-          {TAB_INTRO.wenming && <TabIntro>{TAB_INTRO.wenming}</TabIntro>}
-          <div className="space-y-3">
-            <ChatInterface
-              ziwei={ziwei}
-              initialContext={`你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`}
-              backgroundReadings={backgroundReadings}
-              chartId={sessionId ?? ""}
-              maxQuestions={10}
-            />
+        {/* 問命 — paywall when locked; always mounted (hidden) when unlocked so chat history survives tab switches */}
+        {isLocked("wenming") ? (
+          activeTab === "wenming" && (
+            <div className="space-y-4">
+              <SectionTitle accent="gold">問命</SectionTitle>
+              <PaywallLock chartId={sessionId ?? ""} sectionLabel="問命" />
+            </div>
+          )
+        ) : (
+          <div className={activeTab === "wenming" ? undefined : "hidden"}>
+            {TAB_INTRO.wenming && <TabIntro>{TAB_INTRO.wenming}</TabIntro>}
+            <div className="space-y-3">
+              <ChatInterface
+                ziwei={ziwei}
+                initialContext={`你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`}
+                backgroundReadings={backgroundReadings}
+                chartId={sessionId ?? ""}
+                maxQuestions={10}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
 
