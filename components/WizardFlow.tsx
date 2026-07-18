@@ -369,7 +369,6 @@ interface WizardFlowProps {
   name?: string;
   dateLabel?: string;
   timeLabel?: string;
-  onReadingComplete?: (key: string, text: string) => void;
   onExportReady?: (data: import("@/lib/emailTemplate").ReadingEmailData) => void;
 }
 
