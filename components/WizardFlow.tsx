@@ -8,39 +8,40 @@ import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import FlowYearDetail from "./FlowYearDetail";
 import BaziDecades from "./BaziDecades";
-import HistoricalCases from "./HistoricalCases";
 import { parseModernBlocks } from "@/lib/modernBlocks";
 import PaywallLock from "./PaywallLock";
 import { usePaywall } from "@/lib/usePaywall";
 import { gtagEvent } from "@/lib/gtag";
+import ChartLoadingOverlay from "./ChartLoadingOverlay";
+import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
 
 type Tab = "overview" | "palaces" | "decades" | "bazi" | "dualschool" | "perspectives" | "cautions";
 
 // Free tab everyone sees; the rest unlock together with one purchase.
-const FREE_TABS = new Set<Tab>(["overview"]);
+const FREE_TABS = new Set<Tab>(["overview", "palaces"]);
 
 const TABS: { id: Tab; label: string; char: string }[] = [
-  { id: "overview",      label: "总览", char: "观" },
-  { id: "palaces",       label: "宫位", char: "宫" },
-  { id: "decades",       label: "大运", char: "运" },
+  { id: "overview",      label: "總覽", char: "觀" },
+  { id: "palaces",       label: "宮位", char: "宮" },
+  { id: "decades",       label: "大運", char: "運" },
   { id: "bazi",          label: "八字", char: "字" },
-  { id: "perspectives",  label: "众说", char: "源" },
+  { id: "perspectives",  label: "眾說", char: "源" },
   { id: "cautions",      label: "注意", char: "警" },
 ];
 
 const SCHOOL_LABELS: Record<string, string> = {
-  "三合派": "三合", "四化派": "四化", "飞星派": "飞星",
-  "北派河洛": "北派", "古籍经典": "古籍", "其他名家": "名家", "倪师学派": "倪师",
+  "三合派": "三合", "四化派": "四化", "飛星派": "飛星",
+  "北派河洛": "北派", "古籍經典": "古籍", "其他名家": "名家", "倪師學派": "倪師",
 };
 
 // One-line description shown at the top of each tab.
 const TAB_INTRO: Partial<Record<Tab, React.ReactNode>> = {
-  overview: <>融合<span className="text-vermillion font-semibold">紫微斗数</span>与<span className="text-amber-600 font-semibold">八字命理</span>两套独立体系，经双模型交叉校验，生成全面而独到的命格解读。</>,
-  palaces: "逐一拆解命盘十二宫，看主星、辅星与三方四正如何牵动你人生的各个领域。",
-  decades: "以十年大限为脉络，叠合流年起伏，把握运势的节奏、机遇与转折。",
-  bazi: "以日主旺衰与五行喜忌为纲，深入排盘，详论命局格局与大运走向；附历代相似命造案例对照，及禄命法与盲派两种历史视角。",
-  perspectives: "三合、四化、飞星三派各陈其说，倪师学派直传旁参，再纳小众诸家，终归于综合共识。",
-  cautions: "如实点出命盘中需留意之处——一生格局与当前大运，并各附可行的应对。",
+  overview: <>融合<span className="text-vermillion font-semibold">紫微斗數</span>與<span className="text-amber-600 font-semibold">八字命理</span>兩套獨立體系，經雙模型交叉校驗，生成全面而獨到的命格解讀。</>,
+  palaces: "逐一拆解命盤十二宮，看主星、輔星與三方四正如何牽動你人生的各個領域。",
+  decades: "以十年大限為脈絡，疊合流年起伏，把握運勢的節奏、機遇與轉折。",
+  bazi: "以日主旺衰與五行喜忌為綱，深入排盤，詳論命局格局與大運走向；附歷代相似命造案例對照，及祿命法與盲派兩種歷史視角。",
+  perspectives: "三合、四化、飛星三派各陳其說，倪師學派直傳旁參，再納小眾諸家，終歸於綜合共識。",
+  cautions: "如實點出命盤中需留意之處——一生格局與當前大運，並各附可行的應對。",
 };
 
 function TabIntro({ children }: { children: React.ReactNode }) {
@@ -73,7 +74,7 @@ function RefList({ refs }: { refs: Reference[] }) {
       <button onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 text-xs text-ink-4 hover:text-ink-3 transition-colors">
         <span className="text-gold">📚</span>
-        <span>参考典籍（{refs.length}部）</span>
+        <span>參考典籍（{refs.length}部）</span>
         <span className={`text-ink-4 transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
       {open && (
@@ -93,11 +94,11 @@ function RefList({ refs }: { refs: Reference[] }) {
 }
 
 const LOADING_STEPS = [
-  "正在读取命盘数据…",
-  "检索历史典籍参考…",
-  "比对三合派论断…",
-  "梳理四化飞星脉络…",
-  "生成个人化解读…",
+  "正在讀取命盤資料…",
+  "檢索歷史典籍參考…",
+  "比對三合派論斷…",
+  "梳理四化飛星脈絡…",
+  "生成個人化解讀…",
 ];
 
 function LoadingSkeleton({ label }: { label?: string }) {
@@ -146,13 +147,13 @@ function LoadingSkeleton({ label }: { label?: string }) {
   );
 }
 
-// Parse [现代]...[/现代] blocks out of markdown text
+// Parse [現代]...[/現代] blocks out of markdown text
 function ModernBlock({ content }: { content: string }) {
   return (
     <div className="mt-5 rounded-xl border border-amber-200/80 bg-amber-50/40 overflow-hidden">
       <div className="flex items-center gap-1.5 px-3 py-2 border-b border-amber-100/80">
         <span className="text-amber-500 text-sm leading-none">💡</span>
-        <span className="text-[11px] font-semibold text-amber-700 tracking-widest uppercase">给你的话</span>
+        <span className="text-[11px] font-semibold text-amber-700 tracking-widest uppercase">給你的話</span>
       </div>
       <div className="px-3 py-2.5 text-[13px] text-ink-2 leading-relaxed">
         <Md>{content}</Md>
@@ -163,7 +164,7 @@ function ModernBlock({ content }: { content: string }) {
 
 const MD_PROSE = "prose max-w-none text-sm [&_h2]:text-vermillion [&_h2]:font-bold [&_h2]:text-sm [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:tracking-wide [&_h3]:text-gold [&_h3]:font-semibold [&_h3]:text-xs [&_h3]:mt-3 [&_h3]:mb-1.5 [&_p]:text-ink-2 [&_p]:leading-relaxed [&_p]:mb-3 [&_p]:text-sm [&_strong]:text-ink [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:space-y-1.5 [&_li]:text-ink-2 [&_li]:text-sm [&_li]:leading-relaxed [&_li]:relative [&_li]:pl-4 [&_li]:list-none [&_li]:before:content-['·'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:top-0 [&_li]:before:text-vermillion [&_li]:before:font-bold [&_li>p]:inline [&_li>p]:m-0";
 
-// Markdown renderer — splits out [现代]...[/现代] blocks as always-visible "给你的话" callouts
+// Markdown renderer — splits out [現代]...[/現代] blocks as always-visible "給你的話" callouts
 function ClassicalMd({ text }: { text: string }) {
   const parts = parseModernBlocks(text);
   return (
@@ -199,7 +200,7 @@ function ReadingCard({
     <div className="space-y-2">
       <p className="text-sm text-vermillion">{stream.errorMsg}</p>
       <button onClick={() => { mounted.current = false; onMount?.(); }}
-        className="text-xs text-gold underline">重试</button>
+        className="text-xs text-gold underline">重試</button>
     </div>
   );
 
@@ -216,22 +217,22 @@ function ReadingCard({
   return children ? <>{children}</> : <LoadingSkeleton label={skeleton} />;
 }
 
-// Multi-school overview split (三合 / 四化 / 飞星 + 综合共识)
+// Multi-school overview split (三合 / 四化 / 飛星 + 綜合共識)
 const OVERVIEW_SCHOOLS = [
-  { key: "sanhe",   marker: "## 三合派观点", label: "三合派", desc: "宫位星曜组合", card: "border-vermillion/30 bg-vermillion-l/20", badge: "bg-vermillion text-paper border-vermillion" },
-  { key: "sihua",   marker: "## 四化派观点", label: "四化派", desc: "四化飞化落宫", card: "border-amber-400/30 bg-amber-50/40", badge: "bg-amber-600 text-paper border-amber-600" },
-  { key: "feixing", marker: "## 飞星派观点", label: "飞星派", desc: "飞星入宫脉络", card: "border-emerald-500/30 bg-emerald-50/40", badge: "bg-emerald-700 text-paper border-emerald-700" },
-  { key: "nishi",   marker: "## 倪师学派观点", label: "倪师学派", desc: "倪师直传视角", card: "border-indigo-400/30 bg-indigo-50/40", badge: "bg-indigo-700 text-paper border-indigo-700" },
-  { key: "niche",   marker: "## 小众学派观点", label: "小众学派", desc: "三派之外旁参", card: "border-purple-400/30 bg-purple-50/40", badge: "bg-purple-700 text-paper border-purple-700" },
+  { key: "sanhe",   marker: "## 三合派觀點", label: "三合派", desc: "宮位星曜組合", card: "border-vermillion/30 bg-vermillion-l/20", badge: "bg-vermillion text-paper border-vermillion" },
+  { key: "sihua",   marker: "## 四化派觀點", label: "四化派", desc: "四化飛化落宮", card: "border-amber-400/30 bg-amber-50/40", badge: "bg-amber-600 text-paper border-amber-600" },
+  { key: "feixing", marker: "## 飛星派觀點", label: "飛星派", desc: "飛星入宮脈絡", card: "border-emerald-500/30 bg-emerald-50/40", badge: "bg-emerald-700 text-paper border-emerald-700" },
+  { key: "nishi",   marker: "## 倪師學派觀點", label: "倪師學派", desc: "倪師直傳視角", card: "border-indigo-400/30 bg-indigo-50/40", badge: "bg-indigo-700 text-paper border-indigo-700" },
+  { key: "niche",   marker: "## 小眾學派觀點", label: "小眾學派", desc: "三派之外旁參", card: "border-purple-400/30 bg-purple-50/40", badge: "bg-purple-700 text-paper border-purple-700" },
 ] as const;
 
 // mode controls which slice of the overview reading renders:
-//  "full"      — intro + 3 school cards + 综合共识 (legacy dual-school tab)
-//  "consensus" — intro + 综合共识 only (总览 · 紫薇综合, the holistic conclusion)
-//  "schools"   — the 3 派 breakdowns only (众说 · 紫微三派详解)
+//  "full"      — intro + 3 school cards + 綜合共識 (legacy dual-school tab)
+//  "consensus" — intro + 綜合共識 only (總覽 · 紫薇綜合, the holistic conclusion)
+//  "schools"   — the 3 派 breakdowns only (眾說 · 紫微三派詳解)
 function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: Reference[]; mode?: "full" | "consensus" | "schools" }) {
-  // Consensus marker varies: overview uses 综合共识, legacy dual-school uses 两派共识
-  const consensusMarker = text.includes("## 综合共识") ? "## 综合共识" : "## 两派共识";
+  // Consensus marker varies: overview uses 綜合共識, legacy dual-school uses 兩派共識
+  const consensusMarker = text.includes("## 綜合共識") ? "## 綜合共識" : "## 兩派共識";
 
   const ordered = [
     ...OVERVIEW_SCHOOLS.map((s) => ({ key: s.key as string, marker: s.marker })),
@@ -282,13 +283,13 @@ function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: R
       ))}
 
       {/* Consensus — boxed only in "full" mode (where it caps the school cards);
-          in "consensus" mode (O2 · 紫薇综合) render plain, consistent with 八字综合. */}
+          in "consensus" mode (O2 · 紫薇綜合) render plain, consistent with 八字綜合. */}
       {showConsensus && parts.consensus && (
         mode === "full" ? (
           <div className="rounded-xl border border-jade/30 bg-jade-l/30 p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-4 bg-jade rounded-full" />
-              <span className="text-xs font-bold text-jade tracking-wide">综合共识</span>
+              <span className="text-xs font-bold text-jade tracking-wide">綜合共識</span>
             </div>
             <ClassicalMd text={parts.consensus} />
           </div>
@@ -302,23 +303,30 @@ function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: R
   );
 }
 
-// Per-palace card view — parses the palaces reading so each 宫 shows as clean rows:
-// row 1 = 宫位 · 地支 + 主星, row 2 = 解读. Avoids the "everything clustered" markdown blob.
+// Per-palace card view — parses the palaces reading so each 宮 shows as clean rows:
+// row 1 = 宮位 · 地支 + 主星, row 2 = 解讀. Avoids the "everything clustered" markdown blob.
 function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
+  // The palaces reading ends with ONE whole-reading [現代] "給你的話" block — a summary of
+  // the whole person, not any single palace. Pull it out FIRST so it isn't swallowed into
+  // the last palace card (父母宮), where it wrongly reads as a parents-specific note.
+  // Render it once, after all the palace cards.
+  const modernMatch = text.match(/\[現代\][\s\S]*?\[\/現代\]/);
+  const modernBlock = modernMatch ? modernMatch[0] : "";
+  const palacesText = modernBlock ? text.replace(modernBlock, "").trim() : text;
   // Split on each "## " heading; the first chunk may be intro text (no heading).
-  const blocks = text.split(/\n(?=##\s)/).map((b) => b.trim()).filter(Boolean);
+  const blocks = palacesText.split(/\n(?=##\s)/).map((b) => b.trim()).filter(Boolean);
 
   return (
     <div className="space-y-3 animate-fade-in">
       {blocks.map((block, i) => {
         if (!block.startsWith("##")) {
-          // Intro or trailing [现代] block — render as-is.
+          // Intro or trailing [現代] block — render as-is.
           return <ClassicalMd key={i} text={block} />;
         }
         const nl = block.indexOf("\n");
-        const title = block.slice(2, nl < 0 ? undefined : nl).trim(); // 命宫 · 子宫
+        const title = block.slice(2, nl < 0 ? undefined : nl).trim(); // 命宮 · 子宮
         const rest = nl < 0 ? "" : block.slice(nl + 1).trim();
-        // Pull the 主星 line out for the header row; leave the rest as 解读.
+        // Pull the 主星 line out for the header row; leave the rest as 解讀.
         // Strip ** markers (header is plain text, so markdown bold would show literally).
         const starMatch = rest.match(/\*\*\s*主星\s*\*\*[：:]\s*([^\n]+)|^主星[：:]\s*([^\n]+)/m);
         const stars = (starMatch?.[1] ?? starMatch?.[2] ?? "").replace(/\*\*/g, "").trim();
@@ -326,7 +334,7 @@ function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
 
         return (
           <div key={i} className="rounded-lg border border-border-light bg-paper-2/30 p-3.5">
-            {/* Row 1 — 宫位 · 地支 + 主星 */}
+            {/* Row 1 — 宮位 · 地支 + 主星 */}
             <div className="flex items-baseline gap-x-2.5 gap-y-1 flex-wrap pb-2 mb-2 border-b border-border-light/70">
               <span className="text-sm font-bold text-vermillion">{title}</span>
               {stars && (
@@ -335,11 +343,12 @@ function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
                 </span>
               )}
             </div>
-            {/* Row 2 — 解读 */}
+            {/* Row 2 — 解讀 */}
             {body && <ClassicalMd text={body} />}
           </div>
         );
       })}
+      {modernBlock && <ClassicalMd text={modernBlock} />}
       <RefList refs={refs} />
     </div>
   );
@@ -357,46 +366,53 @@ interface WizardFlowProps {
   dateLabel?: string;
   timeLabel?: string;
   onReadingComplete?: (key: string, text: string) => void;
+  onExportReady?: (data: import("@/lib/emailTemplate").ReadingEmailData) => void;
 }
 
 function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").ValidationStatus }) {
   if (status === "checking") {
-    return <p className="mt-3 text-[11px] text-ink-4 flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-ink-4 animate-pulse" />双模型交叉校验中…</p>;
+    return <p className="mt-3 text-[11px] text-ink-4 flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-ink-4 animate-pulse" />雙模型交叉校驗中…</p>;
   }
   if (status === "reprocessing") {
-    return <p className="mt-3 text-[11px] text-vermillion flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-vermillion animate-pulse" />校验发现偏差，正在为你重新处理以确保准确性…</p>;
+    return <p className="mt-3 text-[11px] text-vermillion flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-vermillion animate-pulse" />校驗發現偏差，正在為你重新處理以確保準確性…</p>;
   }
   if (status === "pass") {
-    return <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-gold border border-gold/30 bg-gold-l rounded-full px-2.5 py-1">✓ 已双模型交叉校验（DeepSeek × Gemini）</p>;
+    return <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-gold border border-gold/30 bg-gold-l rounded-full px-2.5 py-1">✓ 已雙模型交叉校驗（DeepSeek × Gemini）</p>;
   }
   if (status === "fail") {
-    return <p className="mt-3 text-[11px] text-ink-4">本次解读已尽力校验，个别细节仅供参考。</p>;
+    return <p className="mt-3 text-[11px] text-ink-4">本次解讀已盡力校驗，個別細節僅供參考。</p>;
   }
   return null;
 }
 
-export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, onReadingComplete }: WizardFlowProps) {
+export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onReadingComplete, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
   const paywall = usePaywall(sessionId);
   const gated = paywall.enabled && !paywall.unlocked;
+
+  // Detect Stripe return — set once on mount, stable for the component's lifetime
+  const justPaidRef = useRef(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("paid")
+  );
+  const justPaid = justPaidRef.current;
   const isLocked = (tab: Tab) => gated && !FREE_TABS.has(tab);
 
   const ck = (tab: string) => sessionId ? `${sessionId}_${tab}` : undefined;
 
-  // Free cross-domain synthesis (紫微 + 八字) — the new top of the 总览 tab.
+  // Free cross-domain synthesis (紫微 + 八字) — the new top of the 總覽 tab.
   const synthesis     = useSSEStream("/api/reading/synthesis",     ck("synthesis"), { validate: true });
   // The deep multi-school 紫微 reading — now a PAID deep-dive below the free teaser.
   const overview      = useSSEStream("/api/reading/overview",      ck("overview"), { validate: true });
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
   const decades       = useSSEStream("/api/reading/decades",       ck("decades"), { validate: true });
   const dualschool    = useSSEStream("/api/reading/dual-school",   ck("dualschool"), { validate: true });
-  const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"));
-  const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"));         // O3 · 总览 八字综合 (summary)
+  const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"), { validate: true });
+  const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"), { validate: true });         // O3 · 總覽 八字綜合 (summary)
   const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true });  // B1 · 八字 tab (deep, paid)
-  const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"));  // B3 · 各派视角 (禄命+盲派)
+  const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true });  // B3 · 各派視角 (祿命+盲派)
 
   // Notify parent when each core reading completes so the chat can use it as background context
   const notified = useRef<Set<string>>(new Set());
@@ -421,13 +437,15 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const baziPayload      = { bazi, gender, ziwei };  // ziwei passed so cross-validator can check fabricated 格局
   const synthesisPayload = { ziwei, bazi, gender, name };
 
-  // The FREE 总览 sections always run on mount: cross-domain synthesis (混合解读),
-  // the 紫微 overview (紫薇综合 = its 综合共识 slice), and the bazi reading (八字综合).
+  // The FREE sections always run on mount: cross-domain synthesis (混合解讀),
+  // the 紫微 overview (紫薇綜合 = its 綜合共識 slice), the bazi reading (八字綜合),
+  // and the 宮位 per-palace reading (also free).
   useEffect(() => {
     gtagEvent("reading_started");
     if (synthesis.status === "idle") synthesis.start(synthesisPayload);
     if (overview.status === "idle")  overview.start(ziweiPayload);
     if (bazi_.status === "idle")     bazi_.start(baziPayload);
+    if (palaces.status === "idle")   palaces.start({ ziwei, name });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -436,7 +454,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // immediately after unlock (the effect re-fires when `gated` flips false).
   useEffect(() => {
     if (paywall.loading || gated) return;
-    if (palaces.status === "idle")      palaces.start({ ziwei, name });
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
@@ -444,12 +461,35 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
 
-  // Global progress across the auto-run sections (the free 总览 trio always runs)
-  const coreStreams = gated ? [synthesis, overview, bazi_] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools];
+  // Global progress across the auto-run sections (the free 總覽 trio + 宮位 always run)
+  const coreStreams = gated ? [synthesis, overview, bazi_, palaces] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
   const allSettled = coreDone + coreErrored >= coreTotal;
+
+  // Notify parent when all readings are ready so it can render ReadingExport at the page bottom
+  const exportFired = React.useRef(false);
+  useEffect(() => {
+    if (allSettled && !gated && onExportReady && !exportFired.current) {
+      exportFired.current = true;
+      onExportReady({
+        name,
+        birthSummary: [dateLabel, timeLabel, gender].filter(Boolean).join(" · "),
+        chartSummary: ziwei.summary ?? "",
+        readings: {
+          synthesis: synthesis.text,
+          overview:  overview.text,
+          bazi:      bazi_.text,
+          baziDeep:  baziDeep.text,
+          palaces:   palaces.text,
+          decades:   decades.text,
+          cautions:  cautions.text,
+        },
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSettled, gated]);
 
 
   function renderContent() {
@@ -469,9 +509,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
           <div className="space-y-6">
             {/* FREE — cross-domain synthesis */}
             <div className="space-y-4">
-              <SectionTitle>混合解读</SectionTitle>
+              <SectionTitle>混合解讀</SectionTitle>
               {synthesis.status === "streaming" ? (
-                <LoadingSkeleton label="正在融合紫微与八字…" />
+                <LoadingSkeleton label="正在融合紫微與八字…" />
               ) : synthesis.status === "done" ? (
                 <div>
                   <ClassicalMd text={synthesis.text} />
@@ -480,7 +520,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               ) : synthesis.status === "error" ? (
                 <div className="space-y-2">
                   <p className="text-sm text-vermillion">{synthesis.errorMsg}</p>
-                  <button onClick={() => synthesis.start(synthesisPayload)} className="text-xs text-gold underline">重试</button>
+                  <button onClick={() => synthesis.start(synthesisPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
                 <LoadingSkeleton label="正在初始化…" />
@@ -488,9 +528,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <ValidationBadge status={synthesis.validation} />
             </div>
 
-            {/* FREE — 紫薇综合 (the overview 综合共识 slice) */}
+            {/* FREE — 紫薇綜合 (the overview 綜合共識 slice) */}
             <div className="space-y-4 pt-4 border-t border-border-light">
-              <SectionTitle accent="gold">紫薇综合</SectionTitle>
+              <SectionTitle accent="gold">紫薇綜合</SectionTitle>
               {overview.status === "done" ? (
                 <div>
                   <OverviewDualView text={overview.text} refs={overview.refs} mode="consensus" />
@@ -499,17 +539,17 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               ) : overview.status === "error" ? (
                 <div className="space-y-2">
                   <p className="text-sm text-vermillion">{overview.errorMsg}</p>
-                  <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重试</button>
+                  <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
-                <ReadingCard stream={overview} skeleton="正在生成紫薇综合…"
+                <ReadingCard stream={overview} skeleton="正在生成紫薇綜合…"
                   onMount={() => overview.status === "idle" && overview.start(ziweiPayload)} />
               )}
             </div>
 
-            {/* FREE — 八字综合 (comprehensive bazi summary) */}
+            {/* FREE — 八字綜合 (comprehensive bazi summary) */}
             <div className="space-y-4 pt-4 border-t border-border-light">
-              <SectionTitle accent="gold">八字综合</SectionTitle>
+              <SectionTitle accent="gold">八字綜合</SectionTitle>
               {bazi_.status === "done" ? (
                 <div>
                   <ClassicalMd text={bazi_.text} />
@@ -519,10 +559,10 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               ) : bazi_.status === "error" ? (
                 <div className="space-y-2">
                   <p className="text-sm text-vermillion">{bazi_.errorMsg}</p>
-                  <button onClick={() => bazi_.start(baziPayload)} className="text-xs text-gold underline">重试</button>
+                  <button onClick={() => bazi_.start(baziPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
-                <ReadingCard stream={bazi_} skeleton="正在生成八字综合…"
+                <ReadingCard stream={bazi_} skeleton="正在生成八字綜合…"
                   onMount={() => bazi_.status === "idle" && bazi_.start(baziPayload)} />
               )}
             </div>
@@ -532,20 +572,20 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "palaces":
         return (
           <div className="space-y-4">
-            <SectionTitle accent="jade">十二宫位逐宫解读</SectionTitle>
+            <SectionTitle accent="jade">十二宮位逐宮解讀</SectionTitle>
             {palaces.status === "idle" ? (
               <div className="flex flex-col items-center gap-3 py-8">
-                <p className="text-sm text-ink-3 text-center">逐一解读命盘十二宫位的主星与含义</p>
+                <p className="text-sm text-ink-3 text-center">逐一解讀命盤十二宮位的主星與含義</p>
                 <button
                   onClick={() => palaces.start({ ziwei, name })}
                   className="px-5 py-2 bg-jade text-paper text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
-                  开始宫位解读
+                  開始宮位解讀
                 </button>
               </div>
             ) : palaces.status === "done" ? (
               <PalacesView text={palaces.text} refs={palaces.refs} />
             ) : (
-              <ReadingCard stream={palaces} skeleton="正在逐宫分析…" />
+              <ReadingCard stream={palaces} skeleton="正在逐宮分析…" />
             )}
             <ValidationBadge status={palaces.validation} />
           </div>
@@ -554,18 +594,18 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "decades":
         return (
           <div className="space-y-4">
-            <SectionTitle accent="gold">大运解读</SectionTitle>
+            <SectionTitle accent="gold">大運解讀</SectionTitle>
             {decades.status === "idle" ? (
               <div className="flex flex-col items-center gap-3 py-8">
-                <p className="text-sm text-ink-3">分析当前大限运势及下一大限预告</p>
+                <p className="text-sm text-ink-3">分析當前大限運勢及下一大限預告</p>
                 <button
                   onClick={() => decades.start(ziweiWithBirth)}
                   className="px-5 py-2 bg-vermillion text-white text-sm font-medium rounded-lg hover:bg-vermillion-h transition-colors">
-                  开始大运分析
+                  開始大運分析
                 </button>
               </div>
             ) : (
-              <ReadingCard stream={decades} skeleton="正在分析大运…" />
+              <ReadingCard stream={decades} skeleton="正在分析大運…" />
             )}
             <ValidationBadge status={decades.validation} />
             {/* Per-year 流年 deep reading — moved here from the ziwei chart */}
@@ -576,30 +616,29 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "bazi":
         return (
           <div className="space-y-6">
-            <SectionTitle accent="gold">八字命理 · 深度详批</SectionTitle>
-            <ReadingCard stream={baziDeep} skeleton="正在深度排盘解八字…"
+            <SectionTitle accent="gold">八字命理 · 深度詳批</SectionTitle>
+            <ReadingCard stream={baziDeep} skeleton="正在深度排盤解八字…"
               onMount={() => baziDeep.status === "idle" && baziDeep.start(baziPayload)} />
-            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} />
-            <HistoricalCases bazi={bazi} />
             <div className="pt-2 border-t border-parchment-2">
-              <SectionTitle>各派视角 · 禄命法与盲派</SectionTitle>
-              <p className="text-xs text-ink-3 mb-3">以子平法（B1）为主轴，以下补充两种历史流派的独特解读视角，供对照参考。</p>
-              <ReadingCard stream={baziSchools} skeleton="正在调取禄命法与盲派视角…"
+              <SectionTitle>各派視角 · 祿命法與盲派</SectionTitle>
+              <p className="text-xs text-ink-3 mb-3">以子平法（B1）為主軸，以下補充兩種歷史流派的獨特解讀視角，供對照參考。</p>
+              <ReadingCard stream={baziSchools} skeleton="正在調取祿命法與盲派視角…"
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender })} />
             </div>
+            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} />
           </div>
         );
 
       case "dualschool":
         return (
           <div className="space-y-4">
-            <SectionTitle>三合 vs 四化 · 双派比较</SectionTitle>
+            <SectionTitle>三合 vs 四化 · 雙派比較</SectionTitle>
             {dualschool.status === "done" ? (
               <div>
                 <OverviewDualView text={dualschool.text} refs={dualschool.refs} />
               </div>
             ) : (
-              <ReadingCard stream={dualschool} skeleton="正在生成双派解读…"
+              <ReadingCard stream={dualschool} skeleton="正在生成雙派解讀…"
                 onMount={() => dualschool.status === "idle" && dualschool.start({ ziwei })} />
             )}
             <ValidationBadge status={dualschool.validation} />
@@ -609,21 +648,21 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "perspectives":
         return (
           <div className="space-y-4">
-            <SectionTitle accent="gold">紫微三派详解</SectionTitle>
+            <SectionTitle accent="gold">紫微三派詳解</SectionTitle>
             {overview.status === "done" ? (
               <div>
-                {/* mode="schools": only the 三合/四化/飞星/小众 派 cards — the 综合共识
-                    conclusion lives solely in O2 (紫薇综合), so it isn't repeated here. */}
+                {/* mode="schools": only the 三合/四化/飛星/小眾 派 cards — the 綜合共識
+                    conclusion lives solely in O2 (紫薇綜合), so it isn't repeated here. */}
                 <OverviewDualView text={overview.text} refs={overview.refs} mode="schools" />
                 <ValidationBadge status={overview.validation} />
               </div>
             ) : overview.status === "error" ? (
               <div className="space-y-2">
                 <p className="text-sm text-vermillion">{overview.errorMsg}</p>
-                <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重试</button>
+                <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
               </div>
             ) : (
-              <ReadingCard stream={overview} skeleton="正在生成三派详解…"
+              <ReadingCard stream={overview} skeleton="正在生成三派詳解…"
                 onMount={() => overview.status === "idle" && overview.start(ziweiPayload)} />
             )}
           </div>
@@ -632,8 +671,8 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "cautions":
         return (
           <div className="space-y-4">
-            <SectionTitle accent="jade">特别注意 & 当前运势</SectionTitle>
-            <ReadingCard stream={cautions} skeleton="正在分析注意事项…"
+            <SectionTitle accent="jade">特別注意 & 當前運勢</SectionTitle>
+            <ReadingCard stream={cautions} skeleton="正在分析注意事項…"
               onMount={() => cautions.status === "idle" && cautions.start(ziweiWithBirth)} />
           </div>
         );
@@ -642,10 +681,19 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   }
 
   return (
+    <>
+      {/* Birth loading overlay — shown until first SSE chunk + 2s minimum */}
+      <ChartLoadingOverlay firstChunkArrived={synthesis.status !== "idle"} />
+
+      {/* Post-payment overlay — shown when returning from payment until unlock confirmed */}
+      {justPaid && paywall.loading && (
+        <UnlockLoadingOverlay unlocked={paywall.unlocked} />
+      )}
+
     <div className="space-y-0">
       {/* Global progress while sections crunch */}
       {!allSettled && (
-        <div className="flex items-center gap-3 px-3 sm:px-4 py-3 border border-b-0 border-border-warm rounded-t-xl bg-paper-2">
+        <div className="no-print flex items-center gap-3 px-3 sm:px-4 py-3 border border-b-0 border-border-warm rounded-t-xl bg-paper-2">
           <div className="relative w-7 h-7 flex-shrink-0">
             <div className="absolute inset-0 rounded-full border-2 border-vermillion/20" />
             <div className="absolute inset-0 rounded-full border-2 border-vermillion border-t-transparent animate-spin" />
@@ -653,7 +701,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-ink-2">正在推算命盘各部分…</span>
+              <span className="text-xs font-medium text-ink-2">正在推算命盤各部分…</span>
               <span className="text-[10px] text-ink-4 tabular-nums">{coreDone}/{coreTotal}</span>
             </div>
             <div className="h-1.5 rounded-full bg-border-light overflow-hidden">
@@ -665,7 +713,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       )}
 
       {/* Classical tab bar — sticky so tabs stay reachable while the reading scrolls with the page */}
-      <div className={`flex border border-border-warm overflow-hidden bg-paper-2 sticky top-0 z-10 ${allSettled ? "rounded-t-xl" : "border-t-0"}`}>
+      <div className={`no-print flex border border-border-warm overflow-hidden bg-paper-2 sticky top-0 z-10 ${allSettled ? "rounded-t-xl" : "border-t-0"}`}>
         {TABS.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`relative flex-1 min-w-0 flex flex-col items-center py-2.5 px-0.5 border-r last:border-r-0 border-border-light transition-all duration-200 ${
@@ -685,11 +733,13 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       </div>
 
       {/* Content card */}
-      <div className="border border-t-0 border-border-warm rounded-b-xl bg-paper p-4 sm:p-5 min-h-[200px]">
+      <div className="no-print border border-t-0 border-border-warm rounded-b-xl bg-paper p-4 sm:p-5 min-h-[200px]">
         {TAB_INTRO[activeTab] && <TabIntro>{TAB_INTRO[activeTab]}</TabIntro>}
         {renderContent()}
       </div>
 
+
     </div>
+    </>
   );
 }
