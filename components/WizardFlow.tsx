@@ -630,16 +630,15 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "dualschool":
         return (
           <div className="space-y-4">
-            <SectionTitle>三合 vs 四化 · 雙派比較</SectionTitle>
-            {dualschool.status === "done" ? (
+            <SectionTitle>紫微三派詳解</SectionTitle>
+            {overview.status === "done" ? (
               <div>
-                <OverviewDualView text={dualschool.text} refs={dualschool.refs} />
+                <OverviewDualView text={overview.text} refs={overview.refs} mode="schools" />
               </div>
             ) : (
-              <ReadingCard stream={dualschool} skeleton="正在生成雙派解讀…"
-                onMount={() => dualschool.status === "idle" && dualschool.start({ ziwei })} />
+              <ReadingCard stream={overview} skeleton="正在載入三派解讀…" />
             )}
-            <ValidationBadge status={dualschool.validation} />
+            <ValidationBadge status={overview.validation} />
           </div>
         );
 
