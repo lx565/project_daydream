@@ -10,7 +10,6 @@ import ShareButton from "./ShareButton";
 import ChartSaver from "@/components/ChartSaver";
 import BugReportButton from "@/components/BugReportButton";
 import CoupleResultView from "@/components/CoupleResultView";
-import SupportGate from "@/components/SupportGate";
 import MbtiCard from "@/components/MbtiCard";
 import { detectMingge } from "@/lib/detectMingge";
 
@@ -264,11 +263,6 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
           </div>
           <ShareButton />
         </div>
-
-        {/* Support prompt — soft-mode donation (Stripe + WeChat) */}
-        {ziweiResult.palaces.length > 0 && (
-          <SupportGate chartId={sessionId} page="result" />
-        )}
 
         <p className="text-center text-xs text-ink-4 pb-4">
           仅供学习参考与娱乐，请理性看待，切勿迷信
