@@ -41,7 +41,7 @@ export default function BaziDecades({ bazi, name, gender, sessionId, preload }: 
   const s7 = useSSEStream("/api/reading/bazi-decade", ck(7));
   const streams = [s0, s1, s2, s3, s4, s5, s6, s7];
 
-  // Preload all decades at once when `preload` first becomes true (post-unlock)
+  // Preload all decades whenever `preload` is true; idle guard prevents re-starting already-loaded streams
   useEffect(() => {
     if (!preload) return;
     decades.forEach((decade, i) => {
