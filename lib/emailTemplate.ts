@@ -1,0 +1,115 @@
+// HTML email template for 命裡 reading reports.
+// Called by /api/email/report with the collected reading texts.
+
+export interface ReadingEmailData {
+  name?: string;
+  birthSummary: string;   // e.g. "1990年3月15日 · 男 · 午時"
+  chartSummary: string;   // e.g. "命宮子宮，命主紫微，身主天府，火六局"
+  readings: {
+    synthesis?: string;
+    overview?: string;
+    bazi?: string;
+    baziDeep?: string;
+    baziSchools?: string;
+    palaces?: string;
+    decades?: string;
+    cautions?: string;
+  };
+}
+
+function mdToHtml(md: string): string {
+  return md
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:#8B1A1A;margin:24px 0 8px;padding-bottom:4px;border-bottom:1px solid #e8ddd0;">$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:#5c4a2a;margin:16px 0 6px;">$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^[-•]\s+(.+)$/gm, '<li style="margin:4px 0;padding-left:4px;">$1</li>')
+    .replace(/(<li.*<\/li>\n?)+/g, '<ul style="padding-left:20px;margin:8px 0;">$&</ul>')
+    .replace(/\n\n/g, '</p><p style="margin:10px 0;line-height:1.7;">')
+    .replace(/^(?!<[h2h3ulp])/gm, '')
+    .trim();
+}
+
+export function buildReadingEmail(data: ReadingEmailData): { html: string; text: string } {
+  const greet = data.name ? `親愛的 ${data.name}，` : '您好，';
+
+  const sections: { title: string; content: string | undefined }[] = [
+    { title: '混合解讀（紫微 + 八字）', content: data.readings.synthesis },
+    { title: '紫微綜合', content: data.readings.overview },
+    { title: '八字綜合', content: data.readings.bazi },
+    { title: '八字命理 · 深度詳批', content: data.readings.baziDeep },
+    { title: '八字各派視角', content: data.readings.baziSchools },
+    { title: '十二宮位', content: data.readings.palaces },
+    { title: '大運流年', content: data.readings.decades },
+    { title: '特別注意 & 當前大運走勢', content: data.readings.cautions },
+  ].filter(s => s.content && s.content.trim().length > 50);
+
+  const sectionsHtml = sections.map(s => `
+    <div style="margin-bottom:32px;">
+      <h2 style="font-size:18px;font-weight:700;color:#8B1A1A;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid #c8a96e;">
+        ${s.title}
+      </h2>
+      <div style="color:#2c1a0e;font-size:14px;line-height:1.8;">
+        <p style="margin:10px 0;line-height:1.7;">${mdToHtml(s.content!)}</p>
+      </div>
+    </div>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f0ea;font-family:'Noto Serif TC',Georgia,serif;">
+  <div style="max-width:640px;margin:0 auto;background:#fffdf8;">
+
+    <!-- Header -->
+    <div style="background:#8B1A1A;padding:32px 40px;text-align:center;">
+      <div style="font-size:28px;color:#f5d98b;letter-spacing:4px;font-weight:700;">命 裡</div>
+      <div style="font-size:12px;color:#e8c88a;margin-top:6px;letter-spacing:2px;">MINGLI · 紫微斗數 AI 命盤解讀</div>
+    </div>
+
+    <!-- Birth summary -->
+    <div style="background:#2c1a0e;padding:20px 40px;">
+      <div style="color:#c8a96e;font-size:12px;letter-spacing:2px;margin-bottom:6px;">命盤資訊</div>
+      <div style="color:#f5d98b;font-size:15px;font-weight:600;">${data.birthSummary}</div>
+      ${data.chartSummary ? `<div style="color:#e8c88a;font-size:13px;margin-top:4px;opacity:0.85;">${data.chartSummary}</div>` : ''}
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px 40px;">
+      <p style="color:#5c4a2a;font-size:15px;line-height:1.8;margin:0 0 28px;">${greet}以下是您的完整命盤解讀報告，由 命裡 AI 依據紫微斗數與八字命理為您生成。</p>
+
+      ${sectionsHtml}
+
+      <div style="background:#f9f5ef;border:1px solid #e8ddd0;border-radius:8px;padding:16px 20px;margin-top:32px;">
+        <p style="color:#7a6040;font-size:12px;line-height:1.7;margin:0;">
+          本報告由 AI 輔助生成，僅供參考，不構成任何決策依據。如需重新查看或生成新命盤，請訪問
+          <a href="https://www.mingli.study" style="color:#8B1A1A;">mingli.study</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="border-top:1px solid #e8ddd0;padding:20px 40px;text-align:center;">
+      <div style="color:#a09080;font-size:11px;line-height:1.6;">
+        © 命裡 · mingli.study<br>
+        您收到此郵件是因為您在生成命盤後選擇了接收報告。
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+  // Plain text fallback
+  const text = [
+    `命裡 · 命盤解讀報告`,
+    `${data.birthSummary}`,
+    data.chartSummary,
+    '',
+    ...sections.map(s => [`=== ${s.title} ===`, s.content, ''].join('\n')),
+    '---',
+    'mingli.study',
+  ].filter(Boolean).join('\n');
+
+  return { html, text };
+}
