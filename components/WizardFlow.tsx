@@ -636,7 +636,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 <OverviewDualView text={dualschool.text} refs={dualschool.refs} />
               </div>
             ) : (
-              <ReadingCard stream={dualschool} skeleton="正在生成雙派解讀…"
+              <ReadingCard stream={dualschool} skeleton="正在生成三派深解…"
                 onMount={() => dualschool.status === "idle" && dualschool.start({ ziwei })} />
             )}
             <ValidationBadge status={dualschool.validation} />
@@ -674,24 +674,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               onMount={() => cautions.status === "idle" && cautions.start(ziweiWithBirth)} />
           </div>
         );
-
-      case "wenming": {
-        const readingCount = Object.keys(backgroundReadings).length;
-        const initCtx = readingCount > 0
-          ? `你好！我已完整分析你的命盤（${readingCount} 個維度），包括總覽、宮位、大運等，有什麼想深入瞭解的？`
-          : `你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`;
-        return (
-          <div className="space-y-3">
-            <ChatInterface
-              ziwei={ziwei}
-              initialContext={initCtx}
-              backgroundReadings={backgroundReadings}
-              chartId={sessionId ?? ""}
-              maxQuestions={10}
-            />
-          </div>
-        );
-      }
 
     }
   }
@@ -750,8 +732,25 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
 
       {/* Content card */}
       <div className="no-print border border-t-0 border-border-warm rounded-b-xl bg-paper p-4 sm:p-5 min-h-[200px]">
-        {TAB_INTRO[activeTab] && <TabIntro>{TAB_INTRO[activeTab]}</TabIntro>}
-        {renderContent()}
+        {activeTab !== "wenming" && (
+          <>
+            {TAB_INTRO[activeTab] && <TabIntro>{TAB_INTRO[activeTab]}</TabIntro>}
+            {renderContent()}
+          </>
+        )}
+        {/* 問命 — always mounted so conversation history survives tab switches */}
+        <div className={activeTab === "wenming" ? undefined : "hidden"}>
+          {TAB_INTRO.wenming && <TabIntro>{TAB_INTRO.wenming}</TabIntro>}
+          <div className="space-y-3">
+            <ChatInterface
+              ziwei={ziwei}
+              initialContext={`你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`}
+              backgroundReadings={backgroundReadings}
+              chartId={sessionId ?? ""}
+              maxQuestions={10}
+            />
+          </div>
+        </div>
       </div>
 
 
