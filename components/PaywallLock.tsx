@@ -60,7 +60,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
 
       {/* Price + CTA */}
       <div className="text-center mb-3">
-        <span className="text-2xl font-bold text-ink">¥29</span>
+        <span className="text-2xl font-bold text-ink">$6.99</span>
         <span className="text-xs text-ink-4 ml-1">一次付费 · 永久解锁</span>
       </div>
 
@@ -83,7 +83,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
       {err && <p className="mt-2 text-xs text-vermillion text-center">{err}</p>}
 
       <p className="mt-3 text-center text-[11px] text-ink-4 leading-relaxed">
-        支付成功后自动解锁 · 安全加密 · 支持 Visa / Mastercard
+        支付成功后自动解锁 · 安全加密 · 支持 Visa / Mastercard / Apple Pay
       </p>
     </div>
   );
