@@ -8,6 +8,7 @@ import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import FlowYearDetail from "./FlowYearDetail";
 import BaziDecades from "./BaziDecades";
+import ChatInterface from "./ChatInterface";
 import { parseModernBlocks } from "@/lib/modernBlocks";
 import PaywallLock from "./PaywallLock";
 import { usePaywall } from "@/lib/usePaywall";
@@ -15,7 +16,7 @@ import { gtagEvent } from "@/lib/gtag";
 import ChartLoadingOverlay from "./ChartLoadingOverlay";
 import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
 
-type Tab = "overview" | "palaces" | "decades" | "bazi" | "dualschool" | "perspectives" | "cautions";
+type Tab = "overview" | "palaces" | "decades" | "bazi" | "dualschool" | "perspectives" | "cautions" | "wenming";
 
 // Free tab everyone sees; the rest unlock together with one purchase.
 const FREE_TABS = new Set<Tab>(["overview", "palaces"]);
@@ -27,6 +28,7 @@ const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "bazi",          label: "八字", char: "字" },
   { id: "perspectives",  label: "眾說", char: "源" },
   { id: "cautions",      label: "注意", char: "警" },
+  { id: "wenming",      label: "問命", char: "問" },
 ];
 
 const SCHOOL_LABELS: Record<string, string> = {
@@ -42,6 +44,7 @@ const TAB_INTRO: Partial<Record<Tab, React.ReactNode>> = {
   bazi: "以日主旺衰與五行喜忌為綱，深入排盤，詳論命局格局與大運走向；附歷代相似命造案例對照，及祿命法與盲派兩種歷史視角。",
   perspectives: "三合、四化、飛星三派各陳其說，倪師學派直傳旁參，再納小眾諸家，終歸於綜合共識。",
   cautions: "如實點出命盤中需留意之處——一生格局與當前大運，並各附可行的應對。",
+  wenming: "向 AI 深度追問命盤細節——有疑必答，追根究柢。",
 };
 
 function TabIntro({ children }: { children: React.ReactNode }) {
@@ -386,7 +389,7 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
   return null;
 }
 
-export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onReadingComplete, onExportReady }: WizardFlowProps) {
+export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
@@ -415,23 +418,15 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true });  // B1 · 八字 tab (deep, paid)
   const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true });  // B3 · 各派視角 (祿命+盲派)
 
-  // Notify parent when each core reading completes so the chat can use it as background context
-  const notified = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    // The chat expects the "overview" key as background context — feed it from the
-    // FREE synthesis (always runs), so chat works even while the paid 紫微深解 is locked.
-    const pairs: [string, typeof overview][] = [
-      ["overview", synthesis], ["palaces", palaces], ["decades", decades],
-      ["bazi", bazi_], ["cautions", cautions],
-    ];
-    for (const [key, stream] of pairs) {
-      if (stream.status === "done" && stream.text && !notified.current.has(key)) {
-        notified.current.add(key);
-        onReadingComplete?.(key, stream.text);
-        if (key === "overview") gtagEvent("reading_completed");
-      }
-    }
-  }, [synthesis.status, palaces.status, decades.status, bazi_.status, cautions.status, onReadingComplete, synthesis, palaces, decades, bazi_, cautions]);
+  // Background context for 問命 ChatInterface — built live from stream texts
+  const backgroundReadings: Record<string, string> = {};
+  if (synthesis.text) backgroundReadings.synthesis = synthesis.text;
+  if (overview.text)  backgroundReadings.overview  = overview.text;
+  if (bazi_.text)     backgroundReadings.bazi       = bazi_.text;
+  if (baziDeep.text)  backgroundReadings.baziDeep   = baziDeep.text;
+  if (palaces.text)   backgroundReadings.palaces    = palaces.text;
+  if (decades.text)   backgroundReadings.decades    = decades.text;
+  if (cautions.text)  backgroundReadings.cautions   = cautions.text;
 
   const ziweiPayload     = { ziwei, gender, name };
   const ziweiWithBirth   = { ziwei, birthYear, name };
@@ -459,6 +454,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
     if (baziSchools.status === "idle")  baziSchools.start({ bazi, gender });
+    if (dualschool.status === "idle")   dualschool.start({ ziwei });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
 
@@ -474,6 +470,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   useEffect(() => {
     if (allSettled && !gated && onExportReady && !exportFired.current) {
       exportFired.current = true;
+      gtagEvent("reading_completed");
       onExportReady({
         name,
         birthSummary: [dateLabel, timeLabel, gender].filter(Boolean).join(" · "),
@@ -627,7 +624,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <ReadingCard stream={baziSchools} skeleton="正在調取祿命法與盲派視角…"
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender })} />
             </div>
-            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} />
+            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} />
           </div>
         );
 
@@ -678,6 +675,24 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               onMount={() => cautions.status === "idle" && cautions.start(ziweiWithBirth)} />
           </div>
         );
+
+      case "wenming": {
+        const readingCount = Object.keys(backgroundReadings).length;
+        const initCtx = readingCount > 0
+          ? `你好！我已完整分析你的命盤（${readingCount} 個維度），包括總覽、宮位、大運等，有什麼想深入瞭解的？`
+          : `你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`;
+        return (
+          <div className="space-y-3">
+            <ChatInterface
+              ziwei={ziwei}
+              initialContext={initCtx}
+              backgroundReadings={backgroundReadings}
+              chartId={sessionId ?? ""}
+              maxQuestions={10}
+            />
+          </div>
+        );
+      }
 
     }
   }
