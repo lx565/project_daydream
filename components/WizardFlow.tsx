@@ -220,14 +220,15 @@ function ReadingCard({
   return children ? <>{children}</> : <LoadingSkeleton label={skeleton} />;
 }
 
-// Multi-school overview split (三合 / 四化 / 飞星 + 综合共识)
-// IMPORTANT: markers must match exactly what DeepSeek returns (Simplified Chinese section headers)
+// Multi-school overview split (三合 / 四化 / 飛星 + 綜合共識)
+// IMPORTANT: markers must match exactly what DeepSeek returns — Traditional Chinese headers
+// (model copies the format headers verbatim from the system prompt, which uses Traditional)
 const OVERVIEW_SCHOOLS = [
-  { key: "sanhe",   marker: "## 三合派观点", label: "三合派", desc: "宮位星曜組合", card: "border-vermillion/30 bg-vermillion-l/20", badge: "bg-vermillion text-paper border-vermillion" },
-  { key: "sihua",   marker: "## 四化派观点", label: "四化派", desc: "四化飛化落宮", card: "border-amber-400/30 bg-amber-50/40", badge: "bg-amber-600 text-paper border-amber-600" },
-  { key: "feixing", marker: "## 飞星派观点", label: "飛星派", desc: "飛星入宮脈絡", card: "border-emerald-500/30 bg-emerald-50/40", badge: "bg-emerald-700 text-paper border-emerald-700" },
-  { key: "nishi",   marker: "## 倪师学派观点", label: "倪師學派", desc: "倪師直傳視角", card: "border-indigo-400/30 bg-indigo-50/40", badge: "bg-indigo-700 text-paper border-indigo-700" },
-  { key: "niche",   marker: "## 小众学派观点", label: "小眾學派", desc: "三派之外旁參", card: "border-purple-400/30 bg-purple-50/40", badge: "bg-purple-700 text-paper border-purple-700" },
+  { key: "sanhe",   marker: "## 三合派觀點", label: "三合派", desc: "宮位星曜組合", card: "border-vermillion/30 bg-vermillion-l/20", badge: "bg-vermillion text-paper border-vermillion" },
+  { key: "sihua",   marker: "## 四化派觀點", label: "四化派", desc: "四化飛化落宮", card: "border-amber-400/30 bg-amber-50/40", badge: "bg-amber-600 text-paper border-amber-600" },
+  { key: "feixing", marker: "## 飛星派觀點", label: "飛星派", desc: "飛星入宮脈絡", card: "border-emerald-500/30 bg-emerald-50/40", badge: "bg-emerald-700 text-paper border-emerald-700" },
+  { key: "nishi",   marker: "## 倪師學派觀點", label: "倪師學派", desc: "倪師直傳視角", card: "border-indigo-400/30 bg-indigo-50/40", badge: "bg-indigo-700 text-paper border-indigo-700" },
+  { key: "niche",   marker: "## 小眾學派觀點", label: "小眾學派", desc: "三派之外旁參", card: "border-purple-400/30 bg-purple-50/40", badge: "bg-purple-700 text-paper border-purple-700" },
 ] as const;
 
 // mode controls which slice of the overview reading renders:
@@ -235,8 +236,10 @@ const OVERVIEW_SCHOOLS = [
 //  "consensus" — intro + 綜合共識 only (總覽 · 紫薇綜合, the holistic conclusion)
 //  "schools"   — the 3 派 breakdowns only (眾說 · 紫微三派詳解)
 function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: Reference[]; mode?: "full" | "consensus" | "schools" }) {
-  // Consensus marker varies: overview uses 综合共识, legacy dual-school uses 两派共识
-  const consensusMarker = text.includes("## 综合共识") ? "## 综合共识" : "## 两派共识";
+  // Consensus marker: Traditional (綜合共識) from overview, Simplified (综合共识) fallback, legacy dual-school (两派共识)
+  const consensusMarker = text.includes("## 綜合共識") ? "## 綜合共識"
+    : text.includes("## 综合共识") ? "## 综合共识"
+    : "## 两派共识";
 
   const ordered = [
     ...OVERVIEW_SCHOOLS.map((s) => ({ key: s.key as string, marker: s.marker })),
