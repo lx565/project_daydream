@@ -34,14 +34,17 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
   const greet = data.name ? `親愛的 ${data.name}，` : '您好，';
 
   const sections: { title: string; content: string | undefined }[] = [
-    { title: '混合解讀（紫微 + 八字）', content: data.readings.synthesis },
+    { title: '綜合解讀', content: data.readings.synthesis },
+    // 紫微斗數
     { title: '紫微綜合', content: data.readings.overview },
+    { title: '十二宮位', content: data.readings.palaces },
+    { title: '大運流年', content: data.readings.decades },
+    // 八字命理
     { title: '八字綜合', content: data.readings.bazi },
     { title: '八字命理 · 深度詳批', content: data.readings.baziDeep },
     { title: '八字各派視角', content: data.readings.baziSchools },
-    { title: '十二宮位', content: data.readings.palaces },
-    { title: '大運流年', content: data.readings.decades },
-    { title: '特別注意 & 當前大運走勢', content: data.readings.cautions },
+    // 尾
+    { title: '特別注意', content: data.readings.cautions },
   ].filter(s => s.content && s.content.trim().length > 50);
 
   const sectionsHtml = sections.map(s => `
