@@ -54,9 +54,12 @@ interface Props {
   ziwei: ZiweiResult;
   birthYear?: number;
   name?: string;
+  onReady?: (text: string) => void;
 }
 
-export default function FlowYearDetail({ ziwei, name }: Props) {
+function dots(n: number): string { return "●".repeat(n) + "○".repeat(5 - n); }
+
+export default function FlowYearDetail({ ziwei, name, onReady }: Props) {
   const currentYear = new Date().getFullYear();
   const [data, setData] = useState<ScoresData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,7 +79,16 @@ export default function FlowYearDetail({ ziwei, name }: Props) {
       body: JSON.stringify({ ziwei, currentYear, name }),
     })
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then((d: ScoresData) => setData(d))
+      .then((d: ScoresData) => {
+        setData(d);
+        if (onReady && d.scores?.length) {
+          const header = "| 年份 | 干支 | 歲 | 綜合 | 事業 | 感情 | 主題 |\n|------|------|---|------|------|------|------|";
+          const rows = d.scores.map(s =>
+            `| ${s.year}${s.year === currentYear ? "（今年）" : ""} | ${s.ganzhi} | ${s.age} | ${dots(s.overall)} | ${dots(s.career)} | ${dots(s.romance)} | ${s.theme} |`
+          ).join("\n");
+          onReady(`${header}\n${rows}`);
+        }
+      })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps

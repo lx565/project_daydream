@@ -395,6 +395,7 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
 export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [baziDecadesText, setBaziDecadesText] = useState("");
+  const [flowYearsText, setFlowYearsText] = useState("");
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
@@ -488,6 +489,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         bazi:         bazi_.text,
         palaces:      palaces.text,
         decades:      decades.text,
+        flowYears:    flowYearsText,
         baziDeep:     baziDeep.text,
         baziSchools:  baziSchools.text,
         baziDecades:  baziDecadesText,
@@ -496,7 +498,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSettled, gated, baziDecadesText]);
+  }, [allSettled, gated, baziDecadesText, flowYearsText]);
 
 
   function renderContent() {
@@ -616,7 +618,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             )}
             <ValidationBadge status={decades.validation} />
             {/* Per-year 流年 deep reading — moved here from the ziwei chart */}
-            <FlowYearDetail ziwei={ziwei} birthYear={birthYear} name={name} />
+            <FlowYearDetail ziwei={ziwei} birthYear={birthYear} name={name} onReady={setFlowYearsText} />
           </div>
         );
 

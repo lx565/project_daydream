@@ -11,6 +11,7 @@ export interface ReadingEmailData {
     bazi?: string;
     palaces?: string;
     decades?: string;
+    flowYears?: string;
     baziDeep?: string;
     baziSchools?: string;
     baziDecades?: string;
@@ -45,6 +46,7 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     { title: '十二宮位',           content: data.readings.palaces },
     // 大運 tab
     { title: '大運流年',           content: data.readings.decades },
+    { title: '流年運勢總覽',       content: data.readings.flowYears },
     // 八字 tab
     { title: '八字命理 · 深度詳批', content: data.readings.baziDeep },
     { title: '八字各派視角',       content: data.readings.baziSchools },
