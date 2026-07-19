@@ -698,7 +698,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   return (
     <>
       {/* Birth loading overlay — shown until first SSE chunk + 2s minimum */}
-      <ChartLoadingOverlay firstChunkArrived={synthesis.status !== "idle"} />
+      <ChartLoadingOverlay firstChunkArrived={synthesis.text.length > 0 || synthesis.status === "error"} />
 
       {/* Post-payment overlay — shown when returning from payment until unlock confirmed */}
       {justPaid && paywall.loading && (
