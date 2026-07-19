@@ -53,7 +53,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
         {[
           { icon: "📖", stat: "万字以上", label: "深度解读" },
           { icon: "🔄", stat: "多模型", label: "交叉校对" },
-          { icon: "📚", stat: "121部", label: "命理典籍加持" },
+          { icon: "📚", stat: "上百部", label: "命理典籍加持" },
           { icon: "⚡", stat: "双体系", label: "紫微×八字印证" },
         ].map(({ icon, stat, label }) => (
           <div key={stat} className="flex items-center gap-1.5 rounded-lg bg-gold/8 border border-gold/20 px-2.5 py-2">
