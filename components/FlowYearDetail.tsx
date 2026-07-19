@@ -89,7 +89,7 @@ export default function FlowYearDetail({ ziwei, name, onReady }: Props) {
           onReady(`${header}\n${rows}`);
         }
       })
-      .catch(() => setFetchError(true))
+      .catch(() => { setFetchError(true); onReady?.(""); })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [birthKey]);

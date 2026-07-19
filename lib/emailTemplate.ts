@@ -57,8 +57,8 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     { title: '特別注意',           content: data.readings.cautions },
   ].filter(s => s.content && s.content.trim().length > 50);
 
-  const sectionsHtml = sections.map(s => `
-    <div style="margin-bottom:32px;">
+  const sectionsHtml = sections.map((s, i) => `
+    <div style="margin-bottom:32px;${i > 0 ? "page-break-before:always;padding-top:24px;" : ""}">
       <h2 style="font-size:18px;font-weight:700;color:#8B1A1A;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid #c8a96e;">
         ${s.title}
       </h2>

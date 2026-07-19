@@ -394,8 +394,9 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
 
 export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [baziDecadesText, setBaziDecadesText] = useState("");
-  const [flowYearsText, setFlowYearsText] = useState("");
+  // null = not yet arrived; "" = arrived but empty/errored; string = content
+  const [baziDecadesText, setBaziDecadesText] = useState<string | null>(null);
+  const [flowYearsText, setFlowYearsText] = useState<string | null>(null);
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
@@ -470,11 +471,16 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
   const allSettled = coreDone + coreErrored >= coreTotal;
 
-  // Notify parent when all readings are ready so it can render ReadingExport at the page bottom.
-  // Re-fires when baziDecadesText arrives later (BaziDecades streams finish after coreStreams).
+  // Show 儲存&分享 only once every piece of content is ready:
+  //   1. All SSE core streams settled (allSettled)
+  //   2. FlowYearDetail fetch resolved (flowYearsText !== null)
+  //   3. BaziDecades preload complete (baziDecadesText !== null)
+  // null = still loading; "" = finished but empty/errored; string = content
+  const allContentReady = allSettled && flowYearsText !== null && baziDecadesText !== null;
+
   const exportFired = React.useRef(false);
   useEffect(() => {
-    if (!allSettled || gated || !onExportReady) return;
+    if (!allContentReady || gated || !onExportReady) return;
     if (!exportFired.current) {
       exportFired.current = true;
       gtagEvent("reading_completed");
@@ -489,16 +495,16 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         bazi:         bazi_.text,
         palaces:      palaces.text,
         decades:      decades.text,
-        flowYears:    flowYearsText,
+        flowYears:    flowYearsText ?? "",
         baziDeep:     baziDeep.text,
         baziSchools:  baziSchools.text,
-        baziDecades:  baziDecadesText,
+        baziDecades:  baziDecadesText ?? "",
         dualschool:   dualschool.text,
         cautions:     cautions.text,
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSettled, gated, baziDecadesText, flowYearsText]);
+  }, [allContentReady, gated]);
 
 
   function renderContent() {
