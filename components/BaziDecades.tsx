@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Md from "./Md";
 import { useSSEStream } from "@/lib/useSSEStream";
 import type { BaziResult, BaziDecade } from "@/lib/bazi";
@@ -21,13 +21,15 @@ interface Props {
   gender: "male" | "female";
   sessionId?: string;
   preload?: boolean;
+  onReady?: (text: string) => void;
 }
 
-export default function BaziDecades({ bazi, name, gender, sessionId, preload }: Props) {
+export default function BaziDecades({ bazi, name, gender, sessionId, preload, onReady }: Props) {
   const { decades, luckStartAge } = bazi;
   const currentYear = new Date().getFullYear();
   const currentDecadeIdx = decades.findIndex(d => currentYear >= d.startYear && currentYear <= d.endYear);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const readyFired = React.useRef(false);
 
   const ck = (idx: number) => sessionId ? `${sessionId}_bd_${idx}` : undefined;
 
@@ -51,6 +53,22 @@ export default function BaziDecades({ bazi, name, gender, sessionId, preload }: 
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preload]);
+
+  // When preloading, fire onReady once all active decade streams have completed
+  useEffect(() => {
+    if (!preload || !onReady || readyFired.current) return;
+    const activeStreams = streams.slice(0, decades.length);
+    const allDone = activeStreams.every(s => s.status === "done" || s.status === "error");
+    if (!allDone) return;
+    readyFired.current = true;
+    const combined = decades.map((d, i) => {
+      const text = streams[i]?.text?.trim();
+      if (!text) return "";
+      return `### ${d.ganZhi}大運（${d.startAge}–${d.endAge}歲 · ${d.startYear}–${d.endYear}年）\n${text}`;
+    }).filter(Boolean).join("\n\n");
+    if (combined) onReady(combined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streams.map(s => s.status).join(",")]);
 
   const autoLoadIdx = currentDecadeIdx >= 0 ? currentDecadeIdx : 0;
 

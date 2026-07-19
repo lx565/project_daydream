@@ -9,10 +9,12 @@ export interface ReadingEmailData {
     synthesis?: string;
     overview?: string;
     bazi?: string;
-    baziDeep?: string;
-    baziSchools?: string;
     palaces?: string;
     decades?: string;
+    baziDeep?: string;
+    baziSchools?: string;
+    baziDecades?: string;
+    dualschool?: string;
     cautions?: string;
   };
 }
@@ -33,18 +35,24 @@ function mdToHtml(md: string): string {
 export function buildReadingEmail(data: ReadingEmailData): { html: string; text: string } {
   const greet = data.name ? `親愛的 ${data.name}，` : '您好，';
 
+  // Sections ordered exactly by tab: 總覧 → 宮位 → 大運 → 八字 → 眾說 → 注意
   const sections: { title: string; content: string | undefined }[] = [
-    { title: '綜合解讀', content: data.readings.synthesis },
-    // 紫微斗數
-    { title: '紫微綜合', content: data.readings.overview },
-    { title: '十二宮位', content: data.readings.palaces },
-    { title: '大運流年', content: data.readings.decades },
-    // 八字命理
-    { title: '八字綜合', content: data.readings.bazi },
+    // 總覧 tab
+    { title: '混合解讀',           content: data.readings.synthesis },
+    { title: '紫微綜合',           content: data.readings.overview },
+    { title: '八字綜合',           content: data.readings.bazi },
+    // 宮位 tab
+    { title: '十二宮位',           content: data.readings.palaces },
+    // 大運 tab
+    { title: '大運流年',           content: data.readings.decades },
+    // 八字 tab
     { title: '八字命理 · 深度詳批', content: data.readings.baziDeep },
-    { title: '八字各派視角', content: data.readings.baziSchools },
-    // 尾
-    { title: '特別注意', content: data.readings.cautions },
+    { title: '八字各派視角',       content: data.readings.baziSchools },
+    { title: '八字大運走勢',       content: data.readings.baziDecades },
+    // 眾說 tab
+    { title: '三合·四化·飛星 · 三派深解', content: data.readings.dualschool },
+    // 注意 tab
+    { title: '特別注意',           content: data.readings.cautions },
   ].filter(s => s.content && s.content.trim().length > 50);
 
   const sectionsHtml = sections.map(s => `

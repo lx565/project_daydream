@@ -313,11 +313,12 @@ function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: R
 // Per-palace card view — parses the palaces reading so each 宮 shows as clean rows:
 // row 1 = 宮位 · 地支 + 主星, row 2 = 解讀. Avoids the "everything clustered" markdown blob.
 function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
-  // The palaces reading ends with ONE whole-reading [現代] "給你的話" block — a summary of
+  // The palaces reading ends with ONE whole-reading [現代]/[现代] "給你的話" block — a summary of
   // the whole person, not any single palace. Pull it out FIRST so it isn't swallowed into
   // the last palace card (父母宮), where it wrongly reads as a parents-specific note.
   // Render it once, after all the palace cards.
-  const modernMatch = text.match(/\[現代\][\s\S]*?\[\/現代\]/);
+  // Match both Traditional and Simplified variants, with or without a closing tag.
+  const modernMatch = text.match(/\[(?:現代|现代)\][\s\S]*?(?:\[\/(?:現代|现代)\]|$)/);
   const modernBlock = modernMatch ? modernMatch[0] : "";
   const palacesText = modernBlock ? text.replace(modernBlock, "").trim() : text;
   // Split on each "## " heading; the first chunk may be intro text (no heading).
@@ -393,6 +394,7 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
 
 export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [baziDecadesText, setBaziDecadesText] = useState("");
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
@@ -461,36 +463,40 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   }, [paywall.loading, gated]);
 
   // Global progress across the auto-run sections (the free 總覽 trio + 宮位 always run)
-  const coreStreams = gated ? [synthesis, overview, bazi_, palaces] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools];
+  const coreStreams = gated ? [synthesis, overview, bazi_, palaces] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
   const allSettled = coreDone + coreErrored >= coreTotal;
 
-  // Notify parent when all readings are ready so it can render ReadingExport at the page bottom
+  // Notify parent when all readings are ready so it can render ReadingExport at the page bottom.
+  // Re-fires when baziDecadesText arrives later (BaziDecades streams finish after coreStreams).
   const exportFired = React.useRef(false);
   useEffect(() => {
-    if (allSettled && !gated && onExportReady && !exportFired.current) {
+    if (!allSettled || gated || !onExportReady) return;
+    if (!exportFired.current) {
       exportFired.current = true;
       gtagEvent("reading_completed");
-      onExportReady({
-        name,
-        birthSummary: [dateLabel, timeLabel, gender].filter(Boolean).join(" · "),
-        chartSummary: ziwei.summary ?? "",
-        readings: {
-          synthesis:   synthesis.text,
-          overview:    overview.text,
-          bazi:        bazi_.text,
-          baziDeep:    baziDeep.text,
-          baziSchools: baziSchools.text,
-          palaces:     palaces.text,
-          decades:     decades.text,
-          cautions:    cautions.text,
-        },
-      });
     }
+    onExportReady({
+      name,
+      birthSummary: [dateLabel, timeLabel, gender].filter(Boolean).join(" · "),
+      chartSummary: ziwei.summary ?? "",
+      readings: {
+        synthesis:    synthesis.text,
+        overview:     overview.text,
+        bazi:         bazi_.text,
+        palaces:      palaces.text,
+        decades:      decades.text,
+        baziDeep:     baziDeep.text,
+        baziSchools:  baziSchools.text,
+        baziDecades:  baziDecadesText,
+        dualschool:   dualschool.text,
+        cautions:     cautions.text,
+      },
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSettled, gated]);
+  }, [allSettled, gated, baziDecadesText]);
 
 
   function renderContent() {
@@ -626,7 +632,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <ReadingCard stream={baziSchools} skeleton="正在調取祿命法與盲派視角…"
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender })} />
             </div>
-            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} />
+            <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} onReady={setBaziDecadesText} />
           </div>
         );
 
