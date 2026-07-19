@@ -48,6 +48,24 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
         </p>
       </div>
 
+      {/* Quality proof strip */}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        {[
+          { icon: "📖", stat: "万字以上", label: "深度解读" },
+          { icon: "🔄", stat: "多模型", label: "交叉校对" },
+          { icon: "📚", stat: "121部", label: "命理典籍加持" },
+          { icon: "⚡", stat: "双体系", label: "紫微×八字印证" },
+        ].map(({ icon, stat, label }) => (
+          <div key={stat} className="flex items-center gap-1.5 rounded-lg bg-gold/8 border border-gold/20 px-2.5 py-2">
+            <span className="text-base leading-none">{icon}</span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-amber-800 leading-tight">{stat}</div>
+              <div className="text-[10px] text-ink-4 leading-tight truncate">{label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* What's included */}
       <ul className="mb-5 space-y-1.5">
         {included.map((item) => (
