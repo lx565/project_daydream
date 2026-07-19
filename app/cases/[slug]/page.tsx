@@ -25,6 +25,7 @@ export async function generateMetadata(
   return {
     title: `${c.rizi}${c.geju ? `·${c.geju}` : ""}命造案例 | 命里`,
     description: c.analysis.slice(0, 100),
+    alternates: { canonical: `https://www.mingli.study/cases/${slug}` },
   };
 }
 

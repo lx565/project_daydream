@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "历史命造案例库 | 命里",
   description: "收录韦千里、潘东光等命理大师真实批断案例，按日主浏览历史命造。",
+  alternates: { canonical: "https://www.mingli.study/cases" },
 };
 
 const RIZI_ORDER = ["甲木","乙木","丙火","丁火","戊土","己土","庚金","辛金","壬水","癸水"];
