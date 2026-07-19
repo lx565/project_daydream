@@ -1317,7 +1317,8 @@ ${context || "（无可用参考，请基于八字与五行养生通论严谨撰
 /** Corpus source book page — about a specific book used in the 命里 knowledge base. */
 export async function getSourceContent(book: SourceBook, excerpt?: string, revisionNote?: string): Promise<SeoContent> {
   if (!revisionNote) {
-    const pre = readPregenerated("sources", book.slug);
+    // Files renamed to urlSlug (pinyin) on 2026-07-18; fall back to slug for any edge cases
+    const pre = readPregenerated("sources", book.urlSlug) ?? readPregenerated("sources", book.slug);
     if (pre) return pre;
   }
 
