@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #F5F0E6;
+    color: #2C1A10;
+  }
+
+  /* Classical divider style */
+  hr {
+    border-color: #DDD4C0;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Prose overrides for classical theme */
+  .prose-classical {
+    --tw-prose-body: #4A3828;
+    --tw-prose-headings: #8B1A1A;
+    --tw-prose-bold: #2C1A10;
+    --tw-prose-links: #7B5C00;
+    --tw-prose-bullets: #8B1A1A;
+    --tw-prose-hr: #DDD4C0;
+  }
+
+  /* Subtle paper texture via box-shadow layering */
+  .paper-card {
+    background: #FDFCF8;
+    box-shadow: 0 1px 3px rgba(44, 26, 16, 0.08), 0 0 0 1px rgba(44, 26, 16, 0.06);
+  }
+
+  .paper-card-hover:hover {
+    box-shadow: 0 2px 8px rgba(44, 26, 16, 0.12), 0 0 0 1px rgba(139, 26, 26, 0.15);
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.4s ease-out both; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.animate-blink { animation: blink 1s step-end infinite; }
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer { animation: shimmer 2s linear infinite; }
+
+/* Scrollbar style for reading areas */
+.scroll-styled::-webkit-scrollbar { width: 4px; }
+.scroll-styled::-webkit-scrollbar-track { background: #F0EBE0; }
+.scroll-styled::-webkit-scrollbar-thumb { background: #DDD4C0; border-radius: 2px; }
+
+/* Print / PDF export */
+@media print {
+  /* Hide all interactive UI — only the print-view renders */
+  .no-print { display: none !important; }
+  nav, header, footer, [data-radix-popper-content-wrapper] { display: none !important; }
+
+  /* Reveal the hidden print view */
+  .print-view { display: block !important; }
+
+  /* Page setup */
+  @page { margin: 2cm 2.5cm; }
+  body { background: white; font-family: "Noto Serif TC", "Songti SC", "SimSun", Georgia, serif; color: #1a0e00; font-size: 11pt; line-height: 1.8; }
+
+  /* Section titles */
+  .print-section { margin-bottom: 2.4rem; page-break-inside: avoid; }
+  .print-section > h2 { font-size: 14pt; font-weight: 700; color: #8B1A1A; border-bottom: 1pt solid #c8a96e; padding-bottom: 4pt; margin: 0 0 10pt; }
+
+  /* Markdown prose inside print sections */
+  .print-section h2 { font-size: 13pt; color: #8B1A1A; margin: 12pt 0 6pt; }
+  .print-section h3 { font-size: 12pt; color: #5c4a2a; margin: 10pt 0 4pt; }
+  .print-section p  { margin: 5pt 0; font-size: 11pt; line-height: 1.8; }
+  .print-section li { font-size: 11pt; line-height: 1.8; margin: 2pt 0; }
+  .print-section strong { font-weight: 700; }
+
+  /* Cover / header block */
+  .print-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1.2rem; border-bottom: 2pt solid #8B1A1A; }
+  .print-header h1 { font-size: 22pt; color: #8B1A1A; margin: 0 0 6pt; letter-spacing: 4pt; }
+  .print-header p  { font-size: 12pt; color: #5c4a2a; margin: 3pt 0; }
+}

@@ -16,3 +16,10 @@
 .superpowers/
 .env*
 
+# local-only RAG corpus (raw sources, extracted text, backups — never deployed, see .vercelignore)
+/knowledge/
+
+# build artifacts / local logs
+tsconfig.tsbuildinfo
+*.log
+
