@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { startCardCheckout } from "@/lib/checkout";
 import { gtagEvent } from "@/lib/gtag";
 
@@ -23,6 +23,13 @@ const DEFAULT_INCLUDED = [
 export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const viewed = useRef(false);
+
+  useEffect(() => {
+    if (viewed.current || !chartId) return;
+    viewed.current = true;
+    gtagEvent("paywall_view", { chart_id: chartId, section: sectionLabel ?? "" });
+  }, [chartId, sectionLabel]);
 
   async function handleCheckout() {
     if (loading || !chartId) return;
