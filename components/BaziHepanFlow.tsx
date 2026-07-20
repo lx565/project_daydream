@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Md from "./Md";
 import PaywallLock from "./PaywallLock";
+import BugReportButton from "./BugReportButton";
 import { BirthdayWheel } from "./WheelPicker";
 import { calculateBazi, type BaziResult } from "@/lib/bazi";
 import { calcBaziCoupleScore } from "@/lib/baziCouple";
@@ -343,6 +344,8 @@ function BaziHepanResult({ charts, onReset }: { charts: BaziCharts; onReset: () 
         {" · "}
         <Link href="/hepan" className="text-ink-3 hover:underline">改測紫微合盤</Link>
       </p>
+
+      <BugReportButton sessionId={chartId} page="bazihepan" />
     </div>
   );
 }

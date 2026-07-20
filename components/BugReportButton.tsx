@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const TYPES = ["排盤有誤", "解讀問題", "功能異常", "其他"] as const;
+const TYPES = ["排盤有誤", "解讀問題", "功能異常", "使用建議", "其他"] as const;
 
 export default function BugReportButton({ sessionId, page }: { sessionId?: string; page?: string }) {
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function BugReportButton({ sessionId, page }: { sessionId?: strin
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-4 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-paper border border-border-warm text-ink-3 shadow-sm hover:border-vermillion hover:text-vermillion transition-colors"
       >
-        <span>⚑</span> 報錯
+        <span>⚑</span> 意見反饋
       </button>
 
       {/* Modal */}
@@ -48,7 +48,7 @@ export default function BugReportButton({ sessionId, page }: { sessionId?: strin
           <div className="absolute inset-0 bg-black/30" onClick={close} />
           <div className="relative w-full max-w-sm bg-parchment rounded-2xl border border-border-warm p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-ink tracking-wide">報告問題</h3>
+              <h3 className="text-sm font-bold text-ink tracking-wide">意見反饋</h3>
               <button onClick={close} className="text-ink-4 hover:text-ink text-lg leading-none">×</button>
             </div>
 

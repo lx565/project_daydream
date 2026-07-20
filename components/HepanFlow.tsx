@@ -14,6 +14,7 @@ import Link from "next/link";
 import Md from "./Md";
 import ZiweiChart from "./ZiweiChart";
 import PaywallLock from "./PaywallLock";
+import BugReportButton from "./BugReportButton";
 import { BirthdayWheel } from "./WheelPicker";
 import { calculateBazi, type BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
@@ -372,6 +373,8 @@ function HepanResult({ charts, onReset }: { charts: Charts; onReset: () => void 
         僅供學習參考與娛樂，請理性看待，切勿迷信 ·{" "}
         <Link href="/" className="text-vermillion hover:underline">測個人命盤 →</Link>
       </p>
+
+      <BugReportButton sessionId={coupleChartId} page="hepan" />
     </div>
   );
 }
