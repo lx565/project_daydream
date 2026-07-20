@@ -17,6 +17,16 @@ import { gtagEvent } from "@/lib/gtag";
 
 const PAYWALL_ENABLED = process.env.NEXT_PUBLIC_PAYWALL_ENABLED === "true";
 
+// Fires "purchase" at most once per chart per browser session — guards against
+// re-firing on a manual refresh of the ?paid=1 return page (refs alone don't
+// survive a remount, only sessionStorage does).
+function trackPurchaseOnce(chartId: string) {
+  const key = `ga_purchase_tracked_${chartId}`;
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
+  gtagEvent("purchase", { transaction_id: chartId, value: 6.99, currency: "USD" });
+}
+
 export interface PaywallState {
   enabled: boolean;
   unlocked: boolean;
@@ -46,15 +56,21 @@ export function usePaywall(chartId?: string): PaywallState {
     }
 
     async function run() {
+      // Just returned from Stripe? Check this before the unlock check itself —
+      // the webhook can land before this page even mounts, so "already unlocked"
+      // on the very first check does not mean the purchase was tracked yet.
+      const justPaid = new URLSearchParams(window.location.search).has("paid");
+
       const ok = await check();
       if (cancelled) return;
       if (ok) {
         setUnlocked(true);
         setLoading(false);
+        if (justPaid) trackPurchaseOnce(chartId!);
         return;
       }
-      // Just returned from Stripe? Poll a few times for the webhook to land.
-      const justPaid = new URLSearchParams(window.location.search).has("paid");
+
+      // Webhook hasn't landed yet — poll a few times.
       if (justPaid && !polled.current) {
         polled.current = true;
         for (let i = 0; i < 6 && !cancelled; i++) {
@@ -62,10 +78,7 @@ export function usePaywall(chartId?: string): PaywallState {
           if (await check()) {
             if (!cancelled) {
               setUnlocked(true);
-              // Fires only on this Stripe-return transition, not on later
-              // reloads of an already-unlocked chart — chartId doubles as
-              // transaction_id so a duplicate fire (e.g. StrictMode) dedupes in GA4.
-              gtagEvent("purchase", { transaction_id: chartId, value: 6.99, currency: "USD" });
+              trackPurchaseOnce(chartId!);
               break;
             }
           }
