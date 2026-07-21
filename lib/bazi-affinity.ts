@@ -12,12 +12,12 @@ export const CONTROLS: Record<string, string> = { 木: "土", 土: "水", 水: "
 const EL_NAMES: Record<string, string> = { wood: "木", fire: "火", earth: "土", metal: "金", water: "水" };
 
 export function dayMasterAffinity(a: string, b: string): { score: number; desc: string } {
-  if (a === b) return { score: 70, desc: `同为${a}，志趣相近，但需避免同质化` };
-  if (GENERATES[a] === b) return { score: 88, desc: `${a}生${b}，甲方滋养乙方，相扶相助` };
-  if (GENERATES[b] === a) return { score: 85, desc: `${b}生${a}，乙方滋养甲方，相扶相助` };
-  if (CONTROLS[a] === b) return { score: 55, desc: `${a}克${b}，甲方对乙方约束较强，需多包容` };
-  if (CONTROLS[b] === a) return { score: 58, desc: `${b}克${a}，乙方对甲方约束较强，需多包容` };
-  return { score: 72, desc: "日主无直接生克，各自独立，互不干扰" };
+  if (a === b) return { score: 70, desc: `同為${a}，志趣相近但易同質化` };
+  if (GENERATES[a] === b) return { score: 88, desc: `${a}生${b}，甲方滋養乙方，相扶相助` };
+  if (GENERATES[b] === a) return { score: 85, desc: `${b}生${a}，乙方滋養甲方，相扶相助` };
+  if (CONTROLS[a] === b) return { score: 55, desc: `${a}克${b}，甲方對乙方約束較強，需多包容` };
+  if (CONTROLS[b] === a) return { score: 58, desc: `${b}克${a}，乙方對甲方約束較強，需多包容` };
+  return { score: 72, desc: `${a}與${b}無直接生克，各自獨立，後天緣分為主` };
 }
 
 export function elementComplementarity(
@@ -34,10 +34,10 @@ export function elementComplementarity(
   const bWeak = bEntries.slice().sort((x, y) => x[1] - y[1])[0][0];
   const aBoosted = bRatio[aWeak] > 0.2;
   const bBoosted = aRatio[bWeak] > 0.2;
-  if (aBoosted && bBoosted) return { score: 90, desc: `五行互补：${EL_NAMES[aWeak]}与${EL_NAMES[bWeak]}相互填补，搭配均衡` };
-  if (aBoosted) return { score: 78, desc: `乙方${EL_NAMES[aWeak]}旺，补甲方所缺` };
-  if (bBoosted) return { score: 78, desc: `甲方${EL_NAMES[bWeak]}旺，补乙方所缺` };
-  return { score: 62, desc: "五行结构相近，互补性一般，需后天磨合" };
+  if (aBoosted && bBoosted) return { score: 90, desc: `${EL_NAMES[aWeak]}與${EL_NAMES[bWeak]}互補，五行均衡` };
+  if (aBoosted) return { score: 78, desc: `乙方${EL_NAMES[aWeak]}旺，補甲方所缺` };
+  if (bBoosted) return { score: 78, desc: `甲方${EL_NAMES[bWeak]}旺，補乙方所缺` };
+  return { score: 62, desc: "五行結構相近，互補性一般，需後天磨合" };
 }
 
 // 天干五合：甲己合土 乙庚合金 丙辛合水 丁壬合木 戊癸合火
