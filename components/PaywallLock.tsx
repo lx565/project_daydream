@@ -10,6 +10,24 @@ interface Props {
   included?: string[];
 }
 
+// Honest social proof — real reading count from KV; renders nothing until the
+// fetch lands (no seeded/fake number inside a payment surface).
+function UnlockSocialProof() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("/api/stats/readings")
+      .then((r) => r.json())
+      .then((d) => { if (typeof d?.count === "number") setCount(d.count); })
+      .catch(() => {});
+  }, []);
+  if (count === null) return null;
+  return (
+    <p className="mt-2.5 text-center text-[11px] text-ink-4">
+      已有 <span className="font-semibold text-amber-800">{count.toLocaleString("en-US")}</span> 人在命里生成命书
+    </p>
+  );
+}
+
 const DEFAULT_INCLUDED = [
   "十二宫位 · 逐宫精解",
   "大运流年 · 运势时机（含逐年详批）",
@@ -85,8 +103,9 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
 
       {/* Price + CTA */}
       <div className="text-center mb-3">
+        <p className="text-[11px] text-ink-4 mb-1">同类深度命书多定价 $15–40</p>
         <span className="text-2xl font-bold text-ink">$6.99</span>
-        <span className="text-xs text-ink-4 ml-1">一次付费 · 永久解锁</span>
+        <span className="text-xs text-ink-4 ml-1">≈ ¥50 · 一次付费 · 永久解锁</span>
       </div>
 
       <button
@@ -106,6 +125,8 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
       </button>
 
       {err && <p className="mt-2 text-xs text-vermillion text-center">{err}</p>}
+
+      <UnlockSocialProof />
 
       <p className="mt-3 text-center text-[11px] text-ink-4 leading-relaxed">
         支付成功后自动解锁 · 安全加密 · 支持 Visa / Mastercard / Apple Pay

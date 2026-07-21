@@ -158,7 +158,7 @@ const ARTICLE_AREAS = [
   {
     href: "/guide",
     label: "學習中心",
-    badge: "15 篇",
+    badge: "24 篇",
     desc: "紫微入門、三合 / 四化 / 飛星三派、大限流年，系統梳理核心概念。",
   },
 ];
@@ -517,7 +517,7 @@ export default function Home() {
             深入閱讀 · 命理知識庫
           </h2>
           <p className="text-sm text-ink-3 text-center mb-10">
-            依據 103 部典籍整理，數百篇可免費閱讀的深度文章
+            依據 121 部典籍整理，數百篇可免費閱讀的深度文章
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {ARTICLE_AREAS.map((a) => (

@@ -738,7 +738,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 : "text-ink-3 hover:bg-paper hover:text-ink"
             }`}>
             {isLocked(tab.id) && (
-              <span className={`absolute top-1 right-1 text-[8px] leading-none ${activeTab === tab.id ? "opacity-80" : "opacity-50"}`}>🔒</span>
+              <span className={`absolute top-1 right-1 text-[10px] leading-none ${activeTab === tab.id ? "opacity-90" : "opacity-80"}`}>🔒</span>
             )}
             <span className={`text-xs font-bold leading-none ${activeTab === tab.id ? "text-paper/70" : "text-ink-4"}`}>
               {tab.char}
