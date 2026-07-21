@@ -199,7 +199,7 @@ export default function CoupleResultView({ baziA, ziweiA, nameA, genderA, baziB,
         </div>
 
         <p className="text-[10px] text-ink-4 mt-4 text-center leading-relaxed">
-          合盘指数基于五行结构、日主关系与夫妻宫星曜，仅供参考，缘分深浅因人而异
+          合盘指数基于五行结构、日主关系与{cfg.palaces[0] ?? "夫妻"}宫星曜，仅供参考，缘分深浅因人而异
         </p>
       </div>
 

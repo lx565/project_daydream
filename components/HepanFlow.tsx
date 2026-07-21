@@ -298,7 +298,7 @@ function HepanResult({ charts, onReset }: { charts: Charts; onReset: () => void 
           </div>
         </div>
         <p className="text-[10px] text-ink-4 mt-4 text-center leading-relaxed">
-          合盤指數基於五行結構、日主關係與夫妻宮星曜，僅供參考，緣分深淺因人而異
+          合盤指數基於五行結構、日主關係與{cfg.palaces[0] ?? "夫妻"}宮星曜，僅供參考，緣分深淺因人而異
         </p>
       </div>
 
