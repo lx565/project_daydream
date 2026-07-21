@@ -19,7 +19,7 @@ import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
 type Tab = "overview" | "palaces" | "decades" | "bazi" | "dualschool" | "perspectives" | "cautions" | "wenming";
 
 // Free tab everyone sees; the rest unlock together with one purchase.
-const FREE_TABS = new Set<Tab>(["overview", "palaces"]);
+const FREE_TABS = new Set<Tab>(["overview"]);
 
 const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "overview",      label: "總覽", char: "觀" },
@@ -440,22 +440,22 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const synthesisPayload = { ziwei, bazi, gender, name };
 
   // The FREE sections always run on mount: cross-domain synthesis (混合解讀),
-  // the 紫微 overview (紫薇綜合 = its 綜合共識 slice), the bazi reading (八字綜合),
-  // and the 宮位 per-palace reading (also free).
+  // the 紫微 overview (紫薇綜合 = its 綜合共識 slice), and the bazi reading (八字綜合).
   useEffect(() => {
     gtagEvent("reading_started");
     if (synthesis.status === "idle") synthesis.start(synthesisPayload);
     if (overview.status === "idle")  overview.start(ziweiPayload);
     if (bazi_.status === "idle")     bazi_.start(baziPayload);
-    if (palaces.status === "idle")   palaces.start({ ziwei, name });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Paid sections start only once the paywall state is known AND not gated —
   // this both avoids paying for AI the user can't see and runs them
   // immediately after unlock (the effect re-fires when `gated` flips false).
+  // 宮位 is now a paid section (only 總覽 is free), so it starts here too.
   useEffect(() => {
     if (paywall.loading || gated) return;
+    if (palaces.status === "idle")      palaces.start({ ziwei, name });
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
@@ -464,8 +464,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
 
-  // Global progress across the auto-run sections (the free 總覽 trio + 宮位 always run)
-  const coreStreams = gated ? [synthesis, overview, bazi_, palaces] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
+  // Global progress across the auto-run sections. When gated, only the free
+  // 總覽 trio runs; 宮位 and the rest are deferred until unlock.
+  const coreStreams = gated ? [synthesis, overview, bazi_] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
