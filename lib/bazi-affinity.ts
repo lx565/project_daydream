@@ -70,7 +70,7 @@ export function branchRelation(a: string, b: string): { score: number; tag: stri
     if ((x === a && y === b) || (x === b && y === a)) return { score: base - 10, tag: "六冲" };
   }
   for (const g of SAN_XING) {
-    if (g.includes(a) && g.includes(b)) return { score: base - 6, tag: "相刑" };
+    if (g.includes(a) && g.includes(b) && a !== b) return { score: base - 6, tag: "相刑" };
   }
   if (a === b && SELF_XING.has(a)) return { score: base - 4, tag: "自刑" };
   return { score: base, tag: "" };
