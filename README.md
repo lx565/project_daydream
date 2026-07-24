@@ -124,6 +124,9 @@ npx vercel --prod --yes
 npx vercel --prod --yes
 ```
 
+**After deploying new or changed SEO content pages** (guide/, caiyun/, personality/, etc.), run
+`npm run indexnow` to ping search engines directly — don't wait for organic crawl discovery.
+
 The `.vercelignore` excludes `knowledge/sources/` and `knowledge/extracted/` — only `chunks.json` is uploaded.
 
 ---

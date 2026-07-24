@@ -9,25 +9,38 @@ interface ReadingExportProps {
 
 export default function ReadingExport({ data }: ReadingExportProps) {
   const [copied, setCopied]       = useState(false);
+  const [xhsCopied, setXhsCopied] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail]         = useState("");
   const [sending, setSending]     = useState(false);
   const [sent, setSent]           = useState(false);
   const [error, setError]         = useState("");
 
-  async function handleCopy() {
+  async function copyToClipboard(text: string) {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(text);
     } catch {
       const el = document.createElement("input");
-      el.value = window.location.href;
+      el.value = text;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
     }
+  }
+
+  async function handleCopy() {
+    await copyToClipboard(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleShareXhs() {
+    await copyToClipboard(
+      "我在命裡生成了自己的命盤解讀，紫微+八字雙系統AI解讀，附典籍引用 → https://www.mingli.study"
+    );
+    setXhsCopied(true);
+    setTimeout(() => setXhsCopied(false), 2500);
   }
 
   function handlePrint() {
@@ -108,6 +121,15 @@ export default function ReadingExport({ data }: ReadingExportProps) {
           <span className="text-xs font-medium leading-tight text-center">郵件報告</span>
         </button>
       </div>
+
+      {/* Light-touch 小紅書 nudge — copies a share-ready caption, no hard sell */}
+      <button
+        onClick={handleShareXhs}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-xs text-ink-4 hover:text-vermillion transition-colors"
+      >
+        <span>{xhsCopied ? "✓" : "📌"}</span>
+        <span>{xhsCopied ? "文案已複製，快去小紅書分享吧" : "分享到小紅書"}</span>
+      </button>
 
       {/* Email form — expands when ✉ clicked */}
       {showEmail && (
