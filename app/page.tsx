@@ -201,7 +201,7 @@ export default function Home() {
       </nav>
 
       {/* ── 2. Hero ── */}
-      <section className="py-16 px-4">
+      <section className="py-8 lg:py-16 px-4">
         <div className="max-w-5xl mx-auto flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-14">
 
           {/* Left: text + stats */}
@@ -243,6 +243,7 @@ export default function Home() {
               <p className="text-sm font-semibold text-ink mb-1">生成你的命盤解讀</p>
               <p className="text-xs text-ink-4 mb-5">輸入出生資訊，AI 即刻推演 · 免費開始</p>
               <FortuneForm />
+              <p className="text-xs text-ink-4 text-center mt-4">總覽免費 · 完整命書 $6.99</p>
             </div>
           </div>
 
