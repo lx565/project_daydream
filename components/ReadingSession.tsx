@@ -31,6 +31,17 @@ export default function ReadingSession(props: Props) {
 
   return (
     <>
+      {/* Immediate acknowledgment right after unlock, before the full reading has
+          finished streaming (ReadingExport below needs allContentReady, which can
+          take a while) — makes the save/email option discoverable instead of only
+          surfacing once a user happens to scroll past the entire tab interface. */}
+      {enabled && unlocked && !exportData && (
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-jade-l border border-jade/30 text-xs text-jade flex items-center gap-2">
+          <span>✓</span>
+          <span>已解鎖完整命書 — 內容生成完成後，可在頁面底部永久保存或寄送到郵箱</span>
+        </div>
+      )}
+
       <WizardFlow
         ziwei={props.ziwei}
         bazi={props.bazi}
