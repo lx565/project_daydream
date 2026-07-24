@@ -20,8 +20,43 @@ export interface ReadingEmailData {
   };
 }
 
+// Converts one matched GFM pipe-table block (header row + |---|---| separator
+// + data rows) into an inline-styled HTML table — email clients strip
+// stylesheets, so every cell needs its own style attribute.
+function mdTableToHtml(block: string): string {
+  const lines = block.trim().split("\n").map((l) => l.trim());
+  const cells = (line: string) => line.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  const header = cells(lines[0]);
+  const rows = lines.slice(2).map(cells); // lines[1] is the |---|---| separator, skip it
+  const th = header
+    .map((h) => `<th style="padding:6px 10px;background:#f5f0e6;border:1px solid #e8ddd0;text-align:left;font-size:13px;color:#5c4a2a;">${h}</th>`)
+    .join("");
+  const trs = rows
+    .map((r) => `<tr>${r.map((c) => `<td style="padding:6px 10px;border:1px solid #e8ddd0;font-size:13px;color:#2C1A10;">${c}</td>`).join("")}</tr>`)
+    .join("");
+  return `<table style="border-collapse:collapse;width:100%;margin:12px 0;">` +
+    `<thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+// Pulls GFM pipe-tables out of the markdown before the rest of mdToHtml's
+// regex passes run (which would otherwise mangle a table's internal newlines
+// via the paragraph-break / bullet-list rules), replacing each with a
+// placeholder token to be substituted back in once the rest of the text is
+// converted.
+function extractTables(md: string): { text: string; tables: string[] } {
+  const tables: string[] = [];
+  const tableBlockRe = /^\|.+\|[ \t]*\n\|[ \t]*:?-+:?[ \t]*(\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]*\n(?:\|.+\|[ \t]*\n?)+/gm;
+  const text = md.replace(tableBlockRe, (match) => {
+    const token = `@@TABLE_${tables.length}@@`;
+    tables.push(mdTableToHtml(match));
+    return token;
+  });
+  return { text, tables };
+}
+
 function mdToHtml(md: string): string {
-  return md
+  const { text, tables } = extractTables(md);
+  let html = text
     .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:#8B1A1A;margin:24px 0 8px;padding-bottom:4px;border-bottom:1px solid #e8ddd0;">$1</h2>')
     .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:#5c4a2a;margin:16px 0 6px;">$1</h3>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -31,6 +66,8 @@ function mdToHtml(md: string): string {
     .replace(/\n\n/g, '</p><p style="margin:10px 0;line-height:1.7;">')
     .replace(/^(?!<[h2h3ulp])/gm, '')
     .trim();
+  tables.forEach((tableHtml, i) => { html = html.replace(`@@TABLE_${i}@@`, tableHtml); });
+  return html;
 }
 
 export function buildReadingEmail(data: ReadingEmailData): { html: string; text: string } {
