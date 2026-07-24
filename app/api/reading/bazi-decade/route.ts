@@ -26,7 +26,12 @@ const SYSTEM = `你是精通子平八字大運推演的命理師，為命主解�
 簡體中文。**加粗**關鍵十神與五行名稱（單個片語，禁止用**包裹整句或整段）。不空泛，不嚇人，落點在幫助命主理解並善用這段運勢。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "bazi-decade" })).allowed) {
+  // BaziDecades.tsx preloads all ~8-9 decades concurrently on a single unlocked
+  // page view — a limit anywhere near that count guarantees several 429s on
+  // every legitimate visit (was 5/day, i.e. broken by design). Matches the
+  // validate/validate-bazi/validate-flowyear routes' 40/day, which are sized
+  // the same way for the same reason (many calls per real session).
+  if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "bazi-decade" })).allowed) {
     return rateLimitResponse();
   }
 
