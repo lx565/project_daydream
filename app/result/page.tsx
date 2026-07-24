@@ -6,7 +6,6 @@ import BaziProfile from "@/components/BaziProfile";
 import ZiweiChart from "@/components/ZiweiChart";
 import ReadingSession from "@/components/ReadingSession";
 import ReadingCountPing from "@/components/ReadingCountPing";
-import ShareButton from "./ShareButton";
 import ChartSaver from "@/components/ChartSaver";
 import BugReportButton from "@/components/BugReportButton";
 import CoupleResultView from "@/components/CoupleResultView";
@@ -254,15 +253,6 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
         {ziweiResult.palaces.length > 0 && (
           <MbtiCard palaces={ziweiResult.palaces} />
         )}
-
-        {/* Share */}
-        <div className="paper-card rounded-2xl border border-border-warm p-5 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-ink">分享此命盘</p>
-            <p className="text-xs text-ink-4 mt-0.5">复制链接给朋友</p>
-          </div>
-          <ShareButton />
-        </div>
 
         <p className="text-center text-xs text-ink-4 pb-4">
           仅供学习参考与娱乐，请理性看待，切勿迷信

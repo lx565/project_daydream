@@ -8,7 +8,6 @@ interface ReadingExportProps {
 }
 
 export default function ReadingExport({ data }: ReadingExportProps) {
-  const [copied, setCopied]       = useState(false);
   const [xhsCopied, setXhsCopied] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail]         = useState("");
@@ -27,12 +26,6 @@ export default function ReadingExport({ data }: ReadingExportProps) {
       document.execCommand("copy");
       document.body.removeChild(el);
     }
-  }
-
-  async function handleCopy() {
-    await copyToClipboard(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   async function handleShareXhs() {
@@ -82,23 +75,8 @@ export default function ReadingExport({ data }: ReadingExportProps) {
     <div className="mt-8 border-t border-border-light pt-6">
       <p className="text-center text-xs text-ink-4 tracking-widest mb-4">儲存 & 分享</p>
 
-      {/* Three action buttons */}
-      <div className="grid grid-cols-3 gap-3">
-        {/* Share */}
-        <button
-          onClick={handleCopy}
-          className={`flex flex-col items-center gap-2 py-4 px-2 rounded-xl border transition-all ${
-            copied
-              ? "border-jade/50 bg-jade/5 text-jade"
-              : "border-border-warm bg-paper hover:border-gold/40 hover:bg-paper-2 text-ink-3 hover:text-ink"
-          }`}
-        >
-          <span className="text-xl">{copied ? "✓" : "🔗"}</span>
-          <span className="text-xs font-medium leading-tight text-center">
-            {copied ? "已複製" : "分享命盤"}
-          </span>
-        </button>
-
+      {/* 分享命盤 copy-link button removed — leaked free access to anyone with the link; reinstate after 2026-07-24-unlock-token-design.md ships */}
+      <div className="grid grid-cols-2 gap-3">
         {/* Download PDF */}
         <button
           onClick={handlePrint}
