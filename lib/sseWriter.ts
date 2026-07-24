@@ -40,7 +40,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v24"; // 2026-06-30 couple v2: relationship-aware reading + 飞化互入/三方四正/大运 + share card
+const CACHE_VERSION = "v25"; // 2026-07-21 conversion: open-loop endings on free synthesis/bazi sections
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
