@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       mode: "payment",
       line_items: [{ price, quantity: 1 }],
       payment_method_types: methods,
+      locale: "zh", // audience is Chinese-speaking; without this Checkout defaults to browser/English locale
       metadata: { chartId }, // webhook reads this to mark the chart unlocked
       success_url: `${origin}${safeReturn}${sep}paid=1`,
       cancel_url: `${origin}${safeReturn}`,
