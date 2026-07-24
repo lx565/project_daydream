@@ -582,6 +582,19 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                   onMount={() => bazi_.status === "idle" && bazi_.start(baziPayload)} />
               )}
             </div>
+
+            {/* Gated: bridge from free content into the full 命書 — shown at the
+                moment of peak engagement. Static JSX + PaywallLock only (which
+                fires paywall_view itself); no AI generation for gated users. */}
+            {gated && (
+              <div className="space-y-4 pt-4 border-t border-border-light">
+                <SectionTitle accent="gold">你的完整命書</SectionTitle>
+                <p className="text-sm text-ink-3 leading-relaxed">
+                  以上是免費的綜合速讀。命盤裡還有五個章節尚未展開——十二宮位逐宮詳批、大運流年逐年拆解、八字深度詳批、三派各自論斷與風險提醒。
+                </p>
+                <PaywallLock chartId={sessionId ?? ""} sectionLabel="完整命書" />
+              </div>
+            )}
           </div>
         );
 
