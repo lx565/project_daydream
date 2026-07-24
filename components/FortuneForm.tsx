@@ -41,7 +41,6 @@ export default function FortuneForm() {
   const router = useRouter();
   const saved = loadSaved();
 
-  const [mode, setMode] = useState<"personal" | "couple">("personal");
   const [inputMethod, setInputMethod] = useState<"solar" | "bazi">("solar");
   const [showTz, setShowTz] = useState<boolean>((saved?.tz ?? 8) !== 8);
 
@@ -69,7 +68,6 @@ export default function FortuneForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (mode !== "personal") return; // couple mode is a link-through, no submit
     if (!validate()) return;
     const params = new URLSearchParams();
     if (person.name) params.set("name", person.name);
@@ -87,129 +85,105 @@ export default function FortuneForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Mode tabs */}
+      {/* Mode tabs — 个人命盘 stays on this page; 合盘 · 缘分 goes straight to /hepan
+          (no intermediate link-through card — direct navigation on click). */}
       <div className="flex rounded-xl overflow-hidden border border-border-warm">
-        {(["personal", "couple"] as const).map((m) => (
-          <button key={m} type="button"
-            onClick={() => { setMode(m); setErrors({}); }}
-            className={`flex-1 py-2 text-xs font-semibold tracking-wide transition-all ${
-              mode === m
-                ? "bg-vermillion text-white"
-                : "bg-paper text-ink-3 hover:text-vermillion"
-            }`}>
-            {m === "personal" ? "个人命盘" : "合盘 · 缘分"}
-          </button>
-        ))}
+        <button type="button"
+          className="flex-1 py-2 text-xs font-semibold tracking-wide transition-all bg-vermillion text-white">
+          个人命盘
+        </button>
+        <Link href="/hepan"
+          className="flex-1 py-2 text-xs font-semibold tracking-wide transition-all bg-paper text-ink-3 hover:text-vermillion text-center">
+          合盘 · 缘分
+        </Link>
       </div>
 
-      {mode === "personal" ? (
-        <>
-          {/* Dev shortcut */}
-          <div className="flex justify-end">
-            <a href="/result?date=1990-03-21&hour=11&gender=male&tz=8&name=示例"
-              className="text-[11px] text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
-              查看示例命盘 →
-            </a>
-          </div>
+      {/* Dev shortcut */}
+      <div className="flex justify-end">
+        <a href="/result?date=1990-03-21&hour=11&gender=male&tz=8&name=示例"
+          className="text-[11px] text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
+          查看示例命盘 →
+        </a>
+      </div>
 
-          {/* Input method toggle */}
-          <div>
-            <label className={labelClass}>出生信息 <span className="text-vermillion">*</span></label>
-            <div className="flex rounded-lg overflow-hidden border border-border-warm mb-3">
-              {(["solar", "bazi"] as const).map((m) => (
-                <button key={m} type="button"
-                  onClick={() => { setInputMethod(m); setErrors({}); }}
-                  className={`flex-1 py-2 text-xs font-semibold tracking-wide transition-all ${
-                    inputMethod === m
-                      ? "bg-vermillion text-white"
-                      : "bg-paper text-ink-3 hover:text-vermillion"
-                  }`}>
-                  {m === "solar" ? "公历出生日期" : "八字四柱"}
-                </button>
-              ))}
-            </div>
-
-            {inputMethod === "solar" ? (
-              <>
-                <BirthdayWheel
-                  date={person.date}
-                  hour={person.hour}
-                  onDateChange={(d) => { setPerson(p => ({ ...p, date: d })); setErrors(e => ({ ...e, date: "" })); }}
-                  onHourChange={(h) => { setPerson(p => ({ ...p, hour: h })); setErrors(e => ({ ...e, hour: "" })); }}
-                />
-                {(errors.date || errors.hour) && (
-                  <p className="text-xs text-vermillion mt-1">{errors.date || errors.hour}</p>
-                )}
-              </>
-            ) : (
-              <BaziInputFlow
-                gender={person.gender}
-                name={person.name}
-                tz={tz}
-              />
-            )}
-          </div>
-
-          <div>
-            <label className={labelClass}>性别 <span className="text-vermillion">*</span></label>
-            <div className="flex gap-3">
-              {(["male", "female"] as const).map((g) => (
-                <button key={g} type="button"
-                  onClick={() => { setPerson(p => ({ ...p, gender: g })); setErrors(e => ({ ...e, gender: "" })); }}
-                  style={person.gender === g ? { background: "#8B1A1A", color: "#FDFCF8", borderColor: "#8B1A1A" } : {}}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 transition-all duration-200 ${
-                    person.gender === g ? "shadow-md" : "bg-parchment border-border-warm text-ink-2 hover:border-vermillion/60"
-                  }`}>
-                  {person.gender === g ? "✓ " : ""}{g === "male" ? "男命" : "女命"}
-                </button>
-              ))}
-            </div>
-            {errors.gender && <p className="text-xs text-vermillion mt-1">{errors.gender}</p>}
-          </div>
-
-          {inputMethod === "solar" && (
-            showTz ? (
-              <div>
-                <label className={labelClass}>
-                  出生时区
-                  {tz !== 8 && <span className="ml-2 text-vermillion normal-case tracking-normal">将换算为北京时间推盘</span>}
-                </label>
-                <select value={tz} onChange={(e) => setTz(Number(e.target.value))}
-                  className={`${inputClass} appearance-none cursor-pointer`}>
-                  {TZ_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value} className="bg-paper">{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <button type="button" onClick={() => setShowTz(true)}
-                className="text-[11px] text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
-                出生地不在中国（UTC+8）？设置出生时区 →
-              </button>
-            )
-          )}
-        </>
-      ) : (
-        /* ── 合盘 mode: link-through to the dedicated /hepan flow, which has the
-           proper free-preview + paywall (this form used to collect both people's
-           data and route to /result?method=couple, which served the full paid
-           couple reading free — closing that leak). ── */
-        <div className="space-y-4 text-center py-2">
-          <p className="text-sm text-ink-2 leading-relaxed">
-            雙人合盤已升級為獨立頁面：緣分指數、緣分一瞥免費查看，完整合盤解讀一次解鎖。
-          </p>
-          <Link href="/hepan"
-            className="inline-flex items-center justify-center gap-1.5 w-full bg-vermillion text-white font-bold py-3.5 rounded-xl tracking-widest text-sm hover:bg-vermillion-h transition-all shadow-lg">
-            前往紫微雙人合盤 →
-          </Link>
-          <Link href="/bazihepan"
-            className="inline-block text-xs text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
-            也可測八字合盤 →
-          </Link>
+      {/* Input method toggle */}
+      <div>
+        <label className={labelClass}>出生信息 <span className="text-vermillion">*</span></label>
+        <div className="flex rounded-lg overflow-hidden border border-border-warm mb-3">
+          {(["solar", "bazi"] as const).map((m) => (
+            <button key={m} type="button"
+              onClick={() => { setInputMethod(m); setErrors({}); }}
+              className={`flex-1 py-2 text-xs font-semibold tracking-wide transition-all ${
+                inputMethod === m
+                  ? "bg-vermillion text-white"
+                  : "bg-paper text-ink-3 hover:text-vermillion"
+              }`}>
+              {m === "solar" ? "公历出生日期" : "八字四柱"}
+            </button>
+          ))}
         </div>
+
+        {inputMethod === "solar" ? (
+          <>
+            <BirthdayWheel
+              date={person.date}
+              hour={person.hour}
+              onDateChange={(d) => { setPerson(p => ({ ...p, date: d })); setErrors(e => ({ ...e, date: "" })); }}
+              onHourChange={(h) => { setPerson(p => ({ ...p, hour: h })); setErrors(e => ({ ...e, hour: "" })); }}
+            />
+            {(errors.date || errors.hour) && (
+              <p className="text-xs text-vermillion mt-1">{errors.date || errors.hour}</p>
+            )}
+          </>
+        ) : (
+          <BaziInputFlow
+            gender={person.gender}
+            name={person.name}
+            tz={tz}
+          />
+        )}
+      </div>
+
+      <div>
+        <label className={labelClass}>性别 <span className="text-vermillion">*</span></label>
+        <div className="flex gap-3">
+          {(["male", "female"] as const).map((g) => (
+            <button key={g} type="button"
+              onClick={() => { setPerson(p => ({ ...p, gender: g })); setErrors(e => ({ ...e, gender: "" })); }}
+              style={person.gender === g ? { background: "#8B1A1A", color: "#FDFCF8", borderColor: "#8B1A1A" } : {}}
+              className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 transition-all duration-200 ${
+                person.gender === g ? "shadow-md" : "bg-parchment border-border-warm text-ink-2 hover:border-vermillion/60"
+              }`}>
+              {person.gender === g ? "✓ " : ""}{g === "male" ? "男命" : "女命"}
+            </button>
+          ))}
+        </div>
+        {errors.gender && <p className="text-xs text-vermillion mt-1">{errors.gender}</p>}
+      </div>
+
+      {inputMethod === "solar" && (
+        showTz ? (
+          <div>
+            <label className={labelClass}>
+              出生时区
+              {tz !== 8 && <span className="ml-2 text-vermillion normal-case tracking-normal">将换算为北京时间推盘</span>}
+            </label>
+            <select value={tz} onChange={(e) => setTz(Number(e.target.value))}
+              className={`${inputClass} appearance-none cursor-pointer`}>
+              {TZ_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-paper">{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setShowTz(true)}
+            className="text-[11px] text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
+            出生地不在中国（UTC+8）？设置出生时区 →
+          </button>
+        )
       )}
 
-      {mode === "personal" && inputMethod === "solar" && (
+      {inputMethod === "solar" && (
         <button type="submit"
           style={{ color: "#FDFCF8" }}
           className={`w-full font-bold py-3.5 rounded-xl transition-all tracking-widest text-sm mt-2 ${
