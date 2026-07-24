@@ -81,7 +81,11 @@ export async function calculateZiwei(
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const genderStr = gender === 'male' ? '男' : '女';
 
-    const astrolabe = astro.bySolar(dateStr, timeIndex, genderStr, true);
+    // 5th param = language. iztro defaults to zh-CN (Simplified) if omitted —
+    // this whole app is Traditional Chinese, so every palace/star/mutagen name
+    // was silently rendering Simplified (財帛→财帛, 命宮→命宫, 交友→仆役, etc.)
+    // until this was set explicitly. zh-TW is a first-class supported locale.
+    const astrolabe = astro.bySolar(dateStr, timeIndex, genderStr, true, "zh-TW");
 
     const soulBranch: string = astrolabe.earthlyBranchOfSoulPalace ?? '';
     const bodyBranch: string = astrolabe.earthlyBranchOfBodyPalace ?? '';
