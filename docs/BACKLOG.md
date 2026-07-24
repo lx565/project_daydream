@@ -5,6 +5,36 @@ re-derive them from scratch. Newest first.
 
 ---
 
+## Multi-chart pricing (bundle / family pass) — deferred 2026-07-24
+
+**Status:** Deferred. No demand data yet — noted from a design conversation, not
+a validated request. Revisit once there's real usage signal (e.g. support
+messages asking for a discount on a 2nd chart, or checkout drop-off specifically
+on repeat visits from an already-paying customer).
+
+**The finding it comes from:** the purchase-bound unlock design
+(`docs/superpowers/specs/2026-07-24-unlock-token-design.md`) confirmed each
+chart (`date+時辰+gender`) is billed independently — paying for your own chart
+never makes a *different* birthdate's chart free. This is intentional and
+correct (matches "解鎖完整命書" = unlock *this* 命書, not a blanket account), but
+surfaces a real user segment: people learning 命理 who want to check several
+birthdates in one sitting (their own + family members', or practicing on
+friends' charts) hit the full $6.99 every single time.
+
+**The idea (unshaped — needs its own brainstorm when picked up):** some kind of
+multi-chart bundle or discounted Nth-chart pricing for this segment. Not
+scoped — open questions include: flat bundle (e.g. "3 charts for $X") vs.
+declining per-chart price vs. a time-boxed "explore mode"; how it'd interact
+with the per-chartId unlock architecture (would need a way to grant N unlocks
+from one purchase, not obviously a small change); whether this segment is even
+large enough to matter vs. the primary single-reading buyer.
+
+**Why not now:** per [[feedback-validate-before-building]] — no evidence yet
+this is a real, sizable segment vs. an anecdotal edge case. Don't build pricing
+infrastructure speculatively.
+
+---
+
 ## 问典 — "Ask-the-Classics" corpus-as-product (deferred 2026-07-21)
 
 **Status:** Deferred. Not a feature problem right now — the platform has **zero
