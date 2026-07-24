@@ -439,6 +439,19 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const baziPayload      = { bazi, gender, ziwei };  // ziwei passed so cross-validator can check fabricated 格局
   const synthesisPayload = { ziwei, bazi, gender, name };
 
+  // 命宮主星 for the paywall's personalized pitch — same 空宮借對宮 fallback as
+  // MbtiCard.tsx (about 1 in 6 charts has no major star in 命宮 itself).
+  const soulPalaceForHint = ziwei.palaces.find((p) => p.isSoulPalace);
+  let soulStarsForHint = soulPalaceForHint?.stars.filter((s) => s.type === "major") ?? [];
+  if (soulStarsForHint.length === 0) {
+    const migrationPalace = ziwei.palaces.find((p) => p.name === "遷移" || p.name === "遷移宮");
+    soulStarsForHint = migrationPalace?.stars.filter((s) => s.type === "major") ?? [];
+  }
+  const soulMainStarName = soulStarsForHint[0]?.name ?? "";
+  const paywallPersonalizedHint = soulMainStarName
+    ? `你的命宮主星是${soulMainStarName}——宮位篇會逐宮拆解它如何影響財帛與官祿`
+    : undefined;
+
   // The FREE sections always run on mount: cross-domain synthesis (混合解讀),
   // the 紫微 overview (紫薇綜合 = its 綜合共識 slice), and the bazi reading (八字綜合).
   useEffect(() => {
@@ -515,6 +528,12 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       return (
         <div className="space-y-4">
           <SectionTitle accent="gold">{label}</SectionTitle>
+          {/* Fake static teaser — genuinely written placeholder text, not AI-generated,
+              blurred to signal "the content already exists, you just can't read it yet" */}
+          <div aria-hidden="true" className="space-y-2 select-none pointer-events-none blur-sm">
+            <p className="text-sm text-ink-3 leading-relaxed">命宮主星在此宮位形成三方四正的呼應格局，對應到你的財帛與官祿方面，會出現明顯的起伏節點。</p>
+            <p className="text-sm text-ink-3 leading-relaxed">大運行進至此，流年主星與本命宮位交會，化祿與化忌各有側重，須配合流月細察。</p>
+          </div>
           <PaywallLock chartId={sessionId ?? ""} sectionLabel={label} />
         </div>
       );
@@ -592,7 +611,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 <p className="text-sm text-ink-3 leading-relaxed">
                   以上是免費的綜合速讀。命盤裡還有五個章節尚未展開——十二宮位逐宮詳批、大運流年逐年拆解、八字深度詳批、三派各自論斷與風險提醒。
                 </p>
-                <PaywallLock chartId={sessionId ?? ""} sectionLabel="完整命書" />
+                <PaywallLock chartId={sessionId ?? ""} sectionLabel="完整命書" personalizedHint={paywallPersonalizedHint} />
               </div>
             )}
           </div>

@@ -8,6 +8,9 @@ interface Props {
   chartId: string;
   sectionLabel?: string;
   included?: string[];
+  /** One dynamic line personalizing the pitch with data already on the client
+   *  (e.g. the user's 命宮主星). Optional — omit to fall back to the generic pitch. */
+  personalizedHint?: string;
 }
 
 // Honest social proof — real reading count from KV; renders nothing until the
@@ -38,7 +41,7 @@ const DEFAULT_INCLUDED = [
   "永久保存 · 可重复查阅",
 ];
 
-export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED }: Props) {
+export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED, personalizedHint }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const viewed = useRef(false);
@@ -90,6 +93,13 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
           </div>
         ))}
       </div>
+
+      {/* Personalized hint — one dynamic line using client-side chart data, if provided */}
+      {personalizedHint && (
+        <p className="mb-4 rounded-lg border border-gold/25 bg-gold/8 px-3 py-2 text-xs text-ink-2 leading-relaxed">
+          {personalizedHint}
+        </p>
+      )}
 
       {/* What's included */}
       <ul className="mb-5 space-y-1.5">
