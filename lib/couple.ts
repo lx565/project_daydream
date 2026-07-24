@@ -7,11 +7,21 @@ import {
 } from "./bazi-affinity";
 
 // 夫妻宮 star quality (simple heuristic on major stars) — generalized to any palace.
-const FAVORABLE_STARS = new Set(["天同", "太阴", "天梁", "天相", "天府", "紫微", "武曲"]);
-const CHALLENGING_STARS = new Set(["七杀", "破军", "贪狼", "廉贞"]);
+// Traditional Chinese — ziwei.ts requests zh-TW from iztro (astro.bySolar's
+// language param), so star/palace names from ZiweiResult are Traditional.
+const FAVORABLE_STARS = new Set(["天同", "太陰", "天梁", "天相", "天府", "紫微", "武曲"]);
+const CHALLENGING_STARS = new Set(["七殺", "破軍", "貪狼", "廉貞"]);
+
+// iztro's zh-TW locale names this palace 僕役 (classical term); the rest of
+// this app (RelationshipConfig, prompts, UI copy) says 交友 (modern usage) —
+// same palace, different label. Resolve the alias here rather than renaming
+// coupleTypes.ts's user-facing "交友", which is also used for RAG topic search
+// text where "交友" is likely the better-indexed modern term.
+const PALACE_ALIASES: Record<string, string> = { "交友": "僕役" };
 
 export function palaceStarScore(ziwei: ZiweiResult, palaceName: string): { score: number; stars: string[] } {
-  const palace = ziwei.palaces.find((p) => p.name === palaceName);
+  const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;
+  const palace = ziwei.palaces.find((p) => p.name === palaceName || p.name === resolvedName);
   if (!palace) return { score: 70, stars: [] };
   const major = palace.stars.filter((s) => s.type === "major").map((s) => s.name);
   let score = 72;
