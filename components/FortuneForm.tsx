@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BirthdayWheel } from "./WheelPicker";
-import { getSavedChart } from "./ChartSaver";
 import BaziInputFlow from "./BaziInputFlow";
-import { RELATIONSHIP_TYPES, type RelationshipType } from "@/lib/coupleTypes";
 
 interface PersonFields {
   name: string;
@@ -38,61 +37,6 @@ function loadSaved() {
   try { return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "null"); } catch { return null; }
 }
 
-function PersonForm({
-  label,
-  person,
-  onChange,
-  errors,
-  prefix,
-}: {
-  label: string;
-  person: PersonFields;
-  onChange: (p: Partial<PersonFields>) => void;
-  errors: Record<string, string>;
-  prefix: string;
-}) {
-  const labelClass = "block text-xs text-ink-3 tracking-widest uppercase mb-1.5";
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="w-1 h-4 bg-vermillion rounded-full" />
-        <span className="text-xs font-semibold text-ink tracking-widest">{label}</span>
-      </div>
-
-      <div>
-        <label className={labelClass}>出生日期 · 时辰 <span className="text-vermillion">*</span></label>
-        <BirthdayWheel
-          date={person.date}
-          hour={person.hour}
-          onDateChange={(d) => onChange({ date: d })}
-          onHourChange={(h) => onChange({ hour: h })}
-        />
-        {(errors[`${prefix}date`] || errors[`${prefix}hour`]) && (
-          <p className="text-xs text-vermillion mt-1">{errors[`${prefix}date`] || errors[`${prefix}hour`]}</p>
-        )}
-      </div>
-
-      <div>
-        <label className={labelClass}>性别 <span className="text-vermillion">*</span></label>
-        <div className="flex gap-3">
-          {(["male", "female"] as const).map((g) => (
-            <button key={g} type="button"
-              onClick={() => onChange({ gender: g })}
-              style={person.gender === g ? { background: "#8B1A1A", color: "#FDFCF8", borderColor: "#8B1A1A" } : {}}
-              className={`flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 ${
-                person.gender === g ? "shadow-md" : "bg-parchment border-border-warm text-ink-2 hover:border-vermillion/60"
-              }`}>
-              {person.gender === g ? "✓ " : ""}{g === "male" ? "男命" : "女命"}
-            </button>
-          ))}
-        </div>
-        {errors[`${prefix}gender`] && <p className="text-xs text-vermillion mt-1">{errors[`${prefix}gender`]}</p>}
-      </div>
-    </div>
-  );
-}
-
 export default function FortuneForm() {
   const router = useRouter();
   const saved = loadSaved();
@@ -110,65 +54,32 @@ export default function FortuneForm() {
   });
   const [tz, setTz] = useState<number>(saved?.tz ?? 8);
 
-  // Couple
-  const [personA, setPersonA] = useState<PersonFields>({ name: "", date: "", hour: "", gender: "" });
-  const [personB, setPersonB] = useState<PersonFields>({ name: "", date: "", hour: "", gender: "" });
-  const [autoFilledA, setAutoFilledA] = useState(false);
-  const [relType, setRelType] = useState<RelationshipType>("lover");
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const personalReady = !!person.date && !!person.gender && person.hour !== "";
-  const coupleReady = !!personA.date && !!personA.gender && personA.hour !== "" &&
-                      !!personB.date && !!personB.gender && personB.hour !== "";
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (mode === "personal") {
-      if (!person.date) e.date = "请填写出生日期";
-      if (!person.gender) e.gender = "请选择性别";
-      if (!person.hour && person.hour !== "0") e.hour = "请选择出生时辰";
-    } else {
-      if (!personA.date) e.adate = "请填写出生日期";
-      if (!personA.gender) e.agender = "请选择性别";
-      if (!personA.hour && personA.hour !== "0") e.ahour = "请选择出生时辰";
-      if (!personB.date) e.bdate = "请填写出生日期";
-      if (!personB.gender) e.bgender = "请选择性别";
-      if (!personB.hour && personB.hour !== "0") e.bhour = "请选择出生时辰";
-    }
+    if (!person.date) e.date = "请填写出生日期";
+    if (!person.gender) e.gender = "请选择性别";
+    if (!person.hour && person.hour !== "0") e.hour = "请选择出生时辰";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode !== "personal") return; // couple mode is a link-through, no submit
     if (!validate()) return;
     const params = new URLSearchParams();
-
-    if (mode === "personal") {
-      if (person.name) params.set("name", person.name);
-      params.set("date", person.date);
-      params.set("hour", person.hour);
-      params.set("gender", person.gender);
-      params.set("tz", String(tz));
-      params.set("method", "ziwei");
-      try { localStorage.setItem(SAVED_KEY, JSON.stringify({ name: person.name, date: person.date, hour: person.hour, gender: person.gender, tz })); } catch {}
-      router.push(`/result?${params.toString()}`);
-    } else {
-      if (personA.name) params.set("name", personA.name);
-      params.set("date", personA.date);
-      params.set("hour", personA.hour);
-      params.set("gender", personA.gender);
-      params.set("partner", "true");
-      params.set("method", "couple");
-      params.set("rel", relType);
-      if (personB.name) params.set("pname", personB.name);
-      params.set("pdate", personB.date);
-      params.set("phour", personB.hour);
-      params.set("pgender", personB.gender);
-      params.set("tz", "8");
-      router.push(`/result?${params.toString()}`);
-    }
+    if (person.name) params.set("name", person.name);
+    params.set("date", person.date);
+    params.set("hour", person.hour);
+    params.set("gender", person.gender);
+    params.set("tz", String(tz));
+    params.set("method", "ziwei");
+    try { localStorage.setItem(SAVED_KEY, JSON.stringify({ name: person.name, date: person.date, hour: person.hour, gender: person.gender, tz })); } catch {}
+    router.push(`/result?${params.toString()}`);
   }
 
   const inputClass = "w-full bg-parchment border border-border-warm rounded-lg px-4 py-2.5 text-ink placeholder-ink-4 focus:outline-none focus:border-vermillion/50 focus:ring-1 focus:ring-vermillion/20 transition-all text-sm";
@@ -180,22 +91,7 @@ export default function FortuneForm() {
       <div className="flex rounded-xl overflow-hidden border border-border-warm">
         {(["personal", "couple"] as const).map((m) => (
           <button key={m} type="button"
-            onClick={() => {
-              setMode(m);
-              setErrors({});
-              if (m === "couple" && !personA.date) {
-                const sc = getSavedChart();
-                if (sc) {
-                  setPersonA({
-                    name: sc.name ?? "",
-                    date: sc.date,
-                    hour: String(sc.hour),
-                    gender: sc.gender,
-                  });
-                  setAutoFilledA(true);
-                }
-              }
-            }}
+            onClick={() => { setMode(m); setErrors({}); }}
             className={`flex-1 py-2 text-xs font-semibold tracking-wide transition-all ${
               mode === m
                 ? "bg-vermillion text-white"
@@ -294,66 +190,34 @@ export default function FortuneForm() {
           )}
         </>
       ) : (
-        /* ── 合盘 mode ── */
-        <div className="space-y-6">
-          <p className="text-xs text-ink-4 text-center">输入两人信息，查看缘分指数与命盘契合度</p>
-
-          <div className="space-y-2">
-            <label className={labelClass}>关系类型 <span className="text-vermillion">*</span></label>
-            <div className="grid grid-cols-3 gap-2">
-              {Object.values(RELATIONSHIP_TYPES).map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setRelType(r.key)}
-                  className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs transition-all ${
-                    relType === r.key
-                      ? "border-vermillion bg-vermillion-l text-vermillion font-semibold"
-                      : "border-border-warm bg-paper text-ink-3 hover:border-vermillion/40"
-                  }`}
-                >
-                  <span className="text-lg leading-none">{r.emoji}</span>
-                  <span>{r.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
-            {autoFilledA && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-vermillion/6 border border-vermillion/20">
-                <span className="text-vermillion text-xs">✓</span>
-                <p className="text-xs text-vermillion/80">已读取你的个人命盘</p>
-                <button type="button" onClick={() => { setPersonA({ name:"", date:"", hour:"", gender:"" }); setAutoFilledA(false); }}
-                  className="ml-auto text-[11px] text-ink-4 hover:text-vermillion underline">重填</button>
-              </div>
-            )}
-            <PersonForm label="甲方（我）" person={personA} onChange={(p) => setPersonA(prev => ({ ...prev, ...p }))} errors={errors} prefix="a" />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-border-warm" />
-            <span className="text-xs text-vermillion font-bold tracking-widest">与</span>
-            <div className="flex-1 h-px bg-border-warm" />
-          </div>
-
-          <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
-            <PersonForm label="乙方" person={personB} onChange={(p) => setPersonB(prev => ({ ...prev, ...p }))} errors={errors} prefix="b" />
-          </div>
+        /* ── 合盘 mode: link-through to the dedicated /hepan flow, which has the
+           proper free-preview + paywall (this form used to collect both people's
+           data and route to /result?method=couple, which served the full paid
+           couple reading free — closing that leak). ── */
+        <div className="space-y-4 text-center py-2">
+          <p className="text-sm text-ink-2 leading-relaxed">
+            雙人合盤已升級為獨立頁面：緣分指數、緣分一瞥免費查看，完整合盤解讀一次解鎖。
+          </p>
+          <Link href="/hepan"
+            className="inline-flex items-center justify-center gap-1.5 w-full bg-vermillion text-white font-bold py-3.5 rounded-xl tracking-widest text-sm hover:bg-vermillion-h transition-all shadow-lg">
+            前往紫微雙人合盤 →
+          </Link>
+          <Link href="/bazihepan"
+            className="inline-block text-xs text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
+            也可測八字合盤 →
+          </Link>
         </div>
       )}
 
-      {(mode !== "personal" || inputMethod === "solar") && (
+      {mode === "personal" && inputMethod === "solar" && (
         <button type="submit"
           style={{ color: "#FDFCF8" }}
           className={`w-full font-bold py-3.5 rounded-xl transition-all tracking-widest text-sm mt-2 ${
-            (mode === "personal" ? personalReady : coupleReady)
+            personalReady
               ? "bg-vermillion hover:bg-vermillion-h active:scale-[0.99] shadow-lg ring-2 ring-vermillion/20 ring-offset-1"
               : "bg-vermillion/60 cursor-pointer opacity-80"
           }`}>
-          {mode === "personal"
-            ? (personalReady ? "开始推算 →" : "请填写完整信息")
-            : (coupleReady ? "查看合盘缘分 →" : "请填写两人信息")}
+          {personalReady ? "开始推算 →" : "请填写完整信息"}
         </button>
       )}
     </form>
