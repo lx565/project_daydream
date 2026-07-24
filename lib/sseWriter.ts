@@ -1,5 +1,6 @@
 import type { Reference } from "./rag";
 import { createHash } from "crypto";
+import { withDeadline, AttemptTimeoutError } from "./aiRetry";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
 export type ModelTier = "standard" | "fast";
@@ -113,20 +114,40 @@ export async function streamWithRefs(
     }
 
     // ── Stream from AI, capture text ────────────────────────────────────────
+    // A hung provider call is bounded well under Vercel's 60s maxDuration and
+    // retried once — the platform kills the whole function at 60s with no
+    // chance for application code to react, so retrying only helps if it
+    // happens *inside* that budget. `gen` invalidates any writes from an
+    // abandoned first attempt that resolves late (after a retry has already
+    // started) — without it, a slow-but-not-truly-hung first attempt could
+    // interleave stale text into the retry's stream. Only safe to retry if
+    // the timed-out attempt sent NO real content to the client yet —
+    // restarting after partial output was already flushed would duplicate
+    // text in front of the retry's full response, visibly broken.
     let fullText = "";
-    const capturingWrite = async (obj: object) => {
-      if ("text" in obj && typeof (obj as { text: string }).text === "string") {
-        fullText += (obj as { text: string }).text;
-      }
-      await safeWrite(obj);
+    let gen = 0;
+    let sentAnyContent = false;
+    const runAttempt = (attemptGen: number) => {
+      const guardedWrite = async (obj: object) => {
+        if (attemptGen !== gen) return;
+        if ("text" in obj && typeof (obj as { text: string }).text === "string") {
+          fullText += (obj as { text: string }).text;
+          sentAnyContent = true;
+        }
+        await safeWrite(obj);
+      };
+      if (PROVIDER === "gemini") return streamGemini(guardedWrite, opts);
+      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, opts);
+      return streamAnthropic(guardedWrite, opts);
     };
 
-    if (PROVIDER === "gemini") {
-      await streamGemini(capturingWrite, opts);
-    } else if (PROVIDER === "deepseek") {
-      await streamDeepSeek(capturingWrite, opts);
-    } else {
-      await streamAnthropic(capturingWrite, opts);
+    try {
+      gen = 1;
+      await withDeadline(runAttempt(1), 35_000);
+    } catch (e) {
+      if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
+      gen = 2; // invalidates any late write from the abandoned first attempt
+      await withDeadline(runAttempt(2), 15_000);
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
@@ -138,7 +159,10 @@ export async function streamWithRefs(
       kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [] }).catch(() => {});
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "服务暂时不可用";
+    console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);
+    const message = err instanceof AttemptTimeoutError
+      ? "AI 服务响应较慢，请稍后重试"
+      : err instanceof Error ? err.message : "服务暂时不可用";
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
     } catch {}

@@ -1,15 +1,19 @@
 // Non-streaming single AI call — for structured/JSON responses.
 // Respects the same AI_PROVIDER env var as sseWriter.ts.
 
+import { withDeadline, AttemptTimeoutError } from "./aiRetry";
+
 const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic" | "deepseek";
 
-export async function callAI(opts: {
+interface CallAIOpts {
   system: string;
   userMessage: string;
   maxTokens?: number;
   temperature?: number;
   jsonMode?: boolean;
-}): Promise<string> {
+}
+
+async function callOnce(opts: CallAIOpts): Promise<string> {
   const { system, userMessage, maxTokens = 1500, temperature = 0.3, jsonMode = false } = opts;
 
   if (PROVIDER === "deepseek") {
@@ -56,4 +60,26 @@ export async function callAI(opts: {
   });
   const result = await model.generateContent(userMessage);
   return result.response.text();
+}
+
+// A hung provider call is bounded well under Vercel's maxDuration and retried
+// once — the platform kills the whole function with no chance for
+// application code to react, so retrying only helps if it happens *inside*
+// that budget. See lib/aiRetry.ts and lib/sseWriter.ts (same pattern, applied
+// to the streaming path) for the full rationale.
+export async function callAI(opts: CallAIOpts): Promise<string> {
+  try {
+    return await withDeadline(callOnce(opts), 35_000);
+  } catch (e) {
+    if (!(e instanceof AttemptTimeoutError)) {
+      console.error("[callAI]", PROVIDER, (e as Error)?.message ?? e);
+      throw e;
+    }
+    try {
+      return await withDeadline(callOnce(opts), 15_000);
+    } catch (e2) {
+      console.error("[callAI] retry also failed:", PROVIDER, (e2 as Error)?.message ?? e2);
+      throw e2;
+    }
+  }
 }
