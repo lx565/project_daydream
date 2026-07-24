@@ -501,8 +501,10 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     }
     onExportReady({
       name,
+      gender: gender as "male" | "female",
       birthSummary: [dateLabel, timeLabel, gender].filter(Boolean).join(" · "),
       chartSummary: ziwei.summary ?? "",
+      ziwei,
       readings: {
         synthesis:    synthesis.text,
         overview:     overview.text,

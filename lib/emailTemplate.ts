@@ -1,10 +1,15 @@
 // HTML email template for 命裡 reading reports.
 // Called by /api/email/report with the collected reading texts.
 
+import type { ZiweiResult } from "./ziwei";
+import { renderZiweiChartHtml } from "./chartHtml";
+
 export interface ReadingEmailData {
   name?: string;
+  gender: "male" | "female";
   birthSummary: string;   // e.g. "1990年3月15日 · 男 · 午時"
   chartSummary: string;   // e.g. "命宮子宮，命主紫微，身主天府，火六局"
+  ziwei?: ZiweiResult;    // full chart — renders the 12-palace grid as part one, matching the app
   readings: {
     synthesis?: string;
     overview?: string;
@@ -127,6 +132,8 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     <!-- Body -->
     <div style="padding:32px 40px;">
       <p style="color:#5c4a2a;font-size:15px;line-height:1.8;margin:0 0 28px;">${greet}以下是您的完整命盤解讀報告，由 命裡 AI 依據紫微斗數與八字命理為您生成。</p>
+
+      ${data.ziwei ? renderZiweiChartHtml(data.ziwei, data.name, data.gender) : ''}
 
       ${sectionsHtml}
 
