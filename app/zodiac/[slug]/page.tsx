@@ -9,7 +9,7 @@ import { getStarZodiacContent, getZodiacZiweiContent } from "@/lib/seoContent";
 import ToolCTA from "@/components/ToolCTA";
 import LikeButton from "@/components/LikeButton";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 
 export const maxDuration = 60;
 export const revalidate = 604800;
@@ -34,7 +34,7 @@ export async function generateMetadata(
     return {
       title,
       description: starEntry.brief,
-      openGraph: { title, description: starEntry.brief, url: `https://www.mingli.study/zodiac/${slug}`, siteName: "命裡", locale: "zh_CN", type: "article" },
+      openGraph: { title, description: starEntry.brief, url: `https://www.mingli.study/zodiac/${slug}`, siteName: "命裡", locale: "zh_TW", type: "article" },
       alternates: { canonical: `https://www.mingli.study/zodiac/${slug}` },
     };
   }
@@ -45,7 +45,7 @@ export async function generateMetadata(
     return {
       title,
       description: zodiacEntry.brief,
-      openGraph: { title, description: zodiacEntry.brief, url: `https://www.mingli.study/zodiac/${slug}`, siteName: "命裡", locale: "zh_CN", type: "article" },
+      openGraph: { title, description: zodiacEntry.brief, url: `https://www.mingli.study/zodiac/${slug}`, siteName: "命裡", locale: "zh_TW", type: "article" },
       alternates: { canonical: `https://www.mingli.study/zodiac/${slug}` },
     };
   }
@@ -81,6 +81,26 @@ export default async function ZodiacArticlePage(
     ? STAR_ZODIAC_LIST.find(s => s.starSlug === zodiacEntry.primaryStarSlug)
     : null;
 
+  // FAQ — mechanically derived from existing fields, no invented content.
+  const disclaimerQA = {
+    question: "紫微主星和西方星座真的有關係嗎？",
+    answer: "沒有天文或歷史淵源，兩者是完全獨立的系統。這裡做的是「性格原型類比」——紫微斗數的主星氣質，與西方星座的原型描述剛好有相通之處，方便你從另一個角度理解星曜特質，並不是說紫微星等於某個星座。",
+  };
+  const faqItems = starEntry
+    ? [
+        disclaimerQA,
+        { question: `${starEntry.starName}星命宮的核心特質是什麼？`, answer: `${starEntry.coreTraits}。` },
+      ]
+    : zodiacEntry
+    ? [
+        disclaimerQA,
+        {
+          question: `${zodiacEntry.zodiacName}對應紫微斗數的哪顆主星？`,
+          answer: `原型上最呼應的是${zodiacEntry.primaryStar}星，其次是${zodiacEntry.secondaryStars.join("、")}。`,
+        },
+      ]
+    : [];
+
   return (
     <main className="min-h-screen bg-parchment">
       <JsonLd data={[
@@ -91,6 +111,7 @@ export default async function ZodiacArticlePage(
           { name: headline, path },
         ]),
         articleSchema({ headline, description: desc, path, section: "紫微×星座" }),
+        faqSchema(faqItems),
       ]} />
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-ink-4">
@@ -193,6 +214,30 @@ export default async function ZodiacArticlePage(
             </Link>
           </div>
         )}
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <div className="flex items-baseline gap-2 border-b border-border-warm pb-2">
+            <div className="w-1.5 h-5 bg-vermillion rounded-full self-center" />
+            <h2 className="text-lg font-bold text-vermillion tracking-wide" style={{ fontFamily: "var(--font-serif)" }}>
+              常見問題
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {faqItems.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         <LikeButton />
         <ToolCTA variant="slim" label="排你的命盤，看命宮主星 →" />
