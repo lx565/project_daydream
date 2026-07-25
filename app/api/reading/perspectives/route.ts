@@ -3,7 +3,8 @@ export const maxDuration = 60;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
-import { getMultiSchoolKnowledge } from "@/lib/rag";
+import { getSharedRetrieval } from "@/lib/rag";
+import type { Reference } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 
@@ -33,15 +34,19 @@ const SYSTEM = `你是紫微斗數典籍編纂者，以各命理門派視角分�
 ### 【倪師學派】
 （依據倪師典籍，先直判命格星曜格局與天干五行，再指出臟腑健康與因果提醒，風格直接務實，約150字）
 
+### 【小眾學派】
+（綜合三大主流之外各家名師的說法，補充一個旁參視角：獨到論斷或額外提醒，約90字。若參考資料不足，簡述「此命格在小眾諸家中著墨不多」即可，不強行編造）
+
 ## 綜合共識
 （融合各派觀點，客觀陳述命格核心——優勢與侷限並陳，約100字）` + MODERN_INSTRUCTION;
+
+const pName = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
+const keyPalaces = ["命宮", "財帛", "官祿", "夫妻", "遷移", "福德"];
 
 function buildChartData(ziwei: ZiweiResult, gender: string): string {
   const mutagenStars = ziwei.palaces.flatMap((p) =>
     p.stars.filter((s) => s.mutagen).map((s) => `${p.name}${s.name}${s.mutagen}`)
   );
-  const pName = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
-  const keyPalaces = ["命宮", "財帛", "官祿", "夫妻", "遷移", "福德"];
   const palaceLines = ziwei.palaces
     .filter((p) => keyPalaces.includes(p.name))
     .map((p) => {
@@ -81,28 +86,37 @@ export async function POST(request: NextRequest) {
     ziwei.palaces.flatMap((p) => p.stars.filter((s) => s.type === "major").map((s) => s.name))
   )].filter(Boolean);
 
-  const schoolResults = await getMultiSchoolKnowledge({
+  // One embed + one scan, then strict per-school slices — same pattern and same
+  // per-school topK tuning as overview.ts, so 眾說 retrieves at parity with 紫微綜合
+  // instead of a flat topK=5 that starved several schools down to zero chunks.
+  const retrieval = await getSharedRetrieval({
     stars: [ziwei.mainStar, ...soulStars, ...soulMinor, ...sanFangStars, ...allMajorStars].filter(Boolean),
-    topK: 5,
+    palaces: keyPalaces.map(pName),
   });
+  const sanhe   = retrieval.select({ school: "三合派", strict: true, topK: 6, maxPerBook: 2 });
+  const sihua   = retrieval.select({ school: "四化派", strict: true, topK: 5, maxPerBook: 2 });
+  const feixing = retrieval.select({ school: "飛星派", strict: true, topK: 5, maxPerBook: 2 });
+  const guji    = retrieval.select({ school: "古籍經典", strict: true, topK: 3, maxPerBook: 2 });
+  const nixi    = retrieval.select({ school: "倪師學派", strict: true, topK: 4, maxPerBook: 2 });
+  const niche   = retrieval.select({ school: "其他名家", strict: true, topK: 4, maxPerBook: 2 });
+
+  const schoolResults = [
+    { label: "三合派", ...sanhe },
+    { label: "四化派", ...sihua },
+    { label: "飛星派", ...feixing },
+    { label: "古籍經典", ...guji },
+    { label: "倪師學派", ...nixi },
+    { label: "小眾學派", ...niche },
+  ];
 
   // Each school's chunks are in their own labeled block so the model can't cross-attribute
-  const contextBlocks = schoolResults.map((r) =>
+  const fullContext = schoolResults.map((r) =>
     r.chunkCount > 0
-      ? `【${r.school} · 典籍原文（${r.chunkCount}條）】\n${r.context}`
-      : `【${r.school}】\n（本派典籍對此命格著墨不多，請簡短作答）`
+      ? `【${r.label} · 典籍原文（${r.chunkCount}條）】\n${r.context}`
+      : `【${r.label}】\n（本派典籍對此命格著墨不多，請簡短作答）`
   ).join("\n\n---\n\n");
 
-  // Fill in schools with zero relevance with a note so the model still outputs their markers
-  const SCHOOLS = ["三合派", "四化派", "飛星派", "古籍經典", "倪師學派"] as const;
-  const presentSchools = new Set(schoolResults.map((r) => r.school));
-  const missingBlocks = SCHOOLS
-    .filter((s) => !presentSchools.has(s))
-    .map((s) => `【${s}】\n（本派典籍暫無此命格相關參考）`);
-
-  const fullContext = [contextBlocks, ...missingBlocks].filter(Boolean).join("\n\n---\n\n");
-
-  const allRefs = schoolResults
+  const allRefs: Reference[] = schoolResults
     .flatMap((r) => r.refs)
     .filter((r, i, arr) => arr.findIndex((x) => x.book === r.book) === i);
 
@@ -112,7 +126,7 @@ export async function POST(request: NextRequest) {
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 2800,
+      maxTokens: 4000,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs: allRefs,

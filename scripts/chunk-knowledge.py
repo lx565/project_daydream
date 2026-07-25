@@ -19,12 +19,20 @@
 import json
 import re
 from pathlib import Path
-from zhconv import convert  # 繁体→简体 normalization (pure-python)
+from opencc import OpenCC  # pip3 install opencc-python-reimplemented
 
-def to_simplified(text: str) -> str:
-    """Normalize traditional Chinese to simplified so 繁体 books (≈12% of the
-    corpus, incl. core 飞星派 titles) match the simplified query/keyword terms."""
-    return convert(text, "zh-cn")
+# Normalize every book to Traditional (Taiwan, phrase-aware) so simplified-source
+# books (≈88% of the corpus) match the app's Traditional queries — iztro's
+# ZiweiResult is zh-TW, and every school/star/palace constant on the TS side
+# (lib/rag.ts, sourcesData.ts, route prompts) is Traditional. Was previously the
+# other direction (normalize to Simplified) until the 2026-07-25 audit found this
+# silently zeroed out strict-school retrieval for 飛星派/古籍經典/倪師學派 and
+# broke the EXCLUDED_SCHOOLS filter for 易經風水/相學 — see
+# scripts/convert-chunks-to-traditional.py for the one-time corpus fix.
+_cc = OpenCC("s2twp")
+
+def to_traditional(text: str) -> str:
+    return _cc.convert(text)
 
 EXTRACTED_DIR = Path(__file__).parent.parent / "knowledge" / "extracted"
 OUTPUT_FILE   = Path(__file__).parent.parent / "knowledge" / "chunks.json"
@@ -32,25 +40,25 @@ OUTPUT_FILE   = Path(__file__).parent.parent / "knowledge" / "chunks.json"
 CHUNK_SIZE    = 500   # 目标字符数
 CHUNK_OVERLAP = 80    # 相邻块重叠字符数，保留上下文
 
-# 紫微斗数关键词表（用于 RAG 检索时匹配）
+# 紫微斗數關鍵詞表（用於 RAG 檢索時匹配，須與 lib/rag.ts 的 PREINDEX_TERMS 同步）
 ZIWEI_KEYWORDS = [
     # 14 主星
-    "紫微", "天机", "太阳", "武曲", "天同", "廉贞", "天府", "太阴",
-    "贪狼", "巨门", "天相", "天梁", "七杀", "破军",
-    # 辅星
-    "文昌", "文曲", "左辅", "右弼", "天魁", "天钺",
-    "禄存", "擎羊", "陀罗", "火星", "铃星", "地空", "地劫",
-    "化禄", "化权", "化科", "化忌",
-    # 12 宫
-    "命宫", "兄弟宫", "夫妻宫", "子女宫", "财帛宫", "疾厄宫",
-    "迁移宫", "奴仆宫", "官禄宫", "田宅宫", "福德宫", "父母宫",
+    "紫微", "天機", "太陽", "武曲", "天同", "廉貞", "天府", "太陰",
+    "貪狼", "巨門", "天相", "天梁", "七殺", "破軍",
+    # 輔星
+    "文昌", "文曲", "左輔", "右弼", "天魁", "天鉞",
+    "祿存", "擎羊", "陀羅", "火星", "鈴星", "地空", "地劫",
+    "化祿", "化權", "化科", "化忌",
+    # 12 宮
+    "命宮", "兄弟宮", "夫妻宮", "子女宮", "財帛宮", "疾厄宮",
+    "遷移宮", "交友宮", "官祿宮", "田宅宮", "福德宮", "父母宮",
     # 四化
-    "四化", "飞化", "自化",
-    # 派别
-    "三合派", "四化派", "飞星派", "中州派", "天同派",
-    # 常用术语
-    "大限", "小限", "流年", "流月", "命盘", "格局", "庙旺",
-    "落陷", "入庙", "对宫", "三方四正", "桃花", "空宫",
+    "四化", "飛化", "自化",
+    # 派別
+    "三合派", "四化派", "飛星派", "中州派", "天同派",
+    # 常用術語
+    "大限", "小限", "流年", "流月", "命盤", "格局", "廟旺",
+    "落陷", "入廟", "對宮", "三方四正", "桃花", "空宮",
     # NOTE: 天干地支 (甲乙丙…子丑寅…) intentionally NOT indexed as keywords —
     # no reading/chat query ever passes a raw 干支 as a search term, so they were
     # inert noise: 25% of chunks had ONLY 干支 keywords, diluting the lexical index
@@ -70,15 +78,16 @@ MIN_COMMON_RATIO  = 0.05  # at least 5% of CJK chars must be high-frequency char
 
 # Top ~150 most frequent Chinese characters — present in all real prose.
 # OCR garbage produces rare Unicode CJK chars that rarely appear here.
+# Traditional forms — the corpus is normalized to Traditional (see to_traditional above).
 _COMMON_CN = set(
-    '的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就'
-    '分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得'
-    '经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制'
-    '机当使点从业本去把性好应开它合还因由其些然前外天政四日那义事平'
-    '形相全表间样与关各重新线内数正心力月周明白长先然问但实几己见'
-    # 紫微斗数 common prose chars
-    '命宫财官夫疾迁福兄父田交星禄权科忌化飞格局运势析断论理数斗'
-    '解盘推星派三四五六七八九十百千万年月日时'
+    '的一是在不了有和人這中大為上個國我以要他時來用們生到作地於出就'
+    '分對成會可主發年動同工也能下過子說產種面而方後多定行學法所民得'
+    '經十三之進著等部度家電力裡如水化高自二理起小物現實加量都兩體制'
+    '機當使點從業本去把性好應開它合還因由其些然前外天政四日那義事平'
+    '形相全表間樣與關各重新線內數正心力月周明白長先然問但實幾己見'
+    # 紫微斗數 common prose chars
+    '命宮財官夫疾遷福兄父田交星祿權科忌化飛格局運勢析斷論理數斗'
+    '解盤推星派三四五六七八九十百千萬年月日時'
 )
 
 
@@ -178,7 +187,7 @@ def main():
 
         for txt_file in sorted(school_dir.glob("*.txt")):
             book = txt_file.stem
-            text = to_simplified(txt_file.read_text(encoding="utf-8"))
+            text = to_traditional(txt_file.read_text(encoding="utf-8"))
             chunks = split_into_chunks(text)
 
             for i, chunk_text in enumerate(chunks):

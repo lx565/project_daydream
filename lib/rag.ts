@@ -427,29 +427,7 @@ export async function getCaseStudies(query: string, topK = 4): Promise<Knowledge
   };
 }
 
-// ── Multi-school retrieval for the perspectives tab ──────────────────────────
-
-export const PERSPECTIVE_SCHOOLS = ["三合派", "四化派", "飛星派", "古籍經典", "倪師學派"] as const;
-export type PerspectiveSchool = typeof PERSPECTIVE_SCHOOLS[number];
-
-export interface SchoolKnowledge extends KnowledgeResult {
-  school: PerspectiveSchool;
-}
-
-/** One embed + one scan, then strict per-school slices (no repeated embedding). */
-export async function getMultiSchoolKnowledge(
-  baseQuery: Omit<RagQuery, "school" | "strict">,
-): Promise<SchoolKnowledge[]> {
-  const ctx = await prepareRetrieval(baseQuery);
-  if (ctx.queryTerms.size === 0) return [];
-  return PERSPECTIVE_SCHOOLS
-    .map((school) => ({
-      school,
-      ...selectKnowledge(ctx, { school, strict: true, topK: baseQuery.topK ?? 5, maxPerBook: 2 }),
-    }))
-    .filter((r) => r.relevance > 0)
-    .sort((a, b) => b.relevance - a.relevance);
-}
+// ── Shared multi-school retrieval (overview + perspectives tabs) ─────────────
 
 /**
  * Shared prep for routes that need several school slices of the SAME chart
