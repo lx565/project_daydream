@@ -27,7 +27,7 @@ const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic"
 // reflects it automatically; no code edits. Falls back to a sensible default per provider.
 const MODEL_DEFAULTS = {
   gemini:    { standard: "gemini-2.5-flash",          fast: "gemini-2.5-flash" },
-  deepseek:  { standard: "deepseek-chat",             fast: "deepseek-chat" },
+  deepseek:  { standard: "deepseek-v4-pro",           fast: "deepseek-v4-flash" },
   anthropic: { standard: "claude-sonnet-4-6",         fast: "claude-haiku-4-5-20251001" },
 } as const;
 

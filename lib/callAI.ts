@@ -23,7 +23,7 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
       baseURL: "https://api.deepseek.com",
     });
     const res = await client.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-pro",
       max_tokens: maxTokens,
       temperature,
       ...(jsonMode ? { response_format: { type: "json_object" as const } } : {}),
