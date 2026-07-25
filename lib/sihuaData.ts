@@ -24,6 +24,35 @@ export const JI_STEMS: Record<string, string[]> = Object.entries(SIHUA_TABLE).re
   {} as Record<string, string[]>
 );
 
+// Which stems produce each 化祿 / 化權 / 化科 — same derivation as JI_STEMS,
+// added for the 化祿/化權/化科 × 十二宮 palace cluster (lib/sihuaPalaceData.ts).
+export const LU_STEMS: Record<string, string[]> = Object.entries(SIHUA_TABLE).reduce(
+  (acc, [stem, row]) => {
+    acc[row.lu] = acc[row.lu] ?? [];
+    acc[row.lu].push(stem);
+    return acc;
+  },
+  {} as Record<string, string[]>
+);
+
+export const QUAN_STEMS: Record<string, string[]> = Object.entries(SIHUA_TABLE).reduce(
+  (acc, [stem, row]) => {
+    acc[row.quan] = acc[row.quan] ?? [];
+    acc[row.quan].push(stem);
+    return acc;
+  },
+  {} as Record<string, string[]>
+);
+
+export const KE_STEMS: Record<string, string[]> = Object.entries(SIHUA_TABLE).reduce(
+  (acc, [stem, row]) => {
+    acc[row.ke] = acc[row.ke] ?? [];
+    acc[row.ke].push(stem);
+    return acc;
+  },
+  {} as Record<string, string[]>
+);
+
 export type SihuaKind = "pillar" | "huaji" | "hualu" | "huaquan" | "huake";
 
 export interface SihuaEntry {
@@ -84,6 +113,11 @@ const PILLARS: SihuaEntry[] = [
 注意：祿忌同宮或對沖時，祿被化解，需結合判斷。`,
     ragQuery: { text: "化祿 四化 財祿 人緣 機遇 落宮 生年化祿 流年化祿 祿入命財官 三方", topic: "格局" },
     related: ["hua-ji", "hua-quan", "hua-ke"],
+    relatedPalaces: [
+      "hualu-ming-gong", "hualu-xiongdi-gong", "hualu-fuqi-gong", "hualu-zinv-gong",
+      "hualu-caibo-gong", "hualu-jie-gong", "hualu-qianyi-gong", "hualu-jiaoyou-gong",
+      "hualu-guanlu-gong", "hualu-tianzhai-gong", "hualu-fude-gong", "hualu-fumu-gong",
+    ],
   },
   {
     name: "化權",
@@ -100,6 +134,11 @@ const PILLARS: SihuaEntry[] = [
 權與忌同宮：權的強勢遇忌的阻礙，形成內外衝突，需特別注意。`,
     ragQuery: { text: "化權 四化 掌控 主導 權威 競爭 落宮 生年化權 強勢 官祿化權 命宮化權", topic: "格局" },
     related: ["hua-ji", "hua-lu", "hua-ke"],
+    relatedPalaces: [
+      "huaquan-ming-gong", "huaquan-xiongdi-gong", "huaquan-fuqi-gong", "huaquan-zinv-gong",
+      "huaquan-caibo-gong", "huaquan-jie-gong", "huaquan-qianyi-gong", "huaquan-jiaoyou-gong",
+      "huaquan-guanlu-gong", "huaquan-tianzhai-gong", "huaquan-fude-gong", "huaquan-fumu-gong",
+    ],
   },
   {
     name: "化科",
@@ -115,6 +154,11 @@ const PILLARS: SihuaEntry[] = [
 化科特性：主名聲、文書、學識、貴人、化解，不主財（但能帶來間接的名利）。科入命宮→氣質佳、有名聲；科入官祿→事業有名、易得認可；科入夫妻→感情中有緣有品；科入遷移→出門得貴人；科可部分化解化忌的煞氣（科忌相遇有緩衝）。`,
     ragQuery: { text: "化科 四化 名聲 貴人 文書 氣質 化解 落宮 生年化科 科入命財官夫", topic: "格局" },
     related: ["hua-ji", "hua-lu", "hua-quan"],
+    relatedPalaces: [
+      "huake-ming-gong", "huake-xiongdi-gong", "huake-fuqi-gong", "huake-zinv-gong",
+      "huake-caibo-gong", "huake-jie-gong", "huake-qianyi-gong", "huake-jiaoyou-gong",
+      "huake-guanlu-gong", "huake-tianzhai-gong", "huake-fude-gong", "huake-fumu-gong",
+    ],
   },
 ];
 
@@ -355,6 +399,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→魅力人緣佳；落官祿→事業靠人脈與手腕；落夫妻→感情緣分旺、異性追求多；落財帛→靠交際與才藝生財；落福德→懂享受、重情調。`,
     ragQuery: { text: "廉貞化祿 甲年 桃花 異性緣 人際 公關 才藝 祿落宮 命宮官祿夫妻財帛 廉貞星性", topic: "格局" },
     related: ["hua-lu", "lianzheng-huaji", "tanlang-hualu"],
+    relatedPalaces: ["hualu-ming-gong", "hualu-fuqi-gong"],
   },
   {
     name: "天機化祿",
@@ -375,6 +420,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→機智靈活、機遇多；落官祿→事業靠腦力與變通；落財帛→財源靈活多元、偏動財；落遷移→外出/異地有機遇；落兄弟→手足朋友帶來機會。`,
     ragQuery: { text: "天機化祿 乙年 智慧 機變 企劃 副業 祿落宮 命宮官祿財帛遷移 天機星性", topic: "格局" },
     related: ["hua-lu", "tianji-huaji", "tianji-huake"],
+    relatedPalaces: ["hualu-caibo-gong", "hualu-qianyi-gong"],
   },
   {
     name: "天同化祿",
@@ -395,6 +441,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→樂天知足、人緣好；落福德→精神享受、心寬；落夫妻→感情溫和順遂；落財帛→財來得輕鬆但也花得舒服；落子女→與子女緣厚、有口福。`,
     ragQuery: { text: "天同化祿 丙年 福氣 享受 情感 人緣 祿落宮 命宮福德夫妻財帛 天同星性", topic: "格局" },
     related: ["hua-lu", "tiantong-huaji", "tiantong-huaquan"],
+    relatedPalaces: ["hualu-fude-gong", "hualu-zinv-gong"],
   },
   {
     name: "太陰化祿",
@@ -415,6 +462,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→財祿自隨、人緣佳；落財帛→財源穩定豐潤；落田宅→易置產、家道興；落夫妻→感情溫潤、得賢內助；落父母→與母親緣厚受助。`,
     ragQuery: { text: "太陰化祿 丁年 財富 田宅 不動產 女性貴人 祿落宮 命宮財帛田宅夫妻 太陰星性", topic: "格局" },
     related: ["hua-lu", "taiyin-huaji", "taiyin-huake"],
+    relatedPalaces: ["hualu-caibo-gong", "hualu-tianzhai-gong"],
   },
   {
     name: "貪狼化祿",
@@ -435,6 +483,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→魅力交際、機會多；落財帛→偏財或交際財旺；落官祿→事業靠人脈與才藝；落夫妻→異性緣旺、感情豐富；落福德→懂享受、慾望強。`,
     ragQuery: { text: "貪狼化祿 戊年 交際 才藝 偏財 桃花 祿落宮 命宮財帛官祿夫妻 貪狼星性", topic: "格局" },
     related: ["hua-lu", "tanlang-huaji", "tanlang-huaquan"],
+    relatedPalaces: ["hualu-caibo-gong", "hualu-fuqi-gong"],
   },
   {
     name: "武曲化祿",
@@ -455,6 +504,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→務實能賺、行動生財；落財帛→正財旺、財源穩；落官祿→事業帶財、適合掌財；落田宅→積財置產；落遷移→在外求財得利。`,
     ragQuery: { text: "武曲化祿 己年 正財 財星 求財 實業 祿落宮 命宮財帛官祿田宅 武曲星性", topic: "格局" },
     related: ["hua-lu", "wuqu-huaji", "wuqu-huaquan"],
+    relatedPalaces: ["hualu-caibo-gong", "hualu-tianzhai-gong"],
   },
   {
     name: "太陽化祿",
@@ -475,6 +525,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→陽光有人緣、機遇多；落官祿→事業名聲旺、易升遷；落財帛→靠名聲與事業生財；落遷移→在外發展得貴人；落父母→與父親或上司緣佳受助。`,
     ragQuery: { text: "太陽化祿 庚年 名聲 事業 官貴 男性貴人 祿落宮 命宮官祿財帛遷移 太陽星性", topic: "格局" },
     related: ["hua-lu", "taiyang-huaji", "taiyang-huaquan"],
+    relatedPalaces: ["hualu-guanlu-gong", "hualu-qianyi-gong"],
   },
   {
     name: "巨門化祿",
@@ -495,6 +546,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→能言善道、靠口得利；落官祿→事業靠口才或專業；落財帛→口舌生財、飲食業得利；落遷移→在外靠交涉與專業發展；落夫妻→感情靠溝通經營。`,
     ragQuery: { text: "巨門化祿 辛年 口才 專業 異路功名 飲食 祿落宮 命宮官祿財帛遷移 巨門星性", topic: "格局" },
     related: ["hua-lu", "jumen-huaji", "jumen-huaquan"],
+    relatedPalaces: ["hualu-guanlu-gong", "hualu-caibo-gong"],
   },
   {
     name: "天梁化祿",
@@ -515,6 +567,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→有長輩緣、清貴得助；落官祿→事業得提攜、宜清貴行業；落財帛→財來帶責任、宜正途；落父母→受長輩庇廕；落疾厄→逢兇有解、貴人化險。`,
     ragQuery: { text: "天梁化祿 壬年 蔭星 長輩 貴人 清貴 蔭中帶累 祿落宮 命宮官祿父母疾厄 天梁星性", topic: "格局" },
     related: ["hua-lu", "tianliang-huaquan", "tianliang-huake"],
+    relatedPalaces: ["hualu-guanlu-gong", "hualu-fumu-gong"],
   },
   {
     name: "破軍化祿",
@@ -535,6 +588,7 @@ const HUALU_ARTICLES: SihuaEntry[] = [
 落宮變化：祿落命宮→敢闖有開創力、變中生財；落官祿→事業宜開創或轉型；落財帛→財隨變動而來、宜動中求；落遷移→異地或外出開創得利；落田宅→易搬遷但能破舊立新置產。`,
     ragQuery: { text: "破軍化祿 癸年 開創 變動 創業 轉型 祿落宮 命宮官祿財帛遷移 破軍星性", topic: "格局" },
     related: ["hua-lu", "pojun-huaquan", "tanlang-huaji"],
+    relatedPalaces: ["hualu-guanlu-gong", "hualu-qianyi-gong"],
   },
 ];
 
@@ -560,6 +614,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→個性強悍有魄力；落官祿→事業主導變革、掌實權；落財帛→理財大開大合、敢投敢撤；落夫妻→感情中主導強勢；落遷移→在外強勢開拓。`,
     ragQuery: { text: "破軍化權 甲年 開創 魄力 變革 掌權 權落宮 命宮官祿財帛夫妻 破軍星性", topic: "格局" },
     related: ["hua-quan", "pojun-hualu", "wuqu-huake"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-fuqi-gong"],
   },
   {
     name: "天梁化權",
@@ -580,6 +635,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→有威望、老成持重、愛主導；落官祿→事業掌權、宜管理監察；落財帛→理財穩健有原則；落父母→與長輩關係主導；落疾厄→逢兇掌控力強、化險。`,
     ragQuery: { text: "天梁化權 乙年 權威 領導 長輩 監察 醫藥 權落宮 命宮官祿父母疾厄 天梁星性", topic: "格局" },
     related: ["hua-quan", "tianliang-hualu", "tianliang-huake"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-fumu-gong"],
   },
   {
     name: "天機化權",
@@ -600,6 +656,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→機智有主見、善決斷；落官祿→以謀略或企劃掌事業；落財帛→理財精算主動；落兄弟→在團隊中出謀主導；落遷移→在外靠智謀掌局。`,
     ragQuery: { text: "天機化權 丙年 謀略 決斷 企劃 參謀 權落宮 命宮官祿財帛兄弟 天機星性", topic: "格局" },
     related: ["hua-quan", "tianji-hualu", "tianji-huake"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-xiongdi-gong"],
   },
   {
     name: "天同化權",
@@ -620,6 +677,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→外柔內剛、有主見；落官祿→白手開創、以軟實力掌事；落福德→懂經營生活、精神有主張；落夫妻→感情中漸顯主導；落子女→教養有原則。`,
     ragQuery: { text: "天同化權 丁年 福星 主動 白手 以柔帶剛 權落宮 命宮官祿福德夫妻 天同星性", topic: "格局" },
     related: ["hua-quan", "tiantong-hualu", "tiantong-huaji"],
+    relatedPalaces: ["huaquan-fude-gong", "huaquan-zinv-gong"],
   },
   {
     name: "太陰化權",
@@ -640,6 +698,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→內柔外定、有財務主見；落財帛→掌財、理財主動；落田宅→主導不動產或家務；落夫妻→配偶或自己掌家；落父母→與母親關係主導。`,
     ragQuery: { text: "太陰化權 戊年 掌財 理財 不動產 女性當家 權落宮 命宮財帛田宅夫妻 太陰星性", topic: "格局" },
     related: ["hua-quan", "taiyin-hualu", "taiyin-huake"],
+    relatedPalaces: ["huaquan-caibo-gong", "huaquan-tianzhai-gong"],
   },
   {
     name: "貪狼化權",
@@ -660,6 +719,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→野心強、主導欲高；落官祿→事業靠手腕與拼勁掌局；落財帛→積極求財、偏財掌控；落夫妻→感情中強勢主導；落福德→慾望旺、追求刺激。`,
     ragQuery: { text: "貪狼化權 己年 慾望 野心 交際 才藝 權落宮 命宮官祿財帛夫妻 貪狼星性", topic: "格局" },
     related: ["hua-quan", "tanlang-hualu", "tanlang-huaji"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-fuqi-gong"],
   },
   {
     name: "武曲化權",
@@ -680,6 +740,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→剛毅決斷、有威嚴；落官祿→掌財權或實權、宜管理；落財帛→積極掌財、理財強勢；落遷移→在外強勢掌局；落夫妻→感情中剛強主導。`,
     ragQuery: { text: "武曲化權 庚年 財權 決斷 掌財 軍警 權落宮 命宮官祿財帛遷移 武曲星性", topic: "格局" },
     related: ["hua-quan", "wuqu-hualu", "wuqu-huake"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-caibo-gong"],
   },
   {
     name: "太陽化權",
@@ -700,6 +761,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→領導氣場、愛主導；落官祿→事業掌權、宜公職或領導；落財帛→靠事業地位生財；落父母→與父親或上司關係主導；落遷移→在外有影響力。`,
     ragQuery: { text: "太陽化權 辛年 事業 掌權 公眾影響 男性權威 權落宮 命宮官祿父母遷移 太陽星性", topic: "格局" },
     related: ["hua-quan", "taiyang-hualu", "taiyang-huaji"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-fumu-gong"],
   },
   {
     name: "紫微化權",
@@ -720,6 +782,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→領導氣度、掌控欲強；落官祿→事業掌大權、宜居高位；落財帛→大格局理財、主導財政；落夫妻→感情中主導、配偶需能配合；落遷移→在外為領袖型。`,
     ragQuery: { text: "紫微化權 壬年 帝星 領導 權威 掌大局 百官朝拱 權落宮 命宮官祿財帛 紫微星性", topic: "格局" },
     related: ["hua-quan", "ziwei-huake", "tianliang-hualu"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-qianyi-gong"],
   },
   {
     name: "巨門化權",
@@ -740,6 +803,7 @@ const HUAQUAN_ARTICLES: SihuaEntry[] = [
 落宮變化：權落命宮→口才犀利、有主見；落官祿→靠口或專業掌權；落財帛→口舌或專業生財且主導；落夫妻→感情中愛講理主導；落遷移→在外靠交涉專業掌局。`,
     ragQuery: { text: "巨門化權 癸年 口才 權威 專業 話語權 權落宮 命宮官祿財帛夫妻 巨門星性", topic: "格局" },
     related: ["hua-quan", "jumen-hualu", "jumen-huaji"],
+    relatedPalaces: ["huaquan-guanlu-gong", "huaquan-fuqi-gong"],
   },
 ];
 
@@ -765,6 +829,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→務實有口碑、氣質穩重；落官祿→事業以專業得名；落財帛→理財有聲譽、穩健；落遷移→在外以專業得貴人；落疾厄→逢險有專業相助化解。`,
     ragQuery: { text: "武曲化科 甲年 理財 財名 聲譽 專業 科落宮 命宮官祿財帛遷移 武曲星性", topic: "格局" },
     related: ["hua-ke", "wuqu-hualu", "wuqu-huaquan"],
+    relatedPalaces: ["huake-guanlu-gong", "huake-caibo-gong"],
   },
   {
     name: "紫微化科",
@@ -785,6 +850,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→氣度不凡、有名望；落官祿→事業有聲譽、得高層賞識；落財帛→以身份或聲望生財；落遷移→在外得貴人抬舉；落父母→與長輩或上司關係清貴。`,
     ragQuery: { text: "紫微化科 乙年 貴氣 名聲 地位 貴人 科落宮 命宮官祿財帛遷移 紫微星性", topic: "格局" },
     related: ["hua-ke", "ziwei-huaquan", "tianliang-huaquan"],
+    relatedPalaces: ["huake-guanlu-gong", "huake-qianyi-gong"],
   },
   {
     name: "文昌化科",
@@ -805,6 +871,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→有文采、氣質書卷；落官祿→靠學歷、文書或考試立業；落財帛→以文字、證照或知識生財；落父母（文書宮）→利文書契約與學業；落福德→重精神文雅。`,
     ragQuery: { text: "文昌化科 丙年 文名 考試 文書 學術 功名 科落宮 命宮官祿財帛父母 文昌星性", topic: "格局" },
     related: ["hua-ke", "wenqu-huake", "wenchang-huaji"],
+    relatedPalaces: ["huake-fumu-gong", "huake-guanlu-gong"],
   },
   {
     name: "天機化科",
@@ -825,6 +892,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→機智有口碑、氣質靈秀；落官祿→以謀略或企劃得名；落財帛→靠智慧或點子得名利；落遷移→在外以才智得貴人；落兄弟→在團隊中以智謀受敬。`,
     ragQuery: { text: "天機化科 丁年 智慧 名聲 謀略 企劃 科落宮 命宮官祿財帛遷移 天機星性", topic: "格局" },
     related: ["hua-ke", "tianji-hualu", "tianji-huaquan"],
+    relatedPalaces: ["huake-guanlu-gong", "huake-xiongdi-gong"],
   },
   {
     name: "右弼化科",
@@ -845,6 +913,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→人緣好、有貴人名；落官祿→以輔佐或協調得名、宜幕僚副手；落夫妻→感情有助力、易得對方相助；落父母→得長輩或貴人扶持；落交友→朋友貴人多、口碑佳。`,
     ragQuery: { text: "右弼化科 戊年 輔星 貴人 助力 人緣 科落宮 命宮官祿夫妻交友 右弼星性", topic: "格局" },
     related: ["hua-ke", "zuofu-huake", "tanlang-hualu"],
+    relatedPalaces: ["huake-jiaoyou-gong", "huake-guanlu-gong"],
   },
   {
     name: "天梁化科",
@@ -865,6 +934,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→清譽、老成有名望；落官祿→以清貴專業得名；落財帛→正途得名利、不宜偏門；落疾厄→逢兇有貴人或良醫化解；落父母→受長輩廕庇有名。`,
     ragQuery: { text: "天梁化科 己年 蔭名 清貴 醫藥 名聲 科落宮 命宮官祿疾厄父母 天梁星性", topic: "格局" },
     related: ["hua-ke", "tianliang-hualu", "tianliang-huaquan"],
+    relatedPalaces: ["huake-guanlu-gong", "huake-fumu-gong"],
   },
   {
     name: "太陰化科",
@@ -884,6 +954,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→氣質佳、有柔性名望；落官祿→以品味、細膩或文藝得名；落財帛→財中帶名、宜文創或地產；落田宅→家宅清雅有名；落父母→與母親緣佳、受女性長輩助。`,
     ragQuery: { text: "太陰化科 庚年 癸年 柔性名聲 文藝 女性貴人 科落宮 命宮官祿財帛田宅 太陰星性", topic: "格局" },
     related: ["hua-ke", "taiyin-hualu", "taiyin-huaquan"],
+    relatedPalaces: ["huake-tianzhai-gong", "huake-guanlu-gong"],
   },
   {
     name: "文曲化科",
@@ -904,6 +975,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→才情外顯、有藝名；落官祿→以才藝或口才立業得名；落財帛→靠才藝、表演或內容生財；落福德→精神生活豐富有品味；落夫妻→感情浪漫有情調。`,
     ragQuery: { text: "文曲化科 辛年 才藝 口才 文采 異路功名 科落宮 命宮官祿財帛福德 文曲星性", topic: "格局" },
     related: ["hua-ke", "wenchang-huake", "wenqu-huaji"],
+    relatedPalaces: ["huake-fude-gong", "huake-guanlu-gong"],
   },
   {
     name: "左輔化科",
@@ -924,6 +996,7 @@ const HUAKE_ARTICLES: SihuaEntry[] = [
 落宮變化：科落命宮→忠厚有口碑、貴人緣；落官祿→以輔佐或行政得名、宜副手；落夫妻→感情穩、得對方助力；落父母→得長輩扶持；落交友→朋友貴人多、信譽佳。`,
     ragQuery: { text: "左輔化科 壬年 輔星 貴人 助力 忠厚 科落宮 命宮官祿夫妻交友 左輔星性", topic: "格局" },
     related: ["hua-ke", "youbi-huake", "ziwei-huaquan"],
+    relatedPalaces: ["huake-jiaoyou-gong", "huake-guanlu-gong"],
   },
 ];
 

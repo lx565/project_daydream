@@ -883,11 +883,19 @@ const SIHUA_PALACE_BASE_RULES = `你是命裡平台的命理師，精通紫微�
 2. 下方「典籍參考」僅供你提煉，其中可能混有無關、殘缺或非中文的片段——請自行甄別，只採用真正相關、可信的內容，無關片段一律忽略。
 3. 語氣像懂行的朋友在講解，溫暖不生硬；必須出現的術語用一句話點明含義。
 4. 內容具體、有信息量，不空泛、不套話、不嚇人、不下絕對結論，落點在幫助讀者理解命盤特質與應對方向。
-5. 化忌落宮的寫法：誠實說明挑戰，但落點永遠在「這意味著什麼課題、如何面對」，不渲染恐懼。
-6. 【極重要】下方會給出一個「權威定盤資料」塊，其中十干化忌總表與列出的星曜落宮特質是最高準則，絕對不得違背——只能討論資料中明確列出的星曜，不得為未列出的星曜編造此宮位的具體論斷。
+6. 【極重要】下方會給出一個「權威定盤資料」塊，其中十干化X總表與列出的星曜落宮特質是最高準則，絕對不得違背——只能討論資料中明確列出的星曜，不得為未列出的星曜編造此宮位的具體論斷。
 7. 只輸出正文 Markdown，不要前言、不要「以下是」「希望對你有幫助」之類的話。` + ANTI_CLICHE;
 
-/** 化×十二宮 article (Phase 1: 化忌 × 12 palaces; 化祿/化權/化科 follow the same function later). */
+/** 化X落宮的語氣基調，依 hua 分兩種register：化忌是「挑戰/課題」，化祿/化權/化科是「機遇/成長」。 */
+function sihuaPalaceToneRule(hua: SihuaPalaceEntry["hua"]): string {
+  if (hua === "忌") {
+    return "5. 化忌落宮的寫法：誠實說明挑戰，但落點永遠在「這意味著什麼課題、如何面對」，不渲染恐懼。";
+  }
+  const flavor = hua === "祿" ? "財祿、機遇與人緣的順遂" : hua === "權" ? "掌控力、主導力與行動力的放大" : "名聲、貴人與文雅氣質的加持";
+  return `5. 化${hua}落宮的寫法：這是「正面」的四化，主基調是${flavor}——誠實呈現這份好處與它的具體樣貌，但也要點出它並非毫無代價或條件（例如需要搭配格局、需要善用而非坐享），落點是「如何善用這份順遂」而不是空泛地報喜，也不要寫成毫無保留的吹捧。`;
+}
+
+/** 化×十二宮 article (Phase 1: 化忌 × 12 palaces; Phase 2: 化祿/化權/化科 × 12 palaces reuse the same function). */
 export async function getSihuaPalaceContent(entry: SihuaPalaceEntry, revisionNote?: string): Promise<SeoContent> {
   if (!revisionNote) {
     const pre = readPregenerated("sihua-palace", entry.urlSlug);
@@ -900,21 +908,26 @@ export async function getSihuaPalaceContent(entry: SihuaPalaceEntry, revisionNot
     maxPerBook: 3,
   });
 
-  const system = SIHUA_PALACE_BASE_RULES + `
+  const rules = SIHUA_PALACE_BASE_RULES.replace(
+    "6. 【極重要】",
+    sihuaPalaceToneRule(entry.hua) + "\n6. 【極重要】"
+  );
 
-這是一篇「${entry.name}」命理科普文章，面向有一定基礎、想深入了解自己命盤的讀者。這篇文章比一般「XX星化忌」文章更進一步：它專門討論「當化忌落在${entry.palace}這個宮位時」代表什麼——不限定是哪顆星。
+  const system = rules + `
+
+這是一篇「${entry.name}」命理科普文章，面向有一定基礎、想深入了解自己命盤的讀者。這篇文章比一般「XX星${entry.huaName}」文章更進一步：它專門討論「當${entry.huaName}落在${entry.palace}這個宮位時」代表什麼——不限定是哪顆星。
 
 要點（用 ## 二級標題，5 節，每節約150-200字，總長約900-1000字）：
 ## ${entry.huaName}入${entry.palace}是什麼意思
-先講清楚「宮位效應」：無論是十顆化忌星裡的哪一顆落在${entry.palace}，這個宮位本身代表的領域為何會因此承受阻滯或課題。
-## 哪些星的化忌落在${entry.palace}最需要留意
-依據下方「權威定盤資料」逐一點出最相關的幾顆星（只能用資料中列出的星曜與說明），具體講清每顆星的化忌落在此宮時各自的側重與差異。
-## ${entry.palace}化忌的常見人生模式
+先講清楚「宮位效應」：無論是哪一顆${entry.huaName}星落在${entry.palace}，這個宮位本身代表的領域為何會因此受到影響。
+## 哪些星的${entry.huaName}落在${entry.palace}最需要留意
+依據下方「權威定盤資料」逐一點出最相關的幾顆星（只能用資料中列出的星曜與說明），具體講清每顆星的${entry.huaName}落在此宮時各自的側重與差異。
+## ${entry.palace}${entry.huaName}的常見人生模式
 結合真實生活場景，講清這個組合具體會怎麼表現、當事人常見的心理或行為模式。
 ## 流年或大運引動時的信號
-當流年/大限走到這個宮位或其化忌被冲對時，通常會出現什麼徵兆。
-## 如何與這個課題好好相處
-給讀者具體、溫暖、可操作的應對方向，不空泛不說教，落點在「怎麼做」而非單純安慰。`
+當流年/大限走到這個宮位或其${entry.huaName}被冲對時，通常會出現什麼徵兆。
+## 如何善用或面對這個特質
+給讀者具體、溫暖、可操作的應對方向，不空泛不說教，落點在「怎麼做」而非單純安慰或空泛恭喜。`
     + (revisionNote ? `\n\n【本次修訂要求（最高優先級，務必逐條滿足）】\n${revisionNote}` : "");
 
   const prompt = `【主題】${entry.title}

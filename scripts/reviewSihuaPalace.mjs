@@ -2,6 +2,8 @@
 // Step 1: Gemini 2.5 Flash reviews each article for factual errors.
 // Step 2: DeepSeek (deepseek-reasoner) adjudicates each REVISE flag.
 // Step 3: Auto-regens confirmed errors via genSihuaPalace.mjs --slug X --force.
+// Covers all 4 化 types (忌/祿/權/科) — the stem table and scope-rule text are
+// built per-entry from entry.hua, not hardcoded to 化忌.
 // (Mirrors scripts/reviewSihua.mjs.)
 //
 // Usage:
@@ -15,7 +17,9 @@ import { execSync } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import { SIHUA_PALACE } from "../lib/sihuaPalaceData.ts";
-import { JI_STEMS } from "../lib/sihuaData.ts";
+import { JI_STEMS, LU_STEMS, QUAN_STEMS, KE_STEMS } from "../lib/sihuaData.ts";
+
+const STEMS_BY_HUA = { "忌": JI_STEMS, "祿": LU_STEMS, "權": QUAN_STEMS, "科": KE_STEMS };
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -30,13 +34,18 @@ const deepseek = new OpenAI({
 });
 
 // ── Authoritative reference (for Gemini/DeepSeek cross-check) ─────────────────
-const JI_REF = Object.entries(JI_STEMS)
-  .map(([star, stems]) => `${stems.join("、")}年 → ${star}化忌`)
-  .join("\n");
+// Built per-entry now (depends on entry.hua: 忌/祿/權/科), not a single 化忌-only table.
+function stemsRef(hua) {
+  return Object.entries(STEMS_BY_HUA[hua])
+    .map(([star, stems]) => `${stems.join("、")}年 → ${star}化${hua}`)
+    .join("\n");
+}
 
-const SCOPE_RULE = `
-【絕對禁止】本文只能討論「權威定盤資料」中明確列出的星曜與其化忌落宮說明。若文章對未列出的星曜編造具體的落此宮論斷（而非泛泛帶過），必須標記為 REVISE。
-【重要】本文不得聲稱「某年生人的化忌必然落在此宮」——化忌是哪顆星由生年天干決定，但那顆星落在命盤哪個宮位取決於完整排盤，並非天干直接對應宮位。若文章出現此類決定論表述，標記為 REVISE。`;
+function scopeRule(hua) {
+  return `
+【絕對禁止】本文只能討論「權威定盤資料」中明確列出的星曜與其化${hua}落宮說明。若文章對未列出的星曜編造具體的落此宮論斷（而非泛泛帶過），必須標記為 REVISE。
+【重要】本文不得聲稱「某年生人的化${hua}必然落在此宮」——化${hua}是哪顆星由生年天干決定，但那顆星落在命盤哪個宮位取決於完整排盤，並非天干直接對應宮位。若文章出現此類決定論表述，標記為 REVISE。`;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function readArticle(slug) {
@@ -46,21 +55,23 @@ function readArticle(slug) {
 }
 
 function buildGeminiPrompt(entry, content) {
-  return `你是紫微斗數命理權威審核員。審核以下「化忌入${entry.palace}」科普文章是否有事實錯誤或語言問題。
+  const hua = entry.hua;
+  return `你是紫微斗數命理權威審核員。審核以下「化${hua}入${entry.palace}」科普文章是否有事實錯誤或語言問題。
 
 檢查重點：
 1. 全文必須是繁體中文（台灣用語習慣）——若出現簡體字、英文或亂碼，標記 REVISE
-2. 文中提及的星曜與其化忌落宮特質，是否與下方權威資料一致（不得矛盾、不得誤植到錯誤宮位）
+2. 文中提及的星曜與其化${hua}落宮特質，是否與下方權威資料一致（不得矛盾、不得誤植到錯誤宮位）
 3. 是否為未列出的星曜編造了具體的${entry.palace}落宮論斷
-4. 是否出現「某年生人的化忌必然落在此宮」之類的決定論錯誤表述（見下方規則）
+4. 是否出現「某年生人的化${hua}必然落在此宮」之類的決定論錯誤表述（見下方規則）
 5. 內部是否自相矛盾
+6. 若本文為化祿/化權/化科（非化忌），語氣是否符合「正面四化」基調（機遇/主導力/名聲），而非誤套化忌的挑戰語氣，或反過來寫成毫無保留的吹捧
 
 【本文權威定盤資料（視為絕對正確的基準）】
 ${entry.grounding}
 
-【十干化忌權威表（絕對正確）】
-${JI_REF}
-${SCOPE_RULE}
+【十干化${hua}權威表（絕對正確）】
+${stemsRef(hua)}
+${scopeRule(hua)}
 
 【文章內容（前2000字）】
 ${content.slice(0, 2000)}
@@ -73,6 +84,7 @@ ${content.slice(0, 2000)}
 }
 
 function buildDeepseekPrompt(entry, geminiReason, content) {
+  const hua = entry.hua;
   return `你是紫微斗數命理高精度審核員。判斷 Gemini 標記的「錯誤」是否真實存在（避免誤報）。
 
 文章：sihua-palace/${entry.urlSlug}（${entry.title}）
@@ -81,9 +93,9 @@ Gemini 標記：${geminiReason}
 【權威定盤資料】
 ${entry.grounding}
 
-【十干化忌權威表】
-${JI_REF}
-${SCOPE_RULE}
+【十干化${hua}權威表】
+${stemsRef(hua)}
+${scopeRule(hua)}
 
 【完整文章】
 ${content.slice(0, 2500)}
@@ -134,7 +146,10 @@ async function deepseekAdjudicate(entry, geminiReason, attempt = 1) {
 
   try {
     const resp = await deepseek.chat.completions.create({
-      model: process.env.SEO_AI_MODEL ?? "deepseek-reasoner",
+      // deepseek-reasoner was retired 2026-07-25 in favor of deepseek-v4-pro
+      // (see lib/synthesize.ts note) — same fix needed here as in genSihuaPalace's
+      // SEO_MODEL default; keep SEO_AI_MODEL override for either.
+      model: process.env.SEO_AI_MODEL ?? "deepseek-v4-pro",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 600,
       temperature: 0,

@@ -1,5 +1,7 @@
 // Generate 化×十二宮 articles for content/seo/sihua-palace/
-// (Phase 1: 化忌 × 12 palaces. Mirrors scripts/genSihua.mjs.)
+// (Phase 1: 化忌 × 12 palaces. Phase 2: 化祿/化權/化科 × 12 palaces reuse the
+// same script unchanged — SIHUA_PALACE already contains all 48 entries.
+// Mirrors scripts/genSihua.mjs.)
 // Usage:
 //   npx tsx --env-file=.env.local scripts/genSihuaPalace.mjs
 //   npx tsx --env-file=.env.local scripts/genSihuaPalace.mjs --slug huaji-fuqi-gong
