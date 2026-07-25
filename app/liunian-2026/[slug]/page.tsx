@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LIUNIAN, getLiuNian } from "@/lib/liuNianData";
-import { getLiuNianContent } from "@/lib/seoContent";
+import { LIUNIAN_2026, getLiunian2026 } from "@/lib/liunian2026Data";
+import { getLiuNian } from "@/lib/liuNianData";
+import { getLiunian2026Content } from "@/lib/seoContent";
 import JsonLd from "@/components/JsonLd";
 import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
@@ -15,7 +16,7 @@ export const maxDuration = 60;
 export const revalidate = 604800;
 
 export async function generateStaticParams() {
-  return LIUNIAN.map(e => ({ slug: e.urlSlug }));
+  return LIUNIAN_2026.map(e => ({ slug: e.urlSlug }));
 }
 
 interface PageParams { slug: string }
@@ -25,7 +26,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const urlSlug = decodeURIComponent(rawSlug);
-  const entry = getLiuNian(urlSlug);
+  const entry = getLiunian2026(urlSlug);
   if (!entry) return {};
 
   const title = `${entry.title} — 命裡`;
@@ -37,37 +38,58 @@ export async function generateMetadata(
     openGraph: {
       title,
       description,
-      url: `https://www.mingli.study/liunian/${entry.urlSlug}`,
+      url: `https://www.mingli.study/liunian-2026/${entry.urlSlug}`,
       siteName: "命裡",
-      locale: "zh_CN",
+      locale: "zh_TW",
       type: "article",
     },
     alternates: {
-      canonical: `https://www.mingli.study/liunian/${entry.urlSlug}`,
+      canonical: `https://www.mingli.study/liunian-2026/${entry.urlSlug}`,
     },
   };
 }
 
-const KIND_LABELS: Record<string, string> = {
-  jichu: "基礎入門",
-  gongwei: "宮位流年",
-  sihua: "四化流年",
+// Related links can point either to a sibling 生肖 entry (this file's data)
+// or back to a theory article in lib/liuNianData.ts (resolved as /liunian/<slug>)
+// — mirrors the resolveRelated pattern in app/sihua-palace/[slug]/page.tsx.
+function resolveRelated(slug: string): { href: string; name: string; oneLine: string } | null {
+  const own = getLiunian2026(slug);
+  if (own) {
+    return { href: `/liunian-2026/${own.urlSlug}`, name: own.name, oneLine: own.oneLine };
+  }
+  const theory = getLiuNian(slug);
+  if (theory) {
+    return { href: `/liunian/${theory.urlSlug}`, name: theory.name, oneLine: theory.oneLine };
+  }
+  return null;
+}
+
+const RELATION_BADGE: Record<string, string> = {
+  沖太歲: "bg-red-50 text-red-600 border-red-200",
+  害太歲: "bg-orange-50 text-orange-600 border-orange-200",
+  破太歲: "bg-orange-50 text-orange-600 border-orange-200",
+  值太歲: "bg-red-50 text-red-600 border-red-200",
+  三合太歲: "bg-jade/10 text-jade border-jade/30",
+  六合太歲: "bg-jade/10 text-jade border-jade/30",
+  三會太歲: "bg-amber-50 text-amber-700 border-amber-200",
+  平順: "bg-paper-2 text-ink-3 border-border-warm",
 };
 
-export default async function LiuNianArticlePage(
+export default async function Liunian2026ArticlePage(
   { params }: { params: Promise<PageParams> }
 ) {
   const { slug: rawSlug } = await params;
   const urlSlug = decodeURIComponent(rawSlug);
-  const entry = getLiuNian(urlSlug);
+  const entry = getLiunian2026(urlSlug);
   if (!entry) notFound();
 
-  const { markdown, refs } = await getLiuNianContent(entry);
+  const { markdown, refs } = await getLiunian2026Content(entry);
   const hasContent = markdown.trim().length > 0;
   const relatedEntries = entry.related
-    .map(slug => getLiuNian(slug))
+    .map(resolveRelated)
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
-  const pagePath = `/liunian/${entry.urlSlug}`;
+  const pagePath = `/liunian-2026/${entry.urlSlug}`;
+  const badgeClass = RELATION_BADGE[entry.relation] ?? RELATION_BADGE["平順"];
 
   return (
     <>
@@ -76,13 +98,14 @@ export default async function LiuNianArticlePage(
           { name: "命裡", path: "/" },
           { name: "知識庫", path: "/library" },
           { name: "流年運勢", path: "/liunian" },
+          { name: "2026丙午年生肖運勢", path: "/liunian-2026" },
           { name: entry.name, path: pagePath },
         ]),
         articleSchema({
           headline: entry.title,
           description: entry.subtitle,
           path: pagePath,
-          section: "流年運勢",
+          section: "2026丙午年生肖運勢",
         }),
       ]} />
 
@@ -94,7 +117,7 @@ export default async function LiuNianArticlePage(
           {/* Hero */}
           <div className="text-center pt-8 pb-4 space-y-2">
             <p className="text-xs text-amber-600 tracking-widest font-medium">
-              {KIND_LABELS[entry.kind]}
+              2026丙午年 · 生肖運勢
             </p>
             <h1
               className="text-3xl font-bold text-amber-700 leading-snug"
@@ -103,10 +126,10 @@ export default async function LiuNianArticlePage(
               {entry.name}
             </h1>
             <p className="text-xs text-ink-4 tracking-widest">{entry.subtitle}</p>
-            <div className="flex items-center gap-3 justify-center pt-1">
-              <div className="h-px w-16 bg-amber-300/50" />
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
-              <div className="h-px w-16 bg-amber-300/50" />
+            <div className="flex items-center justify-center pt-2">
+              <span className={`text-xs font-medium px-3 py-1 rounded-full border ${badgeClass}`}>
+                與太歲午 · {entry.relation}{entry.relationNote ? ` (${entry.relationNote})` : ""}
+              </span>
             </div>
           </div>
 
@@ -115,31 +138,7 @@ export default async function LiuNianArticlePage(
             <p className="text-sm text-ink-2 leading-[1.9]">{entry.intro}</p>
           </div>
 
-          <ToolCTA variant="slim" label="排你的命盤 · AI 解析你的流年運勢走向 →" />
-
-          {/* Prominent bridge to the 2026丙午年生肖運勢 cluster — this is the
-              actual fix for "2026年運勢屬鼠"-type searchers landing on theory
-              pages instead of a direct answer (2026-07-25 SEO audit). Shown on
-              the two highest-traffic entry points into this theory cluster. */}
-          {(entry.urlSlug === "liunian-jieshao" || entry.urlSlug === "liunian-minggong") && (
-            <Link
-              href="/liunian-2026"
-              className="block paper-card rounded-2xl border-2 border-amber-300/60 hover:border-amber-400 p-5 transition-colors bg-amber-50/40"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-amber-600 font-medium tracking-wide">2026丙午年 · 十二生肖流年運勢</p>
-                  <p className="text-base font-bold text-ink mt-1" style={{ fontFamily: "var(--font-serif)" }}>
-                    想知道你2026年整體運勢？先看你的生肖與太歲關係 →
-                  </p>
-                  <p className="text-xs text-ink-4 mt-1.5 leading-relaxed">
-                    比起先學流年理論，不如先看屬於你生肖的2026年直接解讀——屬鼠、屬牛、屬虎……十二生肖逐一詳解。
-                  </p>
-                </div>
-                <span className="text-amber-600 text-xl shrink-0">→</span>
-              </div>
-            </Link>
-          )}
+          <ToolCTA variant="slim" label="排你的命盤 · AI 結合完整命盤解析你的2026年運勢 →" />
 
           {/* Article content */}
           {hasContent && (
@@ -171,7 +170,7 @@ export default async function LiuNianArticlePage(
           <LikeButton />
           <VoteWidget />
 
-          <ToolCTA variant="card" sub="AI 依據逾百部典籍，結合你的命盤格局分析當年的重點宮位與四化變化，給出具體的流年判斷。" label="解析我的流年運勢" />
+          <ToolCTA variant="card" sub="生肖只是流年判斷的其中一層——AI 依據逾百部典籍，結合你的完整命盤與大運，給出2026年真正屬於你的深度解讀。" label="生成我的2026年命盤運勢" />
 
           {/* Related articles */}
           {relatedEntries.length > 0 && (
@@ -180,8 +179,8 @@ export default async function LiuNianArticlePage(
               <div className="grid grid-cols-2 gap-2">
                 {relatedEntries.map(e => (
                   <Link
-                    key={e.urlSlug}
-                    href={`/liunian/${e.urlSlug}`}
+                    key={e.href}
+                    href={e.href}
                     className="paper-card rounded-xl border border-border-warm p-3 text-sm text-ink-2 hover:border-amber-300 hover:text-amber-700 transition-colors"
                   >
                     <p className="font-medium">{e.name}</p>
@@ -192,7 +191,13 @@ export default async function LiuNianArticlePage(
             </div>
           )}
 
-          <ToolCTA variant="slim" label="紫微斗數 AI · 依據逾百部典籍為你詳批流年運勢走向 →" />
+          <div className="text-center">
+            <Link href="/liunian-2026" className="text-xs text-ink-4 hover:text-amber-700 underline underline-offset-2">
+              ← 查看全部十二生肖 2026 年運勢
+            </Link>
+          </div>
+
+          <ToolCTA variant="slim" label="紫微斗數 AI · 依據逾百部典籍為你詳批2026年整體運勢 →" />
 
         </div>
       </main>

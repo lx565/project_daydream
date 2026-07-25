@@ -83,6 +83,25 @@ export default function LiuNianHubPage() {
 
         <ToolCTA variant="slim" label="排你的命盤 · AI 解析你的流年運勢走向 →" />
 
+        {/* 2026丙午年生肖運勢 — prominent bridge for "今年運勢/屬X運勢" searchers */}
+        <Link
+          href="/liunian-2026"
+          className="block paper-card rounded-2xl border-2 border-amber-300/60 hover:border-amber-400 p-5 transition-colors bg-amber-50/40"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-amber-600 font-medium tracking-wide">2026丙午年 · 十二生肖流年運勢</p>
+              <p className="text-base font-bold text-ink mt-1" style={{ fontFamily: "var(--font-serif)" }}>
+                想知道你2026年整體運勢？先看你的生肖與太歲關係 →
+              </p>
+              <p className="text-xs text-ink-4 mt-1.5 leading-relaxed">
+                2026年太歲屬馬，十二生肖與太歲的沖合害破一次看懂——屬鼠、屬牛、屬虎……點進去查看你的生肖。
+              </p>
+            </div>
+            <span className="text-amber-600 text-xl shrink-0">→</span>
+          </div>
+        </Link>
+
         {/* Articles by kind */}
         {KINDS.map(kind => {
           const items = LIUNIAN.filter(e => e.kind === kind);

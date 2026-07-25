@@ -12,6 +12,7 @@ import { SIHUA } from "@/lib/sihuaData";
 import { SIHUA_PALACE } from "@/lib/sihuaPalaceData";
 import { XIONG } from "@/lib/xiongData";
 import { LIUNIAN } from "@/lib/liuNianData";
+import { LIUNIAN_2026 } from "@/lib/liunian2026Data";
 import { HUNYIN } from "@/lib/hunyinData";
 import { SHIYE } from "@/lib/shiyeData";
 import { CAIYUN } from "@/lib/caiyunData";
@@ -32,6 +33,11 @@ const BASE = "https://www.mingli.study";
 // Stable lastmod — bump this when content meaningfully changes. Using a fixed date
 // (vs new Date()) keeps lastmod truthful; Google ignores always-"now" timestamps.
 const LAST_CONTENT_UPDATE = new Date("2026-06-30");
+
+// New cluster added 2026-07-25 (2026丙午年生肖運勢) — genuinely newer than the
+// sitewide LAST_CONTENT_UPDATE above, so it gets its own lastmod rather than
+// falsely claiming it existed as of 2026-06-30.
+const LIUNIAN_2026_UPDATE = new Date("2026-07-25");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const starOverviews = MAJOR_STARS.map(s => ({
@@ -176,6 +182,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  // 2026丙午年生肖運勢 — seasonal, high-intent cluster (P2 SEO audit fix for
+  // "2026年運勢屬鼠"-type queries bouncing off the theory-only /liunian pages).
+  // Priority set above the theory cluster since this is the actual search-intent match.
+  const liunian2026Pages = LIUNIAN_2026.map(e => ({
+    url: `${BASE}/liunian-2026/${e.urlSlug}`,
+    lastModified: LIUNIAN_2026_UPDATE,
+    changeFrequency: "weekly" as const,
+    priority: 0.9,
+  }));
+
   const hunyinPages = HUNYIN.map(e => ({
     url: `${BASE}/hunyin/${e.urlSlug}`,
     lastModified: LAST_CONTENT_UPDATE,
@@ -277,6 +293,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...xiongPages,
     { url: `${BASE}/liunian`, changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },
     ...liuNianPages,
+    { url: `${BASE}/liunian-2026`, changeFrequency: "weekly" as const, priority: 0.95, lastModified: LIUNIAN_2026_UPDATE },
+    ...liunian2026Pages,
     { url: `${BASE}/hunyin`, changeFrequency: "monthly" as const, priority: 0.9, lastModified: LAST_CONTENT_UPDATE },
     ...hunyinPages,
     { url: `${BASE}/shiye`,  changeFrequency: "monthly" as const, priority: 0.9, lastModified: LAST_CONTENT_UPDATE },

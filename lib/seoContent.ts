@@ -21,6 +21,7 @@ import type { SihuaEntry } from "./sihuaData";
 import type { SihuaPalaceEntry } from "./sihuaPalaceData";
 import type { XiongEntry } from "./xiongData";
 import type { LiuNianEntry } from "./liuNianData";
+import type { Liunian2026Entry } from "./liunian2026Data";
 import type { HunyinEntry } from "./hunyinData";
 import type { ShiyeEntry } from "./shiyeData";
 import type { CaiyunEntry } from "./caiyunData";
@@ -36,7 +37,7 @@ import { starMbtiGroundingBlock, mbtiZiweiGroundingBlock, starZodiacGroundingBlo
 
 // Pre-generated, proofread content store. When a reviewed file exists it is served
 // verbatim (deterministic, no runtime AI). Missing file => fall back to live synth.
-function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assistantstar" | "personality" | "book" | "sources" | "shishen" | "tiangan" | "geju" | "baziguide" | "zodiac" | "qinggan" | "sihua" | "sihua-palace" | "xiong" | "liunian" | "hunyin" | "shiye" | "caiyun" | "jibing" | "bazi-hunyin" | "bazi-shiye" | "bazi-caiyun" | "bazi-jibing" | "shensha", key: string): SeoContent | null {
+function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assistantstar" | "personality" | "book" | "sources" | "shishen" | "tiangan" | "geju" | "baziguide" | "zodiac" | "qinggan" | "sihua" | "sihua-palace" | "xiong" | "liunian" | "liunian-2026" | "hunyin" | "shiye" | "caiyun" | "jibing" | "bazi-hunyin" | "bazi-shiye" | "bazi-caiyun" | "bazi-jibing" | "shensha", key: string): SeoContent | null {
   try {
     const file = path.join(process.cwd(), "content", "seo", kind, `${key}.json`);
     if (!fs.existsSync(file)) return null;
@@ -1010,15 +1011,15 @@ ${context || "（无可用参考，请基于紫微斗数通论严谨撰写）"}
 
 // ── 流年运势 content ──────────────────────────────────────────────────────────
 
-const LIUNIAN_BASE_RULES = `你是命里平台的命理师，精通紫微斗数流年推算，为面向大众的知识科普页面撰写内容。
+const LIUNIAN_BASE_RULES = `你是命裡平台的命理師，精通紫微斗數流年推算，為面向大眾的知識科普頁面撰寫內容。
 
-严格要求：
-1. 全文必须是通顺、现代的简体中文。
-2. 典籍参考中可能有无关片段，请自行甄别只采用相关内容。
-3. 语气像懂行的朋友在讲解，温暖不生硬；术语需简单注释。
-4. 权威定盘资料块中的流年判断规则是最高准则，不得违背。
-5. 内容要实用、有信息量：读者最想知道今年的XX方面怎么样，给出具体的判断逻辑而非泛泛而谈。
-6. 只输出正文 Markdown，不要任何前言或收尾客套话。` + ANTI_CLICHE;
+嚴格要求：
+1. 全文必須是通順、現代的繁體中文（臺灣用語習慣）。絕對不要出現英文、簡體字、亂碼或古籍原文照抄。
+2. 典籍參考中可能有無關片段，請自行甄別只採用相關內容。
+3. 語氣像懂行的朋友在講解，溫暖不生硬；術語需簡單注釋。
+4. 權威定盤資料塊中的流年判斷規則是最高準則，不得違背。
+5. 內容要實用、有信息量：讀者最想知道今年的XX方面怎麼樣，給出具體的判斷邏輯而非泛泛而談。
+6. 只輸出正文 Markdown，不要任何前言或收尾客套話。` + ANTI_CLICHE;
 
 export async function getLiuNianContent(entry: LiuNianEntry, revisionNote?: string): Promise<SeoContent> {
   if (!revisionNote) {
@@ -1034,30 +1035,92 @@ export async function getLiuNianContent(entry: LiuNianEntry, revisionNote?: stri
 
   const system = LIUNIAN_BASE_RULES + `
 
-这是一篇流年运势科普文章，主题为「${entry.name}」（${entry.subtitle}）。
+這是一篇流年運勢科普文章，主題為「${entry.name}」（${entry.subtitle}）。
 
-要点：
-- 先讲清楚这个概念/宫位在流年判断中的作用
-- 给出具体的判断逻辑（什么四化/组合代表什么信号）
-- 举例说明什么情况是好信号、什么是需要注意的信号
-- 结尾给1-2条实用建议（流年运势不好时怎么应对）
+要點：
+- 先講清楚這個概念/宮位在流年判斷中的作用
+- 給出具體的判斷邏輯（什麼四化/組合代表什麼信號）
+- 舉例說明什麼情況是好信號、什麼是需要注意的信號
+- 結尾給1-2條實用建議（流年運勢不好時怎麼應對）
 
-输出结构（用 ## 二级标题，4-6 节，每节约130-180字）。` +
-    (revisionNote ? `\n\n【本次修订要求（最高优先级，务必逐条满足）】\n${revisionNote}` : "");
+輸出結構（用 ## 二級標題，4-6 節，每節約130-180字）。` +
+    (revisionNote ? `\n\n【本次修訂要求（最高優先級，務必逐條滿足）】\n${revisionNote}` : "");
 
-  const prompt = `【主题】${entry.title}
-【副标题】${entry.subtitle}
-【导语】${entry.intro}
+  const prompt = `【主題】${entry.title}
+【副標題】${entry.subtitle}
+【導語】${entry.intro}
 
-【权威定盘资料】
+【權威定盤資料】
 ${entry.grounding}
 
-【典籍参考】
-${context || "（无可用参考，请基于紫微斗数流年推算通论严谨撰写）"}
+【典籍參考】
+${context || "（無可用參考，請基於紫微斗數流年推算通論嚴謹撰寫）"}
 
-请撰写这篇流年运势科普文章的正文。`;
+請撰寫這篇流年運勢科普文章的正文。`;
 
   const markdown = await synthesize({ tag: "liunian", system, prompt, model: SEO_MODEL, maxTokens: 4000 });
+  return { markdown, refs };
+}
+
+// ── 2026丙午年 × 十二生肖流年運勢 content ───────────────────────────────────
+//
+// Distinct cluster from getLiuNianContent above (pure 流年 theory). Grounding
+// (2026 = 丙午年, each 生肖's relation to 午/太歲) is calendrically
+// deterministic — the "權威定盤資料" rule below is the same
+// non-negotiable-facts pattern as SIHUA_PALACE.
+const LIUNIAN_2026_BASE_RULES = `你是命裡平台的命理師，精通紫微斗數與八字的流年、太歲推算，為面向大眾的知識科普頁面撰寫內容。
+
+嚴格要求：
+1. 全文必須是通順、現代的繁體中文（臺灣用語習慣）。絕對不要出現英文、簡體字、亂碼或古籍原文照抄。
+2. 下方「典籍參考」僅供你提煉，其中可能混有無關、殘缺或非中文的片段——請自行甄別，只採用真正相關、可信的內容，無關片段一律忽略。
+3. 語氣像懂行的朋友在講解，溫暖不生硬；必須出現的術語用一句話點明含義。
+4. 內容具體、有信息量，不空泛、不套話、不嚇人、不用「大凶」「破財」「災禍」等驚悚字眼下絕對結論，落點在幫助讀者理解今年的大環境牽動並給出可操作的建議。
+5. 【極重要】下方「權威定盤資料」中 2026 年的干支、太歲，以及該生肖與午的沖/合/害/破/值太歲/平順關係，是最高準則、曆法事實，絕對不得更改或編造其他關係；具體到感情、財運、事業、健康的判斷必須誠實說明「生肖只是流年判斷的一層，完整吉凶仍需結合個人命盤與大運」，不可用生肖本身直接下絕對結論。
+6. 只輸出正文 Markdown，不要前言、不要「以下是」「希望對你有幫助」之類的話。` + ANTI_CLICHE;
+
+/** 2026丙午年 × 生肖 forecast article. */
+export async function getLiunian2026Content(entry: Liunian2026Entry, revisionNote?: string): Promise<SeoContent> {
+  if (!revisionNote) {
+    const pre = readPregenerated("liunian-2026", entry.urlSlug);
+    if (pre) return pre;
+  }
+
+  const { context, refs } = await getKnowledge({
+    ...entry.ragQuery,
+    topK: 10,
+    maxPerBook: 3,
+  });
+
+  const system = LIUNIAN_2026_BASE_RULES + `
+
+這是一篇「${entry.name}」的年度生肖運勢文章，主題是 2026 丙午年對屬${entry.animal}的人有什麼牽動。讀者搜尋這類文章時最想知道「今年我這個生肖到底如何」，請直接、具體地回答，不要繞圈子。
+
+輸出結構（用 ## 二級標題，5 節，每節約150-200字，總長約900-1000字）：
+## 2026丙午年是什麼樣的一年
+先講清楚丙午年的干支五行（雙火）與太歲屬馬的曆法背景，作為理解全文的基礎。
+## 屬${entry.animal}與太歲的關係：${entry.relation}
+依據下方「權威定盤資料」講清屬${entry.animal}與今年太歲午的具體曆法關係，以及這在傳統命理上代表什麼——只能使用資料中給出的關係，不得編造。
+## 2026年實際生活中可能出現的訊號
+結合真實生活場景（工作、人際、決策、健康作息等，依關係類型選擇最貼切的1-2個面向具體展開），講清這層太歲關係通常會怎麼表現，避免空泛。
+## 這樣的年份該怎麼看待
+用理性、不嚇人的角度說明「太歲關係」的意義與限制——它是提醒而非預言，也不是唯一決定因素。
+## 具體可以做的事
+給讀者2-3條具體、可操作的建議（心態調整、行動節奏、留意方向等），並誠實提醒：生肖對應的只是出生年地支，真正影響一整年吉凶的還是完整命盤與大運，想更準確判斷可以進一步排盤查看。`
+    + (revisionNote ? `\n\n【本次修訂要求（最高優先級，務必逐條滿足）】\n${revisionNote}` : "");
+
+  const prompt = `【主題】${entry.title}
+【副標題】${entry.subtitle}
+【導語】${entry.intro}
+
+【權威定盤資料】
+${entry.grounding}
+
+【典籍參考】
+${context || "（無可用參考，請基於紫微斗數／八字流年太歲推算通論嚴謹撰寫）"}
+
+請撰寫這篇2026丙午年生肖運勢文章的正文。`;
+
+  const markdown = await synthesize({ tag: "liunian-2026", system, prompt, model: SEO_MODEL, maxTokens: 4000 });
   return { markdown, refs };
 }
 
