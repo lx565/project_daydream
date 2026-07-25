@@ -1,10 +1,10 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
-import { GUIDE_TOPICS } from "@/lib/guideTopics";
+import { GUIDE_TOPICS, guideFaqItems } from "@/lib/guideTopics";
 import { getGuideContent } from "@/lib/seoContent";
 import GuideView from "@/components/GuideView";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 
 export const maxDuration = 60; // deep R1 synthesis needs headroom
 export const revalidate = 604800;
@@ -36,7 +36,7 @@ export async function generateMetadata(
       description,
       url: `https://www.mingli.study/guide/${topicData.urlSlug}`,
       siteName: "命裡",
-      locale: "zh_CN",
+      locale: "zh_TW",
       type: "article",
     },
     alternates: {
@@ -61,6 +61,7 @@ export default async function GuidePage(
 
   const allTopics = GUIDE_TOPICS.map(t => ({ slug: t.slug, urlSlug: t.urlSlug, title: t.title }));
   const path = `/guide/${topicData.urlSlug}`;
+  const faq = guideFaqItems(topicData);
 
   return (
     <>
@@ -77,12 +78,14 @@ export default async function GuidePage(
           path,
           section: "學習指南",
         }),
+        faqSchema(faq),
       ]} />
       <GuideView
         topic={topicData}
         markdown={markdown}
         refs={refs}
         allTopics={allTopics}
+        faq={faq}
       />
     </>
   );

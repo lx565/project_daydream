@@ -14,9 +14,10 @@ interface Props {
   markdown: string;
   refs: Reference[];
   allTopics: Pick<GuideTopic, "slug" | "urlSlug" | "title">[];
+  faq: { question: string; answer: string }[];
 }
 
-export default function GuideView({ topic, markdown, refs, allTopics }: Props) {
+export default function GuideView({ topic, markdown, refs, allTopics, faq }: Props) {
   const hasContent = markdown.trim().length > 0;
   const relatedTopics = allTopics.filter(t => topic.related.includes(t.slug));
 
@@ -43,13 +44,19 @@ export default function GuideView({ topic, markdown, refs, allTopics }: Props) {
           </div>
         </div>
 
+        {/* Answer box — direct one-sentence answer before the reader has to read past anything */}
+        <div className="paper-card rounded-2xl border-2 border-vermillion/30 bg-vermillion-l/40 p-4">
+          <p className="text-xs text-vermillion font-bold tracking-widest mb-1.5">一句話</p>
+          <p className="text-sm text-ink font-medium leading-[1.8]">{topic.subtitle}</p>
+        </div>
+
         {/* Intro */}
         <div className="paper-card rounded-2xl border border-border-warm p-5">
           <p className="text-sm text-ink-2 leading-[1.9]">{topic.intro}</p>
         </div>
 
         {/* Early CTA */}
-        <ToolCTA variant="slim" label="懂了理論 · 讓 AI 用三派典籍詳批你自己的命盤 →" />
+        <ToolCTA variant="slim" label={topic.ctaLabel ?? "懂了理論 · 讓 AI 用三派典籍詳批你自己的命盤 →"} />
 
         {/* Synthesized article */}
         {hasContent && (
@@ -129,6 +136,24 @@ export default function GuideView({ topic, markdown, refs, allTopics }: Props) {
         <LikeButton />
         <ToolCTA variant="card" sub="理論之外，更要看你自己的盤。三合、四化、飛星三派合參，AI 依據逾百部典籍為你詳批命格、大限與流年。" label="生成我的命盤詳批" />
 
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         {/* Related guides */}
         {relatedTopics.length > 0 && (

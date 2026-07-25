@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { gtagEvent } from "@/lib/gtag";
 
-const HREF = "/?from=seo";
+const HREF = "/?from=seo#form";
 
 interface Props {
   variant?: "card" | "slim";

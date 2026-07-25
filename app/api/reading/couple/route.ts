@@ -218,7 +218,7 @@ ${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
 命格：${baziA.summary}
 
 【甲方紫微宫位】
-${palaceDesc(ziweiA,"命")}
+${palaceDesc(ziweiA,"命宮")}
 ${palaceDesc(ziweiA,"夫妻")}
 ${palaceDesc(ziweiA,"子女")}
 红鸾星：${findStarPalace(ziweiA,"红鸾")}　天喜星：${findStarPalace(ziweiA,"天喜")}
@@ -232,7 +232,7 @@ ${palaceDesc(ziweiA,"子女")}
 命格：${baziB.summary}
 
 【乙方紫微宫位】
-${palaceDesc(ziweiB,"命")}
+${palaceDesc(ziweiB,"命宮")}
 ${palaceDesc(ziweiB,"夫妻")}
 ${palaceDesc(ziweiB,"子女")}
 红鸾星：${findStarPalace(ziweiB,"红鸾")}　天喜星：${findStarPalace(ziweiB,"天喜")}

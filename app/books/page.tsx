@@ -2,19 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BOOK_ARTICLES, bookSystem, type BookSystem } from "@/lib/bookArticles";
 import ToolCTA from "@/components/ToolCTA";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "命理書單 — 經典典籍推薦與解讀 — 命裡",
+  title: "紫微斗數書推薦、八字入門書單 — 命裡",
   description:
-    "紫微斗數與八字命理經典書單：子平真詮、窮通寶鑑、淵海子平、滴天髓……從入門到進階，幫你選對書、讀對順序，少走彎路。",
+    "紫微斗數書推薦、八字入門書單一次看：子平真詮、窮通寶鑑、淵海子平、滴天髓……依系統分類，含書單推薦、書籍對比、深度解讀與作者傳，幫你選對書、讀對順序，少走彎路。",
   openGraph: {
-    title: "命理書單 — 經典典籍推薦與解讀 — 命裡",
-    description: "紫微斗數與八字命理經典書單：從入門到進階，幫你選對書、讀對順序。",
+    title: "紫微斗數書推薦、八字入門書單 — 命裡",
+    description: "紫微斗數書推薦與八字入門書單，依系統分類，從書單選擇到書籍對比、深度解讀，幫你選對書、讀對順序。",
     url: "https://www.mingli.study/books",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/books" },
 };
@@ -41,6 +43,19 @@ const SYSTEMS: { key: BookSystem; label: string; desc: string; accent: string; b
 
 export default function BooksPage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "命理書單", path: "/books" },
+        ]),
+        collectionPageSchema({
+          name: "命理書單 — 紫微斗數與八字經典典籍導讀",
+          description: "紫微斗數與八字命理經典書單，依系統分類：書單推薦、書籍對比、深度解讀與作者傳記，幫你選對書、讀對順序。",
+          path: "/books",
+        }),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <div className="px-4 pt-6 pb-2 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-ink-4">
@@ -127,5 +142,6 @@ export default function BooksPage() {
         <ToolCTA variant="card" />
       </div>
     </main>
+    </>
   );
 }

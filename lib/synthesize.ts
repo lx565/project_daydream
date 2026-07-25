@@ -4,16 +4,22 @@ import { createHash } from "crypto";
 // Mirrors the provider switch in sseWriter.ts but returns the full text at once,
 // with a long-lived KV cache so each page synthesizes at most once per content version.
 
-// SEO content synthesis uses DeepSeek by default — strong at Chinese and a
-// non-thinking model (so no output-budget truncation). This is independent of the
-// app-wide AI_PROVIDER that powers live readings. Override with SEO_AI_PROVIDER.
+// SEO content synthesis uses DeepSeek by default — strong at Chinese. This is
+// independent of the app-wide AI_PROVIDER that powers live readings. Override
+// with SEO_AI_PROVIDER.
+// NOTE (2026-07-25): DeepSeek retired deepseek-chat/deepseek-reasoner in favor of
+// deepseek-v4-pro/deepseek-v4-flash — both new models emit reasoning_content by
+// default (confirmed via direct API test), so the old "non-thinking model, no
+// output-budget truncation" assumption behind picking the cheap/fast tier here no
+// longer holds. Watch generated SEO content for truncated/cut-off endings; if it
+// shows up, maxTokens may need raising to leave headroom for reasoning tokens.
 const PROVIDER = (process.env.SEO_AI_PROVIDER
   ?? (process.env.DEEPSEEK_API_KEY ? "deepseek" : process.env.AI_PROVIDER ?? "gemini")) as
   "gemini" | "anthropic" | "deepseek";
 
 const MODEL_DEFAULTS = {
   gemini: "gemini-2.5-flash",
-  deepseek: "deepseek-chat",
+  deepseek: "deepseek-v4-flash",
   anthropic: "claude-sonnet-4-6",
 } as const;
 

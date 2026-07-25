@@ -66,6 +66,22 @@ export function articleSchema(opts: {
   };
 }
 
+/** A hub/index page listing many entries (books, library, zodiac, etc.). */
+export function collectionPageSchema(opts: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: opts.name,
+    description: opts.description,
+    url: `${SITE}${opts.path}`,
+    inLanguage: "zh-CN",
+  };
+}
+
 /** An FAQ section (hub pages). Mirror the visible <details> Q&A on the page. */
 export function faqSchema(items: { question: string; answer: string }[]) {
   return {

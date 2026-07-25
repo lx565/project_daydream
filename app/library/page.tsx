@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ToolCTA from "@/components/ToolCTA";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
     description: "格局 · 星曜 · 宮位 · 學習指南 · 名人命盤 · 書單，依據121部典籍整理。",
     url: "https://www.mingli.study/library",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/library" },
 };
@@ -135,6 +137,18 @@ const GROUPS: { key: string; label: string; desc: string; bar: string; accent: s
 
 export default function LibraryPage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+        ]),
+        collectionPageSchema({
+          name: "命理知識庫 — 紫微斗數 · 八字",
+          description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據121部經典整理。",
+          path: "/library",
+        }),
+      ]} />
     <main className="min-h-screen bg-parchment">
       {/* Minimal top nav */}
       <div className="border-b border-border-warm bg-paper-2/60 px-4 py-3">
@@ -202,5 +216,6 @@ export default function LibraryPage() {
         <ToolCTA variant="card" label="排命盤 · 看你的格局與運勢" sub="AI 綜合三合、四化、飛星三派典籍，為你深度解讀命盤" />
       </div>
     </main>
+    </>
   );
 }

@@ -18,6 +18,7 @@ import type { AssistantStarDef } from "./assistantStarData";
 import { assistantStarGroundingBlock } from "./assistantStarData";
 import type { QingganEntry } from "./qingganData";
 import type { SihuaEntry } from "./sihuaData";
+import type { SihuaPalaceEntry } from "./sihuaPalaceData";
 import type { XiongEntry } from "./xiongData";
 import type { LiuNianEntry } from "./liuNianData";
 import type { HunyinEntry } from "./hunyinData";
@@ -35,7 +36,7 @@ import { starMbtiGroundingBlock, mbtiZiweiGroundingBlock, starZodiacGroundingBlo
 
 // Pre-generated, proofread content store. When a reviewed file exists it is served
 // verbatim (deterministic, no runtime AI). Missing file => fall back to live synth.
-function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assistantstar" | "personality" | "book" | "sources" | "shishen" | "tiangan" | "geju" | "baziguide" | "zodiac" | "qinggan" | "sihua" | "xiong" | "liunian" | "hunyin" | "shiye" | "caiyun" | "jibing" | "bazi-hunyin" | "bazi-shiye" | "bazi-caiyun" | "bazi-jibing" | "shensha", key: string): SeoContent | null {
+function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assistantstar" | "personality" | "book" | "sources" | "shishen" | "tiangan" | "geju" | "baziguide" | "zodiac" | "qinggan" | "sihua" | "sihua-palace" | "xiong" | "liunian" | "hunyin" | "shiye" | "caiyun" | "jibing" | "bazi-hunyin" | "bazi-shiye" | "bazi-caiyun" | "bazi-jibing" | "shensha", key: string): SeoContent | null {
   try {
     const file = path.join(process.cwd(), "content", "seo", kind, `${key}.json`);
     if (!fs.existsSync(file)) return null;
@@ -50,20 +51,22 @@ function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assist
 type StarDef = (typeof MAJOR_STARS)[number];
 type PalaceDef = (typeof PALACES)[number];
 
-// Deep teaching content uses DeepSeek R1 (reasoner): strong logic + best 紫微斗数
-// domain accuracy. Override with SEO_AI_MODEL. Separate from live readings.
-const SEO_MODEL = process.env.SEO_AI_MODEL ?? "deepseek-reasoner";
+// Deep teaching content uses DeepSeek's higher-capability tier: strong logic +
+// best 紫微斗数 domain accuracy. Override with SEO_AI_MODEL. Separate from live
+// readings. (2026-07-25: deepseek-reasoner was retired by DeepSeek in favor of
+// deepseek-v4-pro/deepseek-v4-flash — see lib/synthesize.ts for the full note.)
+const SEO_MODEL = process.env.SEO_AI_MODEL ?? "deepseek-v4-pro";
 
-// Shared rules: synthesize ONLY readable modern 简体中文, silently discarding any
+// Shared rules: synthesize ONLY readable modern 繁體中文, silently discarding any
 // reference fragment that is non-Chinese, garbled, or off-topic.
-const BASE_RULES = `你是命里平台的紫微斗数命理师，为面向大众的知识科普页面撰写内容。
+const BASE_RULES = `你是命里平台的紫微斗數命理師，為面向大眾的知識科普頁面撰寫內容。
 
-严格要求：
-1. 全文必须是通顺、现代的简体中文。绝对不要出现英文、繁体、乱码或古籍原文照抄。
-2. 下方"典籍参考"仅供你提炼，其中可能混有无关、残缺或非中文的片段——请自行甄别，只采用真正相关、可信的内容，无关片段一律忽略。
-3. 用平实易懂的语言解释，像懂行的朋友在讲解，不堆砌术语；必须出现的术语用一句话点明含义。
-4. 内容具体、有信息量，不空泛、不套话、不吓人、不算命下定论，落点在帮助读者理解自己。
-5. 只输出正文 Markdown，不要前言、不要"以下是""希望对你有帮助"之类的话。`;
+嚴格要求：
+1. 全文必須是通順、現代的繁體中文（臺灣用語習慣）。絕對不要出現英文、簡體字、亂碼或古籍原文照抄。
+2. 下方「典籍參考」僅供你提煉，其中可能混有無關、殘缺或非中文的片段——請自行甄別，只採用真正相關、可信的內容，無關片段一律忽略。
+3. 用平實易懂的語言解釋，像懂行的朋友在講解，不堆砌術語；必須出現的術語用一句話點明含義。
+4. 內容具體、有信息量，不空泛、不套話、不嚇人、不算命下定論，落點在幫助讀者理解自己。
+5. 只輸出正文 Markdown，不要前言、不要「以下是」「希望對你有幫助」之類的話。`;
 
 export interface SeoContent {
   markdown: string;
@@ -570,14 +573,14 @@ export const ANTI_CLICHE = `
 4. 用具体的例子、对比和细节代替泛泛而谈。要有自己的观点和取舍，像一个真正读懂了的人在跟朋友讲，而不是百科词条式的中立罗列。`;
 
 // Shared rules for 八字 content (BASE_RULES is 紫微-specific).
-const BAZI_BASE_RULES = `你是命里平台的八字（子平）命理师，为面向大众的知识科普页面撰写内容。
+const BAZI_BASE_RULES = `你是命里平台的八字（子平）命理師，為面向大眾的知識科普頁面撰寫內容。
 
-严格要求：
-1. 全文必须是通顺、现代的简体中文。绝对不要出现英文、繁体、乱码或古籍原文照抄。
-2. 下方"典籍参考"仅供你提炼，其中可能混有无关、残缺或非中文的片段——请自行甄别，只采用真正相关、可信的内容，无关片段一律忽略。
-3. 用平实易懂的语言解释，像懂行的朋友在讲解，不堆砌术语；必须出现的术语用一句话点明含义。
-4. 内容具体、有信息量，不空泛、不套话、不吓人、不算命下定论，落点在帮助读者理解自己。
-5. 只输出正文 Markdown，不要前言、不要"以下是""希望对你有帮助"之类的话。` + ANTI_CLICHE;
+嚴格要求：
+1. 全文必須是通順、現代的繁體中文（臺灣用語習慣）。絕對不要出現英文、簡體字、亂碼或古籍原文照抄。
+2. 下方「典籍參考」僅供你提煉，其中可能混有無關、殘缺或非中文的片段——請自行甄別，只採用真正相關、可信的內容，無關片段一律忽略。
+3. 用平實易懂的語言解釋，像懂行的朋友在講解，不堆砌術語；必須出現的術語用一句話點明含義。
+4. 內容具體、有信息量，不空泛、不套話、不嚇人、不算命下定論，落點在幫助讀者理解自己。
+5. 只輸出正文 Markdown，不要前言、不要「以下是」「希望對你有幫助」之類的話。` + ANTI_CLICHE;
 
 /** 八字 十神 (Ten Gods) explainer page. */
 export async function getShishenContent(entry: ShishenEntry, revisionNote?: string): Promise<SeoContent> {
@@ -862,6 +865,71 @@ ${context || "（无可用参考，请基于紫微斗数四化理论严谨撰写
 请撰写这篇四化科普文章的正文。`;
 
   const markdown = await synthesize({ tag: "sihua", system, prompt, model: SEO_MODEL, maxTokens: 4000 });
+  return { markdown, refs };
+}
+
+// ── 四化×十二宮 content ───────────────────────────────────────────────────────
+//
+// One level deeper than getSihuaContent: 化X入XX宮 articles (e.g. 化忌入夫妻宮).
+// NOTE: this content must be output in Traditional Chinese (繁體中文/台灣用語),
+// unlike SIHUA_BASE_RULES above which currently still says 简体中文 pending a
+// separate cleanup pass — do not rely on that constant here, state the script
+// requirement explicitly so this new cluster is correct regardless of when
+// that other fix lands.
+const SIHUA_PALACE_BASE_RULES = `你是命裡平台的命理師，精通紫微斗數四化理論，為面向大眾的知識科普頁面撰寫內容。
+
+嚴格要求：
+1. 全文必須是通順、現代的繁體中文（臺灣用語習慣）。絕對不要出現英文、簡體字、亂碼或古籍原文照抄。
+2. 下方「典籍參考」僅供你提煉，其中可能混有無關、殘缺或非中文的片段——請自行甄別，只採用真正相關、可信的內容，無關片段一律忽略。
+3. 語氣像懂行的朋友在講解，溫暖不生硬；必須出現的術語用一句話點明含義。
+4. 內容具體、有信息量，不空泛、不套話、不嚇人、不下絕對結論，落點在幫助讀者理解命盤特質與應對方向。
+5. 化忌落宮的寫法：誠實說明挑戰，但落點永遠在「這意味著什麼課題、如何面對」，不渲染恐懼。
+6. 【極重要】下方會給出一個「權威定盤資料」塊，其中十干化忌總表與列出的星曜落宮特質是最高準則，絕對不得違背——只能討論資料中明確列出的星曜，不得為未列出的星曜編造此宮位的具體論斷。
+7. 只輸出正文 Markdown，不要前言、不要「以下是」「希望對你有幫助」之類的話。` + ANTI_CLICHE;
+
+/** 化×十二宮 article (Phase 1: 化忌 × 12 palaces; 化祿/化權/化科 follow the same function later). */
+export async function getSihuaPalaceContent(entry: SihuaPalaceEntry, revisionNote?: string): Promise<SeoContent> {
+  if (!revisionNote) {
+    const pre = readPregenerated("sihua-palace", entry.urlSlug);
+    if (pre) return pre;
+  }
+
+  const { context, refs } = await getKnowledge({
+    ...entry.ragQuery,
+    topK: 10,
+    maxPerBook: 3,
+  });
+
+  const system = SIHUA_PALACE_BASE_RULES + `
+
+這是一篇「${entry.name}」命理科普文章，面向有一定基礎、想深入了解自己命盤的讀者。這篇文章比一般「XX星化忌」文章更進一步：它專門討論「當化忌落在${entry.palace}這個宮位時」代表什麼——不限定是哪顆星。
+
+要點（用 ## 二級標題，5 節，每節約150-200字，總長約900-1000字）：
+## ${entry.huaName}入${entry.palace}是什麼意思
+先講清楚「宮位效應」：無論是十顆化忌星裡的哪一顆落在${entry.palace}，這個宮位本身代表的領域為何會因此承受阻滯或課題。
+## 哪些星的化忌落在${entry.palace}最需要留意
+依據下方「權威定盤資料」逐一點出最相關的幾顆星（只能用資料中列出的星曜與說明），具體講清每顆星的化忌落在此宮時各自的側重與差異。
+## ${entry.palace}化忌的常見人生模式
+結合真實生活場景，講清這個組合具體會怎麼表現、當事人常見的心理或行為模式。
+## 流年或大運引動時的信號
+當流年/大限走到這個宮位或其化忌被冲對時，通常會出現什麼徵兆。
+## 如何與這個課題好好相處
+給讀者具體、溫暖、可操作的應對方向，不空泛不說教，落點在「怎麼做」而非單純安慰。`
+    + (revisionNote ? `\n\n【本次修訂要求（最高優先級，務必逐條滿足）】\n${revisionNote}` : "");
+
+  const prompt = `【主題】${entry.title}
+【副標題】${entry.subtitle}
+【導語】${entry.intro}
+
+【權威定盤資料】
+${entry.grounding}
+
+【典籍參考】
+${context || "（無可用參考，請基於紫微斗數四化理論嚴謹撰寫）"}
+
+請撰寫這篇「${entry.huaName}入${entry.palace}」科普文章的正文。`;
+
+  const markdown = await synthesize({ tag: "sihua-palace", system, prompt, model: SEO_MODEL, maxTokens: 4000 });
   return { markdown, refs };
 }
 

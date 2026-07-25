@@ -40,6 +40,8 @@ export interface SihuaEntry {
   grounding: string;   // authoritative facts injected verbatim into prompt
   ragQuery: Omit<RagQuery, "topK" | "maxPerBook">;
   related: string[];
+  /** Optional cross-links into the deeper lib/sihuaPalaceData.ts cluster (化×十二宮), e.g. "huaji-fuqi-gong". */
+  relatedPalaces?: string[];
 }
 
 // ── Phase 1 Pillars ─────────────────────────────────────────────────────────
@@ -61,6 +63,11 @@ const PILLARS: SihuaEntry[] = [
 生年化忌 vs 流年化忌：生年化忌是一生的底色課題；流年化忌是該年份特別凸顯的波折方向。`,
     ragQuery: { text: "化忌 四化 宮位 生年化忌 流年化忌 執著 阻滯 課題 落宮 三方四正 忌入命財官夫", topic: "格局" },
     related: ["hua-lu", "hua-quan", "taiyang-huaji", "taiyin-huaji"],
+    relatedPalaces: [
+      "huaji-ming-gong", "huaji-xiongdi-gong", "huaji-fuqi-gong", "huaji-zinv-gong",
+      "huaji-caibo-gong", "huaji-jie-gong", "huaji-qianyi-gong", "huaji-jiaoyou-gong",
+      "huaji-guanlu-gong", "huaji-tianzhai-gong", "huaji-fude-gong", "huaji-fumu-gong",
+    ],
   },
   {
     name: "化祿",
@@ -133,6 +140,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→名譽自我要求高、壓力大；落官祿→事業容易受外界批評；落夫妻→男性配偶有壓力（女命）或自己在感情中承壓；落父母→與父緣薄或有矛盾；落遷移→在外地工作受壓或名譽波折。`,
     ragQuery: { text: "太陽化忌 甲年 名譽 父緣 男性 官貴 化忌落宮 官祿命宮夫妻父母 太陽星性", topic: "格局" },
     related: ["hua-ji", "taiyin-huaji", "lianzheng-huaji"],
+    relatedPalaces: ["huaji-guanlu-gong", "huaji-qianyi-gong"],
   },
   {
     name: "太陰化忌",
@@ -153,6 +161,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→內心容易不安、有憂鬱傾向；落財帛→財務壓力大、難守財；落田宅→家庭不穩定或搬遷多；落夫妻→感情有波折，易情傷；落疾厄→與女性生殖系統或內分泌相關的健康。`,
     ragQuery: { text: "太陰化忌 乙年 財富 母緣 女性 感情 田宅 化忌落宮 夫妻財帛田宅 太陰星性", topic: "格局" },
     related: ["hua-ji", "taiyang-huaji", "tianji-huaji"],
+    relatedPalaces: ["huaji-caibo-gong", "huaji-tianzhai-gong"],
   },
   {
     name: "廉貞化忌",
@@ -173,6 +182,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→性格易走極端、感情執著；落夫妻→婚姻有磨難或桃花是非；落官祿→事業有是非官非；落疾厄→血液、婦科（女命）或泌尿系統需留意；落遷移→出門有意外風險。`,
     ragQuery: { text: "廉貞化忌 丙年 感情 桃花 是非 官司 血光 化忌落宮 夫妻命宮疾厄 廉貞星性", topic: "格局" },
     related: ["hua-ji", "taiyang-huaji", "jumen-huaji"],
+    relatedPalaces: ["huaji-fuqi-gong", "huaji-jie-gong"],
   },
   {
     name: "巨門化忌",
@@ -193,6 +203,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→性格偏執拗，容易招是非；落官祿→工作中言語風險大；落夫妻→伴侶之間容易爭吵、言語傷害；落父母→與師長關係有誤解；落交友→朋友關係有口舌。`,
     ragQuery: { text: "巨門化忌 丁年 口舌 是非 溝通 爭議 化忌落宮 官祿夫妻命宮 巨門星性", topic: "格局" },
     related: ["hua-ji", "lianzheng-huaji", "tianji-huaji"],
+    relatedPalaces: ["huaji-jiaoyou-gong", "huaji-guanlu-gong"],
   },
   {
     name: "天機化忌",
@@ -213,6 +224,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→想太多、內耗；落官祿→工作計劃多變、難守業；落兄弟→手足緣薄；落福德→精神不易安定；落遷移→出行變數多。`,
     ragQuery: { text: "天機化忌 戊年 思維 焦慮 變動 兄弟 機變 化忌落宮 命宮福德官祿 天機星性", topic: "格局" },
     related: ["hua-ji", "jumen-huaji", "wenqu-huaji"],
+    relatedPalaces: ["huaji-xiongdi-gong", "huaji-fude-gong"],
   },
   {
     name: "文曲化忌",
@@ -233,6 +245,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→表達受壓，容易言多有失；落官祿→工作中文書或口頭溝通出錯；落夫妻→感情裡多愁多想；落父母→與長輩溝通有誤解；落交友→朋友間言語摩擦。`,
     ragQuery: { text: "文曲化忌 己年 口才 才藝 感情 文書 化忌落宮 命宮官祿夫妻 文曲星性", topic: "格局" },
     related: ["hua-ji", "tianji-huaji", "tiantong-huaji"],
+    relatedPalaces: ["huaji-fumu-gong", "huaji-fuqi-gong"],
   },
   {
     name: "天同化忌",
@@ -253,6 +266,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→享樂執念重，懶散或沉溺；落夫妻→感情課題多；落子女→子女緣薄；落福德→內心不易滿足；落財帛→花錢大手大腳難守財。`,
     ragQuery: { text: "天同化忌 庚年 福氣 感情 享受 子女 化忌落宮 命宮夫妻子女福德 天同星性", topic: "格局" },
     related: ["hua-ji", "wenqu-huaji", "wenchanghz-huaji"],
+    relatedPalaces: ["huaji-ming-gong", "huaji-zinv-gong"],
   },
   {
     name: "文昌化忌",
@@ -273,6 +287,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→學習有壓力、名譽有波折；落官祿→工作檔案出錯風險；落父母→與學校或長輩有矛盾；落財帛→因文書或合約損財；落遷移→在外名聲有起伏。`,
     ragQuery: { text: "文昌化忌 辛年 考試 文書 名聲 學業 化忌落宮 命宮官祿父母 文昌星性", topic: "格局" },
     related: ["hua-ji", "tiantong-huaji", "wuqu-huaji"],
+    relatedPalaces: ["huaji-fumu-gong", "huaji-caibo-gong"],
   },
   {
     name: "武曲化忌",
@@ -293,6 +308,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落財帛→直接主財務壓力大；落命宮→行事受阻、身體金屬傷；落官祿→事業資金週轉難；落夫妻→婚姻有孤克/磨合；落田宅→不動產難守。`,
     ragQuery: { text: "武曲化忌 壬年 財運 金屬 孤克 婚姻 化忌落宮 財帛命宮夫妻官祿 武曲星性", topic: "格局" },
     related: ["hua-ji", "wenchang-huaji", "tanlang-huaji"],
+    relatedPalaces: ["huaji-tianzhai-gong", "huaji-fuqi-gong"],
   },
   {
     name: "貪狼化忌",
@@ -313,6 +329,7 @@ const HUAJI_ARTICLES: SihuaEntry[] = [
 落宮變化：化忌落命宮→慾望執念重，易陷入沉溺；落夫妻→感情糾纏複雜；落財帛→花錢在享樂上難守財；落官祿→工作上急功近利；落福德→享樂執念影響心理平衡。`,
     ragQuery: { text: "貪狼化忌 癸年 慾望 桃花 投機 感情 化忌落宮 命宮夫妻財帛福德 貪狼星性", topic: "格局" },
     related: ["hua-ji", "wuqu-huaji", "taiyang-huaji"],
+    relatedPalaces: ["huaji-fude-gong", "huaji-fuqi-gong"],
   },
 ];
 
@@ -920,6 +937,24 @@ export const SIHUA: SihuaEntry[] = [
 
 export function getSihua(urlSlug: string): SihuaEntry | undefined {
   return SIHUA.find(e => e.urlSlug === urlSlug);
+}
+
+/**
+ * FAQ pairs for a sihua article, derived mechanically from fields that already
+ * exist on every entry (intro / oneLine / stems) — no per-entry authored copy.
+ */
+export function sihuaFaqItems(entry: SihuaEntry): { question: string; answer: string }[] {
+  const items = [
+    { question: `${entry.name}是什麼意思？`, answer: entry.intro },
+    { question: `${entry.name}是好是壞？該怎麼理解？`, answer: entry.oneLine },
+  ];
+  if (entry.stems && entry.stems.length > 0) {
+    items.push({
+      question: `哪些生年會有${entry.name}？`,
+      answer: `生年天干為${entry.stems.join("、")}的人（即${entry.stems.join("、")}年出生），命盤中即帶有${entry.name}。`,
+    });
+  }
+  return items;
 }
 
 export const SIHUA_PILLARS = PILLARS;

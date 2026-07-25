@@ -3,6 +3,8 @@ import Link from "next/link";
 import { STAR_ZODIAC_LIST, ZODIAC_ZIWEI_LIST } from "@/lib/personalityData";
 import ToolCTA from "@/components/ToolCTA";
 import LibraryNav from "@/components/LibraryNav";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
     description: "紫微斗數主星與西方12星座的跨文化性格原型對照，命裡獨家研究。",
     url: "https://www.mingli.study/zodiac",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/zodiac" },
 };
@@ -37,6 +39,19 @@ const ZODIAC_COLORS: Record<string, string> = {
 
 export default function ZodiacPage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "紫微×星座", path: "/zodiac" },
+        ]),
+        collectionPageSchema({
+          name: "紫微斗數 × 星座 性格對照",
+          description: "14顆紫微命宮主星與12星座的性格原型對照，一東一西、異曲同工，用你熟悉的星座讀懂陌生的紫微主星。",
+          path: "/zodiac",
+        }),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <LibraryNav category="zodiac" currentTitle="紫微×星座" />
 
@@ -133,5 +148,6 @@ export default function ZodiacPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }

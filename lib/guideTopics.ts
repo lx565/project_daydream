@@ -8,6 +8,9 @@ export interface GuideTopic {
   intro: string;
   ragQuery: Omit<RagQuery, "topK" | "maxPerBook">;
   related: string[]; // slugs of related topics
+  /** Override for the early slim ToolCTA label — use when the default is too generic
+   *  to close the gap between what the title promises and what the tool delivers. */
+  ctaLabel?: string;
 }
 
 export const GUIDE_TOPICS: GuideTopic[] = [
@@ -59,12 +62,13 @@ export const GUIDE_TOPICS: GuideTopic[] = [
     title: "三合派紫微斗數",
     subtitle: "以三方四正為核心的古典派別",
     intro:
-      "三合派是紫微斗數最為廣泛流傳的傳統流派，以中州派為代表，由香港命理大師王亭之集大成。三合派以宮氣為重，看命宮三方四正（命宮、官祿宮、財帛宮、遷移宮）的星曜組合，判斷命主的格局高低與運勢走向。",
+      "三合派是紫微斗數三大流派之一，你不需要先選定派別才能看懂自己的命盤——命裡的 AI 解讀採三合、四化、飛星三派合參，互相補充而非偏執一家。三合派是紫微斗數最為廣泛流傳的傳統流派，以中州派為代表，由香港命理大師王亭之集大成。三合派以宮氣為重，看命宮三方四正（命宮、官祿宮、財帛宮、遷移宮）的星曜組合，判斷命主的格局高低與運勢走向。",
     ragQuery: {
       text: "三合派 三方四正 宮氣 中州派 王亭之 命宮 格局 宮位影響",
       school: "三合派",
     },
     related: ["中州派", "三方四正", "三派比較", "四化派", "飛星派"],
+    ctaLabel: "不必先選派別 · AI 三合、四化、飛星三派合參，直接為你詳批命盤 →",
   },
   {
     slug: "四化派",
@@ -149,15 +153,16 @@ export const GUIDE_TOPICS: GuideTopic[] = [
   {
     slug: "流年",
     urlSlug: "annual-luck",
-    title: "流年：每年運勢推算",
+    title: "流年是什麼？流年運勢的推算原理",
     subtitle: "流年宮位與大限疊加的年度分析",
     intro:
-      "流年是紫微斗數中以一年為單位的短期運勢推算。每年以流年命宮（太歲宮）為起點，結合大限與本命盤進行三盤疊合分析。流年的四化飛星對大限宮位和本命宮位的衝化，往往預示著該年的重大事件與運勢變化。",
+      "本文說明流年的推算原理與方法；如果你想直接看自己今年的流年吉凶，可以用命裡的 AI 排盤，依你的命盤即時分析。流年是紫微斗數中以一年為單位的短期運勢推算。每年以流年命宮（太歲宮）為起點，結合大限與本命盤進行三盤疊合分析。流年的四化飛星對大限宮位和本命宮位的衝化，往往預示著該年的重大事件與運勢變化。",
     ragQuery: {
       text: "流年 太歲 流年命宮 流年四化 年運 三盤疊合 大限流年 運勢預測",
       topic: "大限",
     },
     related: ["大限", "四化", "格局"],
+    ctaLabel: "想知道你今年流年運勢如何？直接生成命盤，AI 精算流年吉凶 →",
   },
   {
     slug: "格局",
@@ -320,3 +325,18 @@ export const GUIDE_TOPICS: GuideTopic[] = [
 ] as const;
 
 export type GuideSlug = typeof GUIDE_TOPICS[number]["slug"];
+
+/**
+ * FAQ pairs for a guide article, derived mechanically from fields that already
+ * exist on every topic (title / subtitle / intro) — no per-topic authored copy.
+ */
+export function guideFaqItems(topic: GuideTopic): { question: string; answer: string }[] {
+  // Titles that are already phrased as a question (end with "？") are used as-is;
+  // otherwise build a clean question from the short topic label (`slug`), since
+  // some titles embed a "？" mid-sentence and don't end with one (e.g. "流年是什麼？流年運勢的推算原理").
+  const mainQuestion = topic.title.endsWith("？") ? topic.title : `${topic.slug}是什麼？`;
+  return [
+    { question: mainQuestion, answer: topic.intro },
+    { question: `${topic.slug}的重點是什麼？`, answer: topic.subtitle },
+  ];
+}

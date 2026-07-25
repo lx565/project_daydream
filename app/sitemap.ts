@@ -9,6 +9,7 @@ import { STAR_MBTI_LIST, MBTI_ZIWEI_LIST, STAR_ZODIAC_LIST, ZODIAC_ZIWEI_LIST } 
 import { SHISHEN } from "@/lib/baziShishen";
 import { QINGGAN } from "@/lib/qingganData";
 import { SIHUA } from "@/lib/sihuaData";
+import { SIHUA_PALACE } from "@/lib/sihuaPalaceData";
 import { XIONG } from "@/lib/xiongData";
 import { LIUNIAN } from "@/lib/liuNianData";
 import { HUNYIN } from "@/lib/hunyinData";
@@ -210,6 +211,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  const sihuaPalacePages = SIHUA_PALACE.map(e => ({
+    url: `${BASE}/sihua-palace/${e.urlSlug}`,
+    lastModified: LAST_CONTENT_UPDATE,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }));
+
   const qingganPages = QINGGAN.map(e => ({
     url: `${BASE}/qinggan/${e.urlSlug}`,
     lastModified: LAST_CONTENT_UPDATE,
@@ -264,6 +272,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...qingganPages,
     { url: `${BASE}/sihua`,    changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },
     ...sihuaPages,
+    ...sihuaPalacePages,
     { url: `${BASE}/xiong`,    changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },
     ...xiongPages,
     { url: `${BASE}/liunian`, changeFrequency: "monthly" as const, priority: 0.85, lastModified: LAST_CONTENT_UPDATE },

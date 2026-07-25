@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BirthdayWheel } from "./WheelPicker";
@@ -40,6 +40,19 @@ function loadSaved() {
 export default function FortuneForm() {
   const router = useRouter();
   const saved = loadSaved();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // SEO article CTAs link to /?from=seo#form. Next.js App Router doesn't
+  // reliably auto-scroll to an in-page hash on cross-route navigation, so
+  // scroll + focus the form on mount as a safety net (in-page anchor clicks
+  // via <a href="#form"> still work natively without this).
+  useEffect(() => {
+    if (window.location.hash !== "#form") return;
+    const target = document.getElementById("form") ?? formRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const t = setTimeout(() => formRef.current?.focus({ preventScroll: true }), 400);
+    return () => clearTimeout(t);
+  }, []);
 
   const [inputMethod, setInputMethod] = useState<"solar" | "bazi">("solar");
   const [showTz, setShowTz] = useState<boolean>((saved?.tz ?? 8) !== 8);
@@ -84,7 +97,7 @@ export default function FortuneForm() {
   const labelClass = "block text-xs text-ink-3 tracking-widest uppercase mb-1.5";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} ref={formRef} tabIndex={-1} className="space-y-5 outline-none">
       {/* Mode tabs — 个人命盘 stays on this page; 合盘 · 缘分 goes straight to /hepan
           (no intermediate link-through card — direct navigation on click). */}
       <div className="flex rounded-xl overflow-hidden border border-border-warm">

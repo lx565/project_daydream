@@ -22,10 +22,13 @@ interface Props {
   palace: PalaceDef;
   markdown: string;
   refs: Reference[];
+  faq: { question: string; answer: string }[];
 }
 
-export default function StarPalaceView({ star, palace, markdown, refs }: Props) {
+export default function StarPalaceView({ star, palace, markdown, refs, faq }: Props) {
   const hasContent = markdown.trim().length > 0;
+  const starBrief = star.brief.replace(/。+$/, "");
+  const oneLineAnswer = `${starBrief}，入${palace.name}：${palace.brief}。`;
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -47,6 +50,12 @@ export default function StarPalaceView({ star, palace, markdown, refs }: Props) 
             <div className="w-1.5 h-1.5 rounded-full bg-vermillion/40" />
             <div className="h-px w-16 bg-vermillion/20" />
           </div>
+        </div>
+
+        {/* Answer box — direct one-sentence answer before the reader has to read past anything */}
+        <div className="paper-card rounded-2xl border-2 border-vermillion/30 bg-vermillion-l/40 p-4">
+          <p className="text-xs text-vermillion font-bold tracking-widest mb-1.5">一句話</p>
+          <p className="text-sm text-ink font-medium leading-[1.8]">{oneLineAnswer}</p>
         </div>
 
         {/* Star + palace summary card */}
@@ -102,6 +111,25 @@ export default function StarPalaceView({ star, palace, markdown, refs }: Props) 
           sub={`以上為通論。你命盤中的${star.name}落於何宮、廟旺或落陷、是否帶四化？AI 綜合三派典籍，為你詳批專屬命格。`}
           label="生成我的命盤詳批"
         />
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         {/* Palace navigator */}
         <div className="space-y-3">
