@@ -30,13 +30,13 @@ type Cat = {
   badge: string;
 };
 
-const ZIWEI_CATEGORIES: Cat[] = [
+const FOUNDATION_CATEGORIES: Cat[] = [
   {
     href: "/guide",
     label: "學習中心",
-    subtitle: "從入門到進階",
-    desc: "紫微斗數入門、三合 / 四化 / 飛星三大流派、大限流年、感情事業……系統梳理核心概念。",
-    count: 15,
+    subtitle: "從入門到進階，含常見疑問",
+    desc: "紫微斗數入門、三合 / 四化 / 飛星三大流派、大限流年，以及「準不準」「該用紫微還是八字」等常見疑問解答。",
+    count: 19,
     countLabel: "篇指南",
     accent: "border-jade/40 hover:border-jade/70",
     badge: "bg-jade/10 text-jade",
@@ -72,6 +72,26 @@ const ZIWEI_CATEGORIES: Cat[] = [
     badge: "bg-paper-2 text-ink-3",
   },
   {
+    href: "/sihua",
+    label: "四化詳解",
+    subtitle: "化祿 · 化權 · 化科 · 化忌",
+    desc: "紫微斗數最核心的變化系統：十干主星四化詳解，以及化祿/權/科/忌逐一落在十二宮位的深度解析。",
+    count: 91,
+    countLabel: "篇文章",
+    accent: "border-amber-300/50 hover:border-amber-400/70",
+    badge: "bg-amber-50 text-amber-700",
+  },
+  {
+    href: "/zodiac",
+    label: "紫微 × 星座",
+    subtitle: "東西方命理原型對照",
+    desc: "紫微十四主星與西方十二星座的性格原型類比——一東一西兩套系統，異曲同工的觀察視角。",
+    count: 26,
+    countLabel: "篇文章",
+    accent: "border-jade/30 hover:border-jade/60",
+    badge: "bg-jade/10 text-jade",
+  },
+  {
     href: "/personality",
     label: "紫微 × MBTI",
     subtitle: "命盤與性格型別交叉解讀",
@@ -80,6 +100,102 @@ const ZIWEI_CATEGORIES: Cat[] = [
     countLabel: "",
     accent: "border-purple-200/60 hover:border-purple-300/80",
     badge: "bg-purple-50 text-purple-600",
+  },
+];
+
+const LIFE_TOPIC_CATEGORIES: Cat[] = [
+  {
+    href: "/hunyin",
+    label: "紫微看婚姻",
+    subtitle: "夫妻宮主星與婚姻格局",
+    desc: "各主星落入夫妻宮的配偶特質與婚姻走向，紫微斗數視角的感情深度解讀。",
+    count: 14,
+    countLabel: "篇",
+    accent: "border-vermillion/30 hover:border-vermillion/60",
+    badge: "bg-vermillion-l text-vermillion",
+  },
+  {
+    href: "/bazi/hunyin",
+    label: "八字看婚姻",
+    subtitle: "配偶星 · 夫妻宮 · 正緣時機",
+    desc: "子平八字視角的婚姻解讀：配偶星清濁旺衰、日支夫妻宮、正緣時機、晚婚命、離婚訊號等實用主題。",
+    count: 12,
+    countLabel: "篇",
+    accent: "border-gold/40 hover:border-gold/70",
+    badge: "bg-gold/10 text-gold",
+  },
+  {
+    href: "/shiye",
+    label: "紫微看事業",
+    subtitle: "官祿宮主星與事業格局",
+    desc: "各主星落入官祿宮的事業特質、適合方向與發展節奏。",
+    count: 14,
+    countLabel: "篇",
+    accent: "border-border-warm hover:border-ink-4/40",
+    badge: "bg-paper-2 text-ink-3",
+  },
+  {
+    href: "/caiyun",
+    label: "紫微看財運",
+    subtitle: "財帛宮主星與理財性格",
+    desc: "各主星落入財帛宮的進財方式、理財性格與財運高低起伏。",
+    count: 14,
+    countLabel: "篇",
+    accent: "border-amber-300/50 hover:border-amber-400/70",
+    badge: "bg-amber-50 text-amber-700",
+  },
+  {
+    href: "/jibing",
+    label: "紫微看健康",
+    subtitle: "疾厄宮主星與體質特徵",
+    desc: "各主星落入疾厄宮對應的先天體質強弱與需留意的健康面向。",
+    count: 14,
+    countLabel: "篇",
+    accent: "border-jade/30 hover:border-jade/60",
+    badge: "bg-jade/10 text-jade",
+  },
+  {
+    href: "/qinggan",
+    label: "感情專題",
+    subtitle: "桃花 · 緣分 · 相處模式",
+    desc: "桃花運、緣分深淺、相處模式等感情相關的專題深度文章。",
+    count: 15,
+    countLabel: "篇",
+    accent: "border-purple-200/60 hover:border-purple-300/80",
+    badge: "bg-purple-50 text-purple-600",
+  },
+  {
+    href: "/xiong",
+    label: "凶象詳解",
+    subtitle: "煞星 · 空劫 · 需留意的格局",
+    desc: "命盤中較具挑戰性的星曜組合與格局，誠實面對、理性應對的解讀角度，不渲染恐懼。",
+    count: 14,
+    countLabel: "篇",
+    accent: "border-border-warm hover:border-ink-4/40",
+    badge: "bg-paper-2 text-ink-3",
+  },
+];
+
+const TIMING_CATEGORIES: Cat[] = [
+  {
+    href: "/liunian-2026",
+    label: "2026 丙午年運勢",
+    subtitle: "十二生肖流年運勢",
+    desc: "2026 丙午年（火馬年）十二生肖與太歲的關係——沖合刑害逐一解析，理性看待流年牽動。",
+    count: 12,
+    countLabel: "篇",
+    accent: "border-vermillion/30 hover:border-vermillion/60",
+    badge: "bg-vermillion-l text-vermillion",
+  },
+  {
+    href: "/liunian",
+    label: "流年基礎",
+    subtitle: "大運 · 流年命宮 · 流年四化",
+    desc: "流年運勢的判斷方法：大運與流年疊加、流年命宮、流年四化——系統理解「今年」怎麼看。",
+    count: 11,
+    countLabel: "篇",
+    accent: "border-gold/40 hover:border-gold/70",
+    badge: "bg-gold/10 text-gold",
   },
 ];
 
@@ -96,7 +212,7 @@ const BAZI_CATEGORIES: Cat[] = [
   },
 ];
 
-const SHARED_CATEGORIES: Cat[] = [
+const RESOURCE_CATEGORIES: Cat[] = [
   {
     href: "/famous",
     label: "名人命盤",
@@ -130,9 +246,11 @@ const SHARED_CATEGORIES: Cat[] = [
 ];
 
 const GROUPS: { key: string; label: string; desc: string; bar: string; accent: string; cats: Cat[] }[] = [
-  { key: "ziwei", label: "紫微斗數", desc: "星曜 · 宮位 · 格局 · 三派流派", bar: "bg-vermillion", accent: "text-vermillion", cats: ZIWEI_CATEGORIES },
-  { key: "bazi",  label: "八字命理", desc: "子平 · 十神 · 旺衰 · 調候用神", bar: "bg-gold", accent: "text-gold", cats: BAZI_CATEGORIES },
-  { key: "shared", label: "綜合 · 跨系統", desc: "名人命盤與典籍書單", bar: "bg-jade", accent: "text-jade", cats: SHARED_CATEGORIES },
+  { key: "foundation", label: "基礎理論", desc: "星曜 · 宮位 · 格局 · 四化 · 流派", bar: "bg-vermillion", accent: "text-vermillion", cats: FOUNDATION_CATEGORIES },
+  { key: "life",       label: "生活主題", desc: "婚姻 · 事業 · 財運 · 健康 · 感情", bar: "bg-jade", accent: "text-jade", cats: LIFE_TOPIC_CATEGORIES },
+  { key: "timing",     label: "流年運勢", desc: "今年怎麼看，含 2026 丙午年專題", bar: "bg-amber-500", accent: "text-amber-600", cats: TIMING_CATEGORIES },
+  { key: "bazi",       label: "八字命理", desc: "子平 · 十神 · 旺衰 · 調候用神", bar: "bg-gold", accent: "text-gold", cats: BAZI_CATEGORIES },
+  { key: "resource",   label: "資源 · 參考", desc: "名人命盤與典籍書單", bar: "bg-purple-400", accent: "text-purple-600", cats: RESOURCE_CATEGORIES },
 ];
 
 export default function LibraryPage() {

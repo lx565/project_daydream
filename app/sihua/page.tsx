@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SIHUA_PILLARS, SIHUA_HUAJI, SIHUA_HUALU, SIHUA_HUAQUAN, SIHUA_HUAKE } from "@/lib/sihuaData";
+import { SIHUA_PALACE_HUAJI, SIHUA_PALACE_HUALU, SIHUA_PALACE_HUAQUAN, SIHUA_PALACE_HUAKE } from "@/lib/sihuaPalaceData";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import LibraryNav from "@/components/LibraryNav";
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     description: "化祿 · 化權 · 化科 · 化忌，紫微斗數最核心的變化系統全解析。",
     url: "https://www.mingli.study/sihua",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/sihua" },
 };
@@ -138,6 +139,20 @@ export default function SihuaHubPage() {
               </Link>
             ))}
           </div>
+          <div className="pt-1">
+            <p className="text-[11px] text-ink-4 mb-2">更想知道化忌落在哪個宮位？逐宮詳解 →</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {SIHUA_PALACE_HUAJI.map(p => (
+                <Link
+                  key={p.urlSlug}
+                  href={`/sihua-palace/${p.urlSlug}`}
+                  className="text-[11px] text-center py-1.5 px-1 rounded-lg border border-amber-200/60 bg-amber-50/40 text-amber-700 hover:bg-amber-50 hover:border-amber-300 transition-colors"
+                >
+                  {p.palace}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* 化祿 per-star articles */}
@@ -172,6 +187,20 @@ export default function SihuaHubPage() {
                 <span className="text-[11px] font-medium mt-auto text-ink-4 group-hover:underline underline-offset-2">閱讀 →</span>
               </Link>
             ))}
+          </div>
+          <div className="pt-1">
+            <p className="text-[11px] text-ink-4 mb-2">更想知道化祿落在哪個宮位？逐宮詳解 →</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {SIHUA_PALACE_HUALU.map(p => (
+                <Link
+                  key={p.urlSlug}
+                  href={`/sihua-palace/${p.urlSlug}`}
+                  className="text-[11px] text-center py-1.5 px-1 rounded-lg border border-emerald-200/60 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
+                >
+                  {p.palace}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -208,6 +237,20 @@ export default function SihuaHubPage() {
               </Link>
             ))}
           </div>
+          <div className="pt-1">
+            <p className="text-[11px] text-ink-4 mb-2">更想知道化權落在哪個宮位？逐宮詳解 →</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {SIHUA_PALACE_HUAQUAN.map(p => (
+                <Link
+                  key={p.urlSlug}
+                  href={`/sihua-palace/${p.urlSlug}`}
+                  className="text-[11px] text-center py-1.5 px-1 rounded-lg border border-blue-200/60 bg-blue-50/40 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                >
+                  {p.palace}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* 化科 per-star articles */}
@@ -242,6 +285,20 @@ export default function SihuaHubPage() {
                 <span className="text-[11px] font-medium mt-auto text-ink-4 group-hover:underline underline-offset-2">閱讀 →</span>
               </Link>
             ))}
+          </div>
+          <div className="pt-1">
+            <p className="text-[11px] text-ink-4 mb-2">更想知道化科落在哪個宮位？逐宮詳解 →</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {SIHUA_PALACE_HUAKE.map(p => (
+                <Link
+                  key={p.urlSlug}
+                  href={`/sihua-palace/${p.urlSlug}`}
+                  className="text-[11px] text-center py-1.5 px-1 rounded-lg border border-violet-200/60 bg-violet-50/40 text-violet-700 hover:bg-violet-50 hover:border-violet-300 transition-colors"
+                >
+                  {p.palace}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 

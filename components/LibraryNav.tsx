@@ -23,7 +23,6 @@ const TAB_GROUPS: { tabs: Tab[] }[] = [
   {
     tabs: [
       { key: "bazi",    label: "八字", href: "/bazi"    },
-      { key: "cases",   label: "命造案例", href: "/cases" },
       { key: "books",   label: "书单", href: "/books"   },
       { key: "sources", label: "典籍", href: "/sources" },
     ],
