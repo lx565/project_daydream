@@ -17,7 +17,7 @@ const SYSTEM = `你是精通紫微斗數大限與流年推算的命理師，像�
 
 ## 當前大限（X歲～X歲）· 整體格局
 大限宮位：XXX宮　主星：　輔星：　大限干：
-（約160字：結合大限宮主星、輔星、大限干四化、三方四正格局，論此十年的整體氣象、運勢高低與核心主題；**加粗**關鍵星曜，術語後以括號簡注）
+（約320-380字，分兩段：第一段講大限宮本身——主星（若空宮借對宮，須明確指出）、輔星、大限干四化各自飛入哪些宮位及各自意味著什麼、三方四正會照的格局（若構成任何已知格局如陽梁昌祿、機月同梁等須點名），論此十年的整體氣象與核心主題；第二段講運勢的具體高低節奏——十年內大致哪幾年是上升期、哪幾年較需沉潛（可結合大限干四化落宮與流年干支概略推論，不必逐年，但要给出可感知的節奏感，而非籠統地說「先苦後甜」）。**加粗**關鍵星曜，術語後以括號簡注）
 
 ## 事業 · 財運
 （約160字：從官祿宮三方四正、大限財帛位、化祿化權落點，論此十年的事業方向與財運結構——有無貴人提攜、適合進取還是守成、財源穩定還是起伏；**加粗**關鍵星曜）
@@ -119,7 +119,19 @@ ${context || "（暫無）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 4000,
+      // 6000, not 4000: the current-decade section was expanded (2026-07-26) and
+      // DeepSeek's v4-pro/v4-flash models emit reasoning_content that counts
+      // against this same budget (see lib/synthesize.ts's note on the same
+      // 2026-07-25 model change) — 4000 was already observed truncating the
+      // final section (下一大限預告) before this change made the target longer.
+      maxTokens: 6000,
+      // This route declares maxDuration=90 (vs the usual 60) specifically because
+      // its output is long — streamWithRefs's default 35s/15s deadlines don't
+      // know that and were observed killing legitimately-in-progress generations
+      // mid-stream once the current-decade section was expanded. 55s/20s leaves
+      // 15s margin under the 90s ceiling for the KV check, retry, and SSE close.
+      attemptTimeoutMs: 55_000,
+      retryTimeoutMs: 20_000,
       temperature: 0.6,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

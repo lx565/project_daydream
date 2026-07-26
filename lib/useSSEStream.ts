@@ -24,7 +24,7 @@ export interface StreamOpts {
 }
 
 // v16: 2026-06-30 couple v2 — relationship-aware reading + preview/full split.
-const CACHE_PREFIX = "ziwei_rd_v18_";
+const CACHE_PREFIX = "ziwei_rd_v19_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 

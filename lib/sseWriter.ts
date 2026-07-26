@@ -14,6 +14,18 @@ export interface SSEWriterOptions {
   /** Sampling temperature. Default 0.5 (factual readings). Narrative routes
    *  (流年/今日/合盘) pass ~0.7 for richer, less generic prose. Was hardcoded 0. */
   temperature?: number;
+  /** First-attempt deadline in ms before retrying (if no content sent yet) or
+   *  failing (if content already streamed). Default 35_000 — matches every
+   *  route's `maxDuration = 60` with margin for retry + overhead. Routes that
+   *  declare a longer `maxDuration` (e.g. decades' 90) and generate enough
+   *  content to need more real time should pass a proportionally longer value
+   *  here — otherwise a legitimately-in-progress-but-slow generation gets
+   *  killed mid-stream at the default 35s regardless of how much headroom the
+   *  route's own maxDuration actually has. */
+  attemptTimeoutMs?: number;
+  /** Retry-attempt deadline in ms, only used if the first attempt timed out
+   *  with zero content sent. Default 15_000. See attemptTimeoutMs. */
+  retryTimeoutMs?: number;
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -41,7 +53,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v26"; // 2026-07-24 perspectives retrieval parity fix (palaces signal, per-school topK, 6th school)
+const CACHE_VERSION = "v27"; // 2026-07-26 decades: current-decade section expanded + maxTokens truncation fix
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
@@ -143,11 +155,11 @@ export async function streamWithRefs(
 
     try {
       gen = 1;
-      await withDeadline(runAttempt(1), 35_000);
+      await withDeadline(runAttempt(1), opts.attemptTimeoutMs ?? 35_000);
     } catch (e) {
       if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
       gen = 2; // invalidates any late write from the abandoned first attempt
-      await withDeadline(runAttempt(2), 15_000);
+      await withDeadline(runAttempt(2), opts.retryTimeoutMs ?? 15_000);
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
