@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SIHUA_PALACE, getSihuaPalace } from "@/lib/sihuaPalaceData";
+import { SIHUA_PALACE, getSihuaPalace, type SihuaPalaceHua } from "@/lib/sihuaPalaceData";
 import { getSihua } from "@/lib/sihuaData";
 import { getSihuaPalaceContent } from "@/lib/seoContent";
 import JsonLd from "@/components/JsonLd";
@@ -14,6 +14,20 @@ import LibraryNav from "@/components/LibraryNav";
 
 export const maxDuration = 60;
 export const revalidate = 604800;
+
+// Per-化 theming so each palace article matches its own 化 type and the color
+// coding on the /sihua hub (化忌 amber · 化祿 emerald · 化權 blue · 化科 violet).
+// Full literal class strings — Tailwind can't extract dynamically-built names.
+// `pillar` is the parent 化 pillar slug in lib/sihuaData.ts (SIHUA_PILLARS), so
+// the breadcrumb points to the matching pillar, not always 化忌.
+const HUA_THEME: Record<SihuaPalaceHua, {
+  labelText: string; h1: string; line: string; dot: string; relatedHover: string; pillar: string;
+}> = {
+  "忌": { labelText: "text-amber-600",   h1: "text-amber-700",   line: "bg-amber-300/40",   dot: "bg-amber-400/50",   relatedHover: "hover:border-amber-300 hover:text-amber-700",     pillar: "hua-ji" },
+  "祿": { labelText: "text-emerald-600", h1: "text-emerald-700", line: "bg-emerald-300/40", dot: "bg-emerald-400/50", relatedHover: "hover:border-emerald-300 hover:text-emerald-700", pillar: "hua-lu" },
+  "權": { labelText: "text-blue-600",    h1: "text-blue-700",    line: "bg-blue-300/40",    dot: "bg-blue-400/50",    relatedHover: "hover:border-blue-300 hover:text-blue-700",       pillar: "hua-quan" },
+  "科": { labelText: "text-violet-600",  h1: "text-violet-700",  line: "bg-violet-300/40",  dot: "bg-violet-400/50",  relatedHover: "hover:border-violet-300 hover:text-violet-700",   pillar: "hua-ke" },
+};
 
 export async function generateStaticParams() {
   return SIHUA_PALACE.map(e => ({ slug: e.urlSlug }));
@@ -79,7 +93,8 @@ export default async function SihuaPalaceArticlePage(
     .map(resolveRelated)
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
   const pagePath = `/sihua-palace/${entry.urlSlug}`;
-  const parentPillar = getSihua("hua-ji");
+  const theme = HUA_THEME[entry.hua];
+  const parentPillar = getSihua(theme.pillar);
 
   return (
     <>
@@ -106,20 +121,20 @@ export default async function SihuaPalaceArticlePage(
 
           {/* Hero */}
           <div className="text-center pt-8 pb-4 space-y-2">
-            <p className="text-xs text-amber-600 tracking-widest font-medium">
+            <p className={`text-xs ${theme.labelText} tracking-widest font-medium`}>
               十二宮 · {entry.huaName}
             </p>
             <h1
-              className="text-3xl font-bold text-amber-700 leading-snug"
+              className={`text-3xl font-bold ${theme.h1} leading-snug`}
               style={{ fontFamily: "var(--font-serif)", letterSpacing: "0.08em" }}
             >
               {entry.name}
             </h1>
             <p className="text-xs text-ink-4 tracking-widest">{entry.subtitle}</p>
             <div className="flex items-center gap-3 justify-center pt-1">
-              <div className="h-px w-16 bg-amber-300/40" />
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
-              <div className="h-px w-16 bg-amber-300/40" />
+              <div className={`h-px w-16 ${theme.line}`} />
+              <div className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
+              <div className={`h-px w-16 ${theme.line}`} />
             </div>
           </div>
 
@@ -128,7 +143,7 @@ export default async function SihuaPalaceArticlePage(
             <p className="text-sm text-ink-2 leading-[1.9]">{entry.intro}</p>
           </div>
 
-          <ToolCTA variant="slim" label="排你的命盤 · AI 解析你的化忌實際落在哪個宮位 →" />
+          <ToolCTA variant="slim" label={`排你的命盤 · AI 解析你的${entry.huaName}實際落在哪個宮位 →`} />
 
           {/* Article content */}
           {hasContent && (
@@ -160,7 +175,7 @@ export default async function SihuaPalaceArticlePage(
           <LikeButton />
           <VoteWidget />
 
-          <ToolCTA variant="card" sub="AI 依據逾百部典籍，結合你的完整命盤判斷化忌實際落在哪個宮位並給出專屬深度解讀。" label="生成我的命盤四化詳批" />
+          <ToolCTA variant="card" sub={`AI 依據逾百部典籍，結合你的完整命盤判斷${entry.huaName}實際落在哪個宮位並給出專屬深度解讀。`} label="生成我的命盤四化詳批" />
 
           {/* Related articles */}
           {relatedEntries.length > 0 && (
@@ -171,7 +186,7 @@ export default async function SihuaPalaceArticlePage(
                   <Link
                     key={e.href}
                     href={e.href}
-                    className="paper-card rounded-xl border border-border-warm p-3 text-sm text-ink-2 hover:border-amber-300 hover:text-amber-700 transition-colors"
+                    className={`paper-card rounded-xl border border-border-warm p-3 text-sm text-ink-2 ${theme.relatedHover} transition-colors`}
                   >
                     <p className="font-medium">{e.name}</p>
                     <p className="text-[11px] text-ink-4 mt-0.5">{e.oneLine}</p>
