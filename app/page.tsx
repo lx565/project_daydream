@@ -203,7 +203,7 @@ export default function Home() {
       {/* ── 2. Hero ── */}
       <section className="py-8 lg:py-16 px-4">
         {/* flex-col-reverse on mobile puts the FORM first — the audience is
-            mobile-first (小紅書), and text-first made a phone visitor scroll
+            mobile-first (TW/HK/overseas), and text-first made a phone visitor scroll
             past logo + tagline + headline + paragraph + count + a 4-item stats
             grid before reaching the one action that matters. Desktop keeps the
             original text-left / form-right layout. */}

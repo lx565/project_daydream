@@ -47,7 +47,7 @@ const COUPLE_INCLUDED = [
   "合盤三方四正 · 五行互補結構",
   "緣分時機 · 高峰與考驗階段",
   "相處之道 · 具體可行建議",
-  "可分享緣分卡片 · 一鍵複製發小紅書",
+  "可分享緣分卡片 · 一鍵複製分享",
 ];
 
 // ── Input form ──────────────────────────────────────────────────────────────
@@ -195,7 +195,7 @@ function ShareCard({ text }: { text: string }) {
       <pre className="whitespace-pre-wrap font-sans text-sm text-ink leading-relaxed text-center">{text}</pre>
       <button onClick={copy}
         className="mt-3 w-full rounded-full bg-vermillion px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity">
-        {copied ? "已複製 ✓" : "複製 · 分享到小紅書"}
+        {copied ? "已複製 ✓" : "複製 · 分享給朋友"}
       </button>
     </div>
   );

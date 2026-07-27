@@ -118,7 +118,7 @@ function CoupleReadingText({ text }: { text: string }) {
 }
 
 // Splits the share-card block (after "### 分享卡片") out of the full reading and
-// renders it as a copyable card for 小红书 sharing.
+// renders it as a copyable card for sharing.
 function CoupleFullReading({ text }: { text: string }) {
   const marker = "### 分享卡片";
   const idx = text.indexOf(marker);
@@ -142,7 +142,7 @@ function ShareCard({ text }: { text: string }) {
       <pre className="whitespace-pre-wrap font-sans text-sm text-ink leading-relaxed text-center">{text}</pre>
       <button onClick={copy}
         className="mt-3 w-full rounded-full bg-vermillion px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity">
-        {copied ? "已复制 ✓" : "复制 · 分享到小红书"}
+        {copied ? "已复制 ✓" : "复制 · 分享给朋友"}
       </button>
     </div>
   );

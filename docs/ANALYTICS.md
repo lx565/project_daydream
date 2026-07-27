@@ -25,7 +25,7 @@ SSR-safe (no-ops when `window`/`gtag` is absent) and takes typed params.
 | `library_to_tool` | `components/ToolCTA.tsx` | `variant` | SEO article → tool CTA click |
 | `export_pdf` | `components/ReadingExport.tsx` | — | PDF/print export |
 | `export_email_sent` | `components/ReadingExport.tsx` | — | Reading emailed successfully |
-| `share_xhs` | `components/ReadingExport.tsx` | — | 小紅書 share caption copied |
+| `share_copy` | `components/ReadingExport.tsx` | — | Share caption copied (platform-neutral) |
 
 ### Why `reading_error` lives in `useSSEStream`
 

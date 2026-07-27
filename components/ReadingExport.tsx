@@ -9,7 +9,7 @@ interface ReadingExportProps {
 }
 
 export default function ReadingExport({ data }: ReadingExportProps) {
-  const [xhsCopied, setXhsCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail]         = useState("");
   const [sending, setSending]     = useState(false);
@@ -29,13 +29,13 @@ export default function ReadingExport({ data }: ReadingExportProps) {
     }
   }
 
-  async function handleShareXhs() {
-    gtagEvent("share_xhs");
+  async function handleShareCopy() {
+    gtagEvent("share_copy");
     await copyToClipboard(
       "我在命裡生成了自己的命盤解讀，紫微+八字雙系統AI解讀，附典籍引用 → https://www.mingli.study"
     );
-    setXhsCopied(true);
-    setTimeout(() => setXhsCopied(false), 2500);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2500);
   }
 
   function handlePrint() {
@@ -104,13 +104,15 @@ export default function ReadingExport({ data }: ReadingExportProps) {
         </button>
       </div>
 
-      {/* Light-touch 小紅書 nudge — copies a share-ready caption, no hard sell */}
+      {/* Light-touch share nudge — copies a ready-to-post caption. Platform-neutral
+          on purpose: the audience is TW/HK/overseas (Threads, IG, Dcard, LINE),
+          not 小紅書, and hardcoding one platform is how this got stale before. */}
       <button
-        onClick={handleShareXhs}
+        onClick={handleShareCopy}
         className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-xs text-ink-4 hover:text-vermillion transition-colors"
       >
-        <span>{xhsCopied ? "✓" : "📌"}</span>
-        <span>{xhsCopied ? "文案已複製，快去小紅書分享吧" : "分享到小紅書"}</span>
+        <span>{shareCopied ? "✓" : "📌"}</span>
+        <span>{shareCopied ? "文案已複製，快去分享吧" : "複製分享文案"}</span>
       </button>
 
       {/* Email form — expands when ✉ clicked */}

@@ -40,7 +40,7 @@ const BAZI_COUPLE_INCLUDED = [
   "地支合衝刑害 · 緣分結構",
   "五行互補 · 喜用神匹配",
   "大運時機 · 關係高峰與考驗",
-  "可分享緣分卡片 · 一鍵複製發小紅書",
+  "可分享緣分卡片 · 一鍵複製分享",
 ];
 
 // ── Input form ────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ function ShareCard({ text }: { text: string }) {
       <pre className="whitespace-pre-wrap font-sans text-sm text-ink leading-relaxed text-center">{text}</pre>
       <button onClick={copy}
         className="mt-3 w-full rounded-full bg-vermillion px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity">
-        {copied ? "已複製 ✓" : "複製 · 分享到小紅書"}
+        {copied ? "已複製 ✓" : "複製 · 分享給朋友"}
       </button>
     </div>
   );
