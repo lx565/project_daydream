@@ -410,6 +410,16 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const justPaid = justPaidRef.current;
   const isLocked = (tab: Tab) => gated && !FREE_TABS.has(tab);
 
+  // Tab clicks were previously untracked. locked_tab_click is the strongest
+  // purchase-intent signal available: it separates "people want the paid
+  // content but didn't buy" (pricing/paywall-copy problem) from "nobody even
+  // tries the locked tabs" (desire problem) — indistinguishable until now.
+  const handleTabClick = (tab: Tab) => {
+    setActiveTab(tab);
+    if (isLocked(tab)) gtagEvent("locked_tab_click", { tab });
+    else gtagEvent("tab_view", { tab });
+  };
+
   const ck = (tab: string) => sessionId ? `${sessionId}_${tab}` : undefined;
 
   // Free cross-domain synthesis (紫微 + 八字) — the new top of the 總覽 tab.
@@ -492,13 +502,23 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // null = still loading; "" = finished but empty/errored; string = content
   const allContentReady = allSettled && flowYearsText !== null && baziDecadesText !== null;
 
-  const exportFired = React.useRef(false);
+  // reading_completed must fire for FREE users too — it's the funnel step between
+  // reading_started and the paywall. It used to live inside the export effect
+  // below, which returns early when `gated`, so it only ever fired for users who
+  // had already paid (and that effect also waits on allContentReady, which needs
+  // baziDecadesText — never set when gated, since BaziDecades has preload={!gated}).
+  // Keyed off allSettled, which is already gated-aware via coreStreams.
+  const readingCompletedFired = React.useRef(false);
+  useEffect(() => {
+    if (!allSettled || readingCompletedFired.current) return;
+    readingCompletedFired.current = true;
+    // Only count a reading as completed if nothing errored — failures are
+    // reported separately by reading_error (lib/useSSEStream.ts).
+    if (coreErrored === 0) gtagEvent("reading_completed", { gated });
+  }, [allSettled, coreErrored, gated]);
+
   useEffect(() => {
     if (!allContentReady || gated || !onExportReady) return;
-    if (!exportFired.current) {
-      exportFired.current = true;
-      gtagEvent("reading_completed");
-    }
     onExportReady({
       name,
       gender: gender as "male" | "female",
@@ -765,7 +785,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       {/* Classical tab bar — sticky so tabs stay reachable while the reading scrolls with the page */}
       <div className={`no-print flex border border-border-warm overflow-hidden bg-paper-2 sticky top-0 z-10 ${allSettled ? "rounded-t-xl" : "border-t-0"}`}>
         {TABS.map((tab) => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => { handleTabClick(tab.id); }}
             className={`relative flex-1 min-w-0 flex flex-col items-center py-2.5 px-0.5 border-r last:border-r-0 border-border-light transition-all duration-200 ${
               activeTab === tab.id
                 ? "bg-vermillion text-paper"

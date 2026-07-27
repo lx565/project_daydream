@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { Reference } from "./rag";
+import { gtagEvent } from "./gtag";
 
 export type StreamStatus = "idle" | "streaming" | "done" | "error";
 export type ValidationStatus = "idle" | "checking" | "pass" | "fail" | "reprocessing";
@@ -199,8 +200,17 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         void runValidation(accText.current, body);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        setErrorMsg((err as Error).message ?? "未知错误");
+        const message = (err as Error).message ?? "未知错误";
+        setErrorMsg(message);
         setStatus("error");
+        // Fired here rather than per-component so every reading route is covered
+        // in one place. Until this existed there was NO analytics signal for a
+        // failed reading at all — a large funnel drop was indistinguishable
+        // between "the product broke" and "they weren't convinced".
+        gtagEvent("reading_error", {
+          section: url.replace("/api/reading/", ""),
+          message: message.slice(0, 100),
+        });
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

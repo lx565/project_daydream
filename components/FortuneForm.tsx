@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BirthdayWheel } from "./WheelPicker";
 import BaziInputFlow from "./BaziInputFlow";
+import { gtagEvent } from "@/lib/gtag";
 
 interface PersonFields {
   name: string;
@@ -81,7 +82,14 @@ export default function FortuneForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
+    // form_validation_failed is the friction signal: the gap between a landing
+    // page visit and reading_started was previously invisible, so someone
+    // bouncing off the form (e.g. stuck on the 時辰 picker) left no trace.
+    if (!validate()) {
+      gtagEvent("form_validation_failed");
+      return;
+    }
+    gtagEvent("form_submit");
     const params = new URLSearchParams();
     if (person.name) params.set("name", person.name);
     params.set("date", person.date);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { buildReadingEmail, type ReadingEmailData } from "@/lib/emailTemplate";
+import { gtagEvent } from "@/lib/gtag";
 
 interface ReadingExportProps {
   data: ReadingEmailData;
@@ -29,6 +30,7 @@ export default function ReadingExport({ data }: ReadingExportProps) {
   }
 
   async function handleShareXhs() {
+    gtagEvent("share_xhs");
     await copyToClipboard(
       "我在命裡生成了自己的命盤解讀，紫微+八字雙系統AI解讀，附典籍引用 → https://www.mingli.study"
     );
@@ -37,6 +39,7 @@ export default function ReadingExport({ data }: ReadingExportProps) {
   }
 
   function handlePrint() {
+    gtagEvent("export_pdf");
     const { html } = buildReadingEmail(data);
     const w = window.open("", "_blank", "width=700,height=900");
     if (!w) return;
@@ -61,6 +64,7 @@ export default function ReadingExport({ data }: ReadingExportProps) {
       if (!res.ok) {
         setError(json.error ?? "發送失敗，請稍後再試");
       } else {
+        gtagEvent("export_email_sent");
         setSent(true);
         setShowEmail(false);
       }
