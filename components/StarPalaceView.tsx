@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PALACES } from "@/lib/starData";
+import { PALACES, MAJOR_STARS } from "@/lib/starData";
 import type { Reference } from "@/lib/rag";
 import SeoMarkdown from "./SeoMarkdown";
 import VoteWidget from "./VoteWidget";
@@ -131,7 +131,7 @@ export default function StarPalaceView({ star, palace, markdown, refs, faq }: Pr
           </div>
         </div>
 
-        {/* Palace navigator */}
+        {/* Palace navigator — same star across the 12 palaces */}
         <div className="space-y-3">
           <p className="text-xs text-ink-4 font-medium">{star.name}在其他宮位</p>
           <div className="flex flex-wrap gap-2">
@@ -149,6 +149,44 @@ export default function StarPalaceView({ star, palace, markdown, refs, faq }: Pr
               </Link>
             ))}
           </div>
+        </div>
+
+        {/* Star navigator — the 14 major stars in THIS palace (horizontal axis;
+            complements the palace navigator's vertical axis so every star×palace
+            page reaches its full row and column of siblings). */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">其他主星在{palace.name}</p>
+          <div className="flex flex-wrap gap-2">
+            {MAJOR_STARS.map(s => (
+              <Link
+                key={s.urlSlug}
+                href={`/star/${s.urlSlug}/${palace.urlSlug}`}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                  s.name === star.name
+                    ? "bg-vermillion text-white border-vermillion"
+                    : "border-border-warm text-ink-3 hover:border-vermillion/50 hover:text-vermillion"
+                }`}
+              >
+                {s.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Up-links to the two hubs this article sits under */}
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Link
+            href={`/star/${star.urlSlug}`}
+            className="px-3 py-1.5 rounded-lg border border-border-warm text-ink-3 hover:border-vermillion/50 hover:text-vermillion transition-colors"
+          >
+            {star.name}星總覽 →
+          </Link>
+          <Link
+            href={`/palace/${palace.urlSlug}`}
+            className="px-3 py-1.5 rounded-lg border border-border-warm text-ink-3 hover:border-vermillion/50 hover:text-vermillion transition-colors"
+          >
+            {palace.name}總覽 →
+          </Link>
         </div>
 
         <ToolCTA variant="slim" label="三派合參 · AI 依據逾百部典籍為你詳批命盤 →" />
