@@ -202,7 +202,12 @@ export default function Home() {
 
       {/* ── 2. Hero ── */}
       <section className="py-8 lg:py-16 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col lg:flex-row items-start lg:items-center gap-10 lg:gap-14">
+        {/* flex-col-reverse on mobile puts the FORM first — the audience is
+            mobile-first (小紅書), and text-first made a phone visitor scroll
+            past logo + tagline + headline + paragraph + count + a 4-item stats
+            grid before reaching the one action that matters. Desktop keeps the
+            original text-left / form-right layout. */}
+        <div className="max-w-5xl mx-auto flex flex-col-reverse lg:flex-row items-start lg:items-center gap-10 lg:gap-14">
 
           {/* Left: text + stats */}
           <div className="flex-1 text-center lg:text-left">
@@ -243,7 +248,14 @@ export default function Home() {
               <p className="text-sm font-semibold text-ink mb-1">生成你的命盤解讀</p>
               <p className="text-xs text-ink-4 mb-5">輸入出生資訊，AI 即刻推演 · 免費開始</p>
               <FortuneForm />
-              <p className="text-xs text-ink-4 text-center mt-4">總覽免費 · 完整命書 $6.99</p>
+              <div className="mt-4 text-center space-y-1">
+                <p className="text-xs text-ink-3">
+                  總覽免費 · 完整命書 <span className="font-semibold text-vermillion">$6.99</span>
+                </p>
+                <p className="text-[11px] text-ink-4">
+                  同類深度命書多定價 $15–40 · 一次付費永久保存
+                </p>
+              </div>
             </div>
           </div>
 
@@ -282,6 +294,17 @@ export default function Home() {
         <p className="text-center text-xs text-ink-4 mt-4 italic">
           示例解讀（內容模糊處理）— 生成你的命盤後即可檢視完整版
         </p>
+        {/* Mid-page CTA: the page runs ~500 lines of persuasion between the hero
+            form and the closing CTA. A reader convinced here shouldn't have to
+            scroll to the bottom (or back to the top) to act. */}
+        <div className="text-center mt-8">
+          <a
+            href="#form"
+            className="inline-block bg-vermillion text-paper text-sm font-medium px-7 py-3 rounded-full hover:bg-vermillion-h transition-colors"
+          >
+            生成我的命盤 · 免費檢視總覽 →
+          </a>
+        </div>
       </section>
 
       {/* ── 6. Tab-by-Tab Reading Guide ── */}
@@ -508,6 +531,16 @@ export default function Home() {
               </tbody>
             </table>
           </div>
+          {/* Mid-page CTA — the comparison table is the page's strongest
+              differentiation argument; give the convinced reader a way to act. */}
+          <div className="text-center mt-8">
+            <a
+              href="#form"
+              className="inline-block bg-vermillion text-paper text-sm font-medium px-7 py-3 rounded-full hover:bg-vermillion-h transition-colors"
+            >
+              試試命裡的解讀 · 免費開始 →
+            </a>
+          </div>
         </div>
       </section>
 
@@ -559,8 +592,14 @@ export default function Home() {
         <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-3">
           準備好了解你的命盤了嗎？
         </h2>
-        <p className="text-sm text-ink-3 mb-8">
+        <p className="text-sm text-ink-3 mb-3">
           輸入出生資訊，即刻獲得你的專屬命理解讀
+        </p>
+        {/* The highest-intent moment on the page — state the offer here rather
+            than only saying "免費開始", which undersells what the reader gets. */}
+        <p className="text-sm text-ink-3 mb-8">
+          <span className="font-semibold text-ink">總覽免費</span>，不需註冊 ·
+          完整命書 <span className="font-semibold text-vermillion">$6.99</span> 一次付費永久保存
         </p>
         <a
           href="#form"
