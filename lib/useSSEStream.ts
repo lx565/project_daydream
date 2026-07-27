@@ -101,6 +101,33 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   const start = useCallback(
     async (body: object) => {
       lastBodyRef.current = body;
+
+      // Cache-authoritative gate: if a completed reading is already cached for
+      // this key, restore it and skip the network entirely. Every *forced*
+      // regeneration path (reset/rerun/validation-reprocessing) calls
+      // deleteCache() before start(), so they correctly fall through to a real
+      // fetch. Without this gate, an SSR/hydration mount re-streams from
+      // scratch: loadCache runs server-side in the useState initializer (no
+      // window → null), the server renders status="idle", React reuses that on
+      // hydration without re-running the initializer client-side, and
+      // WizardFlow's mount effect then calls start() on a finished reading —
+      // re-billing the AI and making the free reading appear to "reload" on
+      // every navigation back to /result.
+      if (cacheKey) {
+        const restored = loadCache(cacheKey);
+        if (restored && restored.text) {
+          abortRef.current?.abort();
+          accText.current = restored.text;
+          accRefs.current = restored.refs;
+          setText(restored.text);
+          setRefs(restored.refs);
+          setErrorMsg("");
+          setStatus("done");
+          setValidation(restored.validated ? "pass" : "idle");
+          return;
+        }
+      }
+
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
