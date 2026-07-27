@@ -463,18 +463,22 @@ export default function HepanFlow() {
         </div>
       </div>
 
-      <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
-        <PersonForm label="甲方（你）" person={personA} onChange={(p) => setPersonA((prev) => ({ ...prev, ...p }))} errors={errors} prefix="a" />
-      </div>
+      {/* Side-by-side on md+, stacked on mobile. The 與 divider is a grid child
+          shown only when stacked — on two columns the pairing is self-evident. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
+          <PersonForm label="甲方（你）" person={personA} onChange={(p) => setPersonA((prev) => ({ ...prev, ...p }))} errors={errors} prefix="a" />
+        </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border-warm" />
-        <span className="text-xs text-vermillion font-bold tracking-widest">與</span>
-        <div className="flex-1 h-px bg-border-warm" />
-      </div>
+        <div className="flex items-center gap-3 md:hidden">
+          <div className="flex-1 h-px bg-border-warm" />
+          <span className="text-xs text-vermillion font-bold tracking-widest">與</span>
+          <div className="flex-1 h-px bg-border-warm" />
+        </div>
 
-      <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
-        <PersonForm label="乙方（對方）" person={personB} onChange={(p) => setPersonB((prev) => ({ ...prev, ...p }))} errors={errors} prefix="b" />
+        <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
+          <PersonForm label="乙方（對方）" person={personB} onChange={(p) => setPersonB((prev) => ({ ...prev, ...p }))} errors={errors} prefix="b" />
+        </div>
       </div>
 
       <button type="submit" disabled={computing} style={{ color: "#FDFCF8" }}

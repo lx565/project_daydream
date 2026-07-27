@@ -62,7 +62,9 @@ export default function HepanPage() {
         faqSchema(FAQ),
       ]} />
 
-      <div className="max-w-2xl mx-auto space-y-8">
+      {/* max-w-3xl (not 2xl) so the two side-by-side birth forms in HepanFlow get
+          ~370px each — about phone width — instead of a cramped ~328px. */}
+      <div className="max-w-3xl mx-auto space-y-8">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors">
           ← 返回首頁
         </Link>
@@ -78,12 +80,8 @@ export default function HepanPage() {
           </p>
         </header>
 
-        {/* Interactive flow */}
-        <section className="paper-card rounded-2xl border border-border-warm p-5 sm:p-6">
-          <HepanFlow />
-        </section>
-
-        {/* SEO content */}
+        {/* SEO content — above the form: entering TWO people's birth details is a
+            heavy ask, so the value has to be clear before the input burden. */}
         <section className="space-y-5">
           <div className="space-y-2">
             <h2 className="text-lg font-bold text-ink tracking-wide">雙人合盤看什麼？</h2>
@@ -106,6 +104,11 @@ export default function HepanPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Interactive flow */}
+        <section className="paper-card rounded-2xl border border-border-warm p-5 sm:p-6">
+          <HepanFlow />
         </section>
 
         {/* FAQ */}
