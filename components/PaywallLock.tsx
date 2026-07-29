@@ -26,19 +26,19 @@ function UnlockSocialProof() {
   if (count === null) return null;
   return (
     <p className="mt-2.5 text-center text-[11px] text-ink-4">
-      已有 <span className="font-semibold text-amber-800">{count.toLocaleString("en-US")}</span> 人在命里生成命书
+      已有 <span className="font-semibold text-amber-800">{count.toLocaleString("en-US")}</span> 人在命裡生成命書
     </p>
   );
 }
 
 const DEFAULT_INCLUDED = [
-  "十二宫位 · 逐宫精解",
-  "大运流年 · 运势时机（含逐年详批）",
-  "八字命理 · 双重印证",
-  "众说纷纭 · 三派各自论断",
-  "特别注意 · 风险与化解",
-  "问命追问 · 可向模型深度追问命盘细节",
-  "永久保存 · 可重复查阅",
+  "十二宮位 · 逐宮精解",
+  "大運流年 · 運勢時機（含逐年詳批）",
+  "八字命理 · 雙重印證",
+  "眾說紛紜 · 三派各自論斷",
+  "特別注意 · 風險與化解",
+  "問命追問 · 可向模型深度追問命盤細節",
+  "永久保存 · 可重複查閱",
 ];
 
 export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED, personalizedHint }: Props) {
@@ -59,7 +59,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
     gtagEvent("paywall_checkout_start", { chart_id: chartId, section: sectionLabel ?? "" });
     const result = await startCardCheckout(chartId);
     if (!result.ok) {
-      setErr("支付跳转失败，请稍后再试");
+      setErr("付款跳轉失敗，請稍後再試");
       setLoading(false);
     }
     // On success startCardCheckout redirects — no further state needed
@@ -70,19 +70,19 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
       {/* Header */}
       <div className="text-center mb-4">
         <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 text-xl">🔒</div>
-        <h3 className="text-base font-bold text-ink">解锁完整命书</h3>
+        <h3 className="text-base font-bold text-ink">解鎖完整命書</h3>
         <p className="mt-1 text-xs text-ink-3 leading-relaxed">
-          {sectionLabel ? `「${sectionLabel}」及` : ""}以下深度解读一次解锁，全部开启
+          {sectionLabel ? `「${sectionLabel}」及` : ""}以下深度解讀一次解鎖，全部開啟
         </p>
       </div>
 
       {/* Quality proof strip */}
       <div className="mb-4 grid grid-cols-2 gap-2">
         {[
-          { icon: "📖", stat: "万字以上", label: "深度解读" },
-          { icon: "🔄", stat: "多模型", label: "交叉校对" },
+          { icon: "📖", stat: "萬字以上", label: "深度解讀" },
+          { icon: "🔄", stat: "多模型", label: "交叉校對" },
           { icon: "📚", stat: "上百部", label: "命理典籍加持" },
-          { icon: "⚡", stat: "双体系", label: "紫微×八字印证" },
+          { icon: "⚡", stat: "雙體系", label: "紫微×八字印證" },
         ].map(({ icon, stat, label }) => (
           <div key={stat} className="flex items-center gap-1.5 rounded-lg bg-gold/8 border border-gold/20 px-2.5 py-2">
             <span className="text-base leading-none">{icon}</span>
@@ -113,9 +113,9 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
 
       {/* Price + CTA */}
       <div className="text-center mb-3">
-        <p className="text-[11px] text-ink-4 mb-1">同类深度命书多定价 $15–40</p>
+        <p className="text-[11px] text-ink-4 mb-1">人工命理諮詢動輒數千元起跳</p>
         <span className="text-2xl font-bold text-ink">$6.99</span>
-        <span className="text-xs text-ink-4 ml-1">≈ ¥50 · 一次付费 · 永久解锁</span>
+        <span className="text-xs text-ink-4 ml-1">USD · 一次付費 · 永久解鎖</span>
       </div>
 
       <button
@@ -127,10 +127,10 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
         {loading ? (
           <>
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            跳转中…
+            跳轉中…
           </>
         ) : (
-          "立即解锁 · 信用卡 / 借记卡支付"
+          "立即解鎖 · 信用卡 / Apple Pay"
         )}
       </button>
 
@@ -139,7 +139,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
       <UnlockSocialProof />
 
       <p className="mt-3 text-center text-[11px] text-ink-4 leading-relaxed">
-        支付成功后自动解锁 · 安全加密 · 支持 Visa / Mastercard / Apple Pay
+        付款成功後自動解鎖 · 安全加密 · 支援 Visa / Mastercard / Apple Pay
       </p>
     </div>
   );

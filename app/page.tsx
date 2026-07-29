@@ -253,7 +253,7 @@ export default function Home() {
                   總覽免費 · 完整命書 <span className="font-semibold text-vermillion">$6.99</span>
                 </p>
                 <p className="text-[11px] text-ink-4">
-                  同類深度命書多定價 $15–40 · 一次付費永久保存
+                  人工命理諮詢動輒數千元起跳 · 一次付費永久保存
                 </p>
               </div>
             </div>
@@ -304,6 +304,59 @@ export default function Home() {
           >
             生成我的命盤 · 免費檢視總覽 →
           </a>
+        </div>
+      </section>
+
+      {/* ── 5.5 Competitor Comparison ── moved up from position 9: TW/HK media
+           actively publishes "do 算命 free with Gemini/ChatGPT" guides, so this is
+           the core objection to answer, not a footnote most visitors never reach. */}
+      <section className="py-16 px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-ink text-center mb-2">
+            為什麼命裡優於通用 AI？
+          </h2>
+          <p className="text-sm text-ink-3 text-center mb-10">
+            通用AI沒有專業命理知識，也無法準確排盤
+          </p>
+          <div className="paper-card rounded-2xl border border-border-warm overflow-hidden">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border-warm">
+                  <th className="text-left px-4 py-3 bg-parchment text-ink-3 font-medium w-1/4">維度</th>
+                  <th className="text-left px-4 py-3 bg-vermillion text-white font-semibold w-5/12">
+                    命裡
+                  </th>
+                  <th className="text-left px-4 py-3 bg-parchment text-ink-4 font-medium w-5/12">
+                    通用AI模型
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON_ROWS.map((row, i) => (
+                  <tr
+                    key={row.dim}
+                    className={`border-b border-border-warm last:border-0 ${
+                      i % 2 === 0 ? "bg-paper" : "bg-parchment"
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-ink-3 font-medium">{row.dim}</td>
+                    <td className="px-4 py-3 bg-vermillion-l text-ink font-medium border-l-2 border-vermillion/30">{row.us}</td>
+                    <td className="px-4 py-3 text-ink-4">{row.them}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mid-page CTA — the comparison table is the page's strongest
+              differentiation argument; give the convinced reader a way to act. */}
+          <div className="text-center mt-8">
+            <a
+              href="#form"
+              className="inline-block bg-vermillion text-paper text-sm font-medium px-7 py-3 rounded-full hover:bg-vermillion-h transition-colors"
+            >
+              試試命裡的解讀 · 免費開始 →
+            </a>
+          </div>
         </div>
       </section>
 
@@ -489,57 +542,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 9. Competitor Comparison ── */}
-      <section className="py-16 px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-ink text-center mb-2">
-            為什麼命裡優於通用 AI？
-          </h2>
-          <p className="text-sm text-ink-3 text-center mb-10">
-            通用AI沒有專業命理知識，也無法準確排盤
-          </p>
-          <div className="paper-card rounded-2xl border border-border-warm overflow-hidden">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-border-warm">
-                  <th className="text-left px-4 py-3 bg-parchment text-ink-3 font-medium w-1/4">維度</th>
-                  <th className="text-left px-4 py-3 bg-vermillion text-white font-semibold w-5/12">
-                    命裡
-                  </th>
-                  <th className="text-left px-4 py-3 bg-parchment text-ink-4 font-medium w-5/12">
-                    通用AI模型
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON_ROWS.map((row, i) => (
-                  <tr
-                    key={row.dim}
-                    className={`border-b border-border-warm last:border-0 ${
-                      i % 2 === 0 ? "bg-paper" : "bg-parchment"
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-ink-3 font-medium">{row.dim}</td>
-                    <td className="px-4 py-3 bg-vermillion-l text-ink font-medium border-l-2 border-vermillion/30">{row.us}</td>
-                    <td className="px-4 py-3 text-ink-4">{row.them}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Mid-page CTA — the comparison table is the page's strongest
-              differentiation argument; give the convinced reader a way to act. */}
-          <div className="text-center mt-8">
-            <a
-              href="#form"
-              className="inline-block bg-vermillion text-paper text-sm font-medium px-7 py-3 rounded-full hover:bg-vermillion-h transition-colors"
-            >
-              試試命裡的解讀 · 免費開始 →
-            </a>
           </div>
         </div>
       </section>
