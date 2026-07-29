@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-export type LibraryCategory = "mingge" | "star" | "palace" | "guide" | "famous" | "personality" | "books" | "sources" | "bazi" | "zodiac" | "qinggan" | "sihua" | "xiong" | "liunian" | "hunyin" | "shiye" | "caiyun" | "jibing" | "cases";
+export type LibraryCategory = "mingge" | "star" | "palace" | "guide" | "famous" | "personality" | "books" | "sources" | "bazi" | "zodiac" | "qinggan" | "sihua" | "xiong" | "liunian" | "huangli" | "hunyin" | "shiye" | "caiyun" | "jibing" | "cases";
 
 interface LibraryNavProps {
   category: LibraryCategory;
@@ -47,6 +47,7 @@ const TAB_GROUPS: { label: string; tabs: Tab[] }[] = [
   {
     label: "運勢",
     tabs: [
+      { key: "huangli", label: "黃曆", href: "/huangli" },
       { key: "sihua",   label: "四化", href: "/sihua"   },
       { key: "liunian", label: "流年", href: "/liunian" },
       { key: "xiong",   label: "凶象", href: "/xiong"   },
