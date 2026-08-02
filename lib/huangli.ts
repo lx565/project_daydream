@@ -294,8 +294,12 @@ export async function findAuspiciousDays(
 ): Promise<AuspiciousDay[]> {
   const { Solar } = await import("lunar-javascript");
   const out: AuspiciousDay[] = [];
+  // Normalize to the start of `from`'s day: callers pass chinaToday(), which
+  // carries a time-of-day, and day-boundary arithmetic must not depend on what
+  // o'clock the page happened to render.
+  const base = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   for (let i = 0; i < days; i++) {
-    const d = new Date(from.getTime() + i * 86400000);
+    const d = new Date(base.getTime() + i * 86400000);
     const lunar = (Solar.fromDate(d) as LunarAny).getLunar();
     const yi = lunar.getDayYi() as string[];
     if (!yi.includes(activity.term)) continue;

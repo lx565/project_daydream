@@ -6,9 +6,13 @@ import { breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import LibraryNav from "@/components/LibraryNav";
 import ToolCTA from "@/components/ToolCTA";
 
-// Recomputed hourly — the almanac changes at the China-time day boundary, and a
-// stale "today" card is worse than a slightly cold one.
-export const revalidate = 3600;
+// Rendered per request. The almanac flips at the China-time midnight boundary,
+// but ISR `revalidate` is a TTL rather than a scheduled job — a page cached at
+// 15:00 would keep serving that day's 宜忌 until 15:00 the NEXT day, i.e. show
+// yesterday's almanac on a page titled 今日黃曆. The computation is a local
+// lunar calc (~0.3ms, no network, no AI), so per-request rendering is cheap and
+// always correct. Still server-rendered HTML, so indexing is unaffected.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "今日黃曆 · 每日宜忌 · 農民曆查詢 — 命裡",

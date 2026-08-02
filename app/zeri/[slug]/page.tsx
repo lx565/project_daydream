@@ -7,12 +7,12 @@ import { breadcrumbSchema, articleSchema, faqSchema } from "@/lib/jsonld";
 import LibraryNav from "@/components/LibraryNav";
 import ToolCTA from "@/components/ToolCTA";
 
-// Rebuilt daily — the 90-day window rolls forward, so yesterday's list is stale.
-export const revalidate = 86400;
-
-export async function generateStaticParams() {
-  return ACTIVITIES.map((a) => ({ slug: a.slug }));
-}
+// Rendered per request. The 90-day window rolls forward every day, so any cached
+// copy eventually lists dates that are already in the past — a past date in a
+// "future auspicious days" list reads as broken, and unlike a stale almanac it
+// isn't self-evidently wrong. The scan is ~6ms of local lunar computation, so
+// this is cheap; the pages remain server-rendered HTML and fully indexable.
+export const dynamic = "force-dynamic";
 
 interface PageParams { slug: string }
 
