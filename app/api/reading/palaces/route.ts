@@ -1,6 +1,6 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
@@ -52,7 +52,7 @@ function buildPalaceDetail(ziwei: ZiweiResult): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 3, keyPrefix: "palaces" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "palaces" })).allowed) return rateLimitResponse();
 
   let body: { ziwei: ZiweiResult; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -103,6 +103,7 @@ ${buildPalaceDetail(ziwei)}
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "palaces" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,

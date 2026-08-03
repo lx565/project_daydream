@@ -2,7 +2,7 @@ import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
@@ -24,7 +24,7 @@ const SYSTEM = `你是紫微斗數命理師，像一位關心你的兄長，把�
 const CAUTION_STARS = ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫", "化忌", "破軍", "七殺", "廉貞"];
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "cautions" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "cautions" })).allowed) return rateLimitResponse();
 
   let body: { ziwei: ZiweiResult; birthYear: number; name?: string };
   try { body = await request.json(); } catch {
@@ -93,6 +93,7 @@ ${riskYearLines}
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "cautions" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,

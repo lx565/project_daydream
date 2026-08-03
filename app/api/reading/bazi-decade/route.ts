@@ -1,7 +1,7 @@
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
@@ -79,6 +79,7 @@ ${context || "（無可用參考，請基於八字命理通論嚴謹推演）"}
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "bazi-decade" },
       temperature: 0.6,
     })
   );

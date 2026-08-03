@@ -2,7 +2,7 @@ import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
@@ -42,7 +42,7 @@ function parseAgeRange(range: string): [number, number] {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "decades" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "decades" })).allowed) return rateLimitResponse();
 
   let body: { ziwei: ZiweiResult; birthYear?: number; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -132,6 +132,7 @@ ${context || "（暫無）"}
       // 15s margin under the 90s ceiling for the KV check, retry, and SSE close.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "decades" },
       temperature: 0.6,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

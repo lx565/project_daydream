@@ -2,7 +2,7 @@ import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
@@ -144,7 +144,7 @@ function branchRelations(baziA: BaziResult, baziB: BaziResult, labelA: string, l
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 3, keyPrefix: "couple" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "couple" })).allowed) return rateLimitResponse();
 
   let body: {
     baziA: BaziResult; ziweiA: ZiweiResult;
@@ -250,7 +250,11 @@ ${context||"（暂无）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 2800,
+      // 6000, not 2800: DeepSeek's v4-pro model emits reasoning_content that counts
+      // against this same budget (see lib/synthesize.ts's note on the 2026-07-25 model
+      // change) — 2800 was observed truncating output mid-section (this route asks for
+      // 9 sections, more than decades' 4 that already needed 6000 for the same reason).
+      maxTokens: 6000,
       // This route declares maxDuration=90 (vs the usual 60) because its 8-section
       // output (甲方/乙方/飞化互入/合盘综析/...) was observed exceeding
       // streamWithRefs's default 35s deadline while still legitimately streaming
@@ -259,6 +263,7 @@ ${context||"（暂无）"}
       // under the 90s ceiling, matching decades/route.ts's fix for the same issue.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "couple" },
       temperature: 0.7,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],

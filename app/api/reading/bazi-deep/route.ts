@@ -1,6 +1,6 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
@@ -84,7 +84,7 @@ ${jqBlock}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "bazi-deep" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-deep" })).allowed) return rateLimitResponse();
 
   let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "bazi-deep" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,

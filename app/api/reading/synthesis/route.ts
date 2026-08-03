@@ -1,6 +1,6 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 
 import { NextRequest } from "next/server";
 import { getSharedRetrieval, getKnowledge } from "@/lib/rag";
@@ -80,7 +80,7 @@ ${jqBlock}`;
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "synthesis" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "synthesis" })).allowed) return rateLimitResponse();
 
   let body: { ziwei: ZiweiResult; bazi: BaziResult; gender: string; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -158,6 +158,7 @@ ${baziFacts}
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "synthesis" },
       temperature: 0.5,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

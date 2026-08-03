@@ -1,6 +1,7 @@
 import type { Reference } from "./rag";
 import { createHash } from "crypto";
 import { withDeadline, AttemptTimeoutError } from "./aiRetry";
+import { refundRateLimit } from "./rateLimit";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
 export type ModelTier = "standard" | "fast";
@@ -26,6 +27,13 @@ export interface SSEWriterOptions {
   /** Retry-attempt deadline in ms, only used if the first attempt timed out
    *  with zero content sent. Default 15_000. See attemptTimeoutMs. */
   retryTimeoutMs?: number;
+  /** When set, the route already charged one rate-limit unit up front (via
+   *  checkRateLimit). streamWithRefs refunds that unit if the request never
+   *  actually hit the AI provider — a cache replay or a failed/timed-out
+   *  generation — so only readings that genuinely consumed the provider count
+   *  against the daily quota. Pass { ip: clientIp(request), keyPrefix: <same
+   *  keyPrefix the route used> }. */
+  rateLimit?: { ip: string; keyPrefix: string };
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -53,7 +61,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v27"; // 2026-07-26 decades: current-decade section expanded + maxTokens truncation fix
+const CACHE_VERSION = "v28"; // 2026-08-03 couple/bazi-couple: maxTokens truncation fix (same reasoning_content issue as v27)
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
@@ -117,7 +125,11 @@ export async function streamWithRefs(
     const cacheKey = makeCacheKey(opts);
     const cached = await kvGet(cacheKey);
     if (cached) {
-      // Replay cached response instantly
+      // Replay cached response instantly — no provider call happened, so refund
+      // the rate-limit unit the route charged up front.
+      if (opts.rateLimit) {
+        refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
+      }
       await safeWrite({ text: cached.text });
       if (cached.refs?.length) await safeWrite({ refs: cached.refs });
       await safeWrite({ _done: true });
@@ -172,6 +184,11 @@ export async function streamWithRefs(
     }
   } catch (err) {
     console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);
+    // The generation never produced a usable reading — refund the rate-limit unit
+    // so a slow/failed provider night doesn't burn the user's daily quota on retries.
+    if (opts.rateLimit) {
+      refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
+    }
     const message = err instanceof AttemptTimeoutError
       ? "AI 服务响应较慢，请稍后重试"
       : err instanceof Error ? err.message : "服务暂时不可用";

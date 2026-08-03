@@ -2,7 +2,7 @@ import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
@@ -182,7 +182,7 @@ function dmRelationHint(baziA: BaziResult, baziB: BaziResult, labelA: string, la
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 5, keyPrefix: "bazi-couple" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" })).allowed) return rateLimitResponse();
 
   let body: {
     baziA: BaziResult;
@@ -250,11 +250,15 @@ ${context || "（暫無相關典籍）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 2800,
+      // 6000, not 2800: same truncation risk as couple/route.ts (DeepSeek's
+      // reasoning_content eats into this budget — see that file's comment) — this
+      // route asks for a comparably long 9-10 section output.
+      maxTokens: 6000,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "bazi-couple" },
       temperature: 0.7,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],

@@ -2,7 +2,7 @@ import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getSharedRetrieval } from "@/lib/rag";
 import type { Reference } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
@@ -68,7 +68,7 @@ function buildChartData(ziwei: ZiweiResult, gender: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 3, keyPrefix: "perspectives" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "perspectives" })).allowed) return rateLimitResponse();
 
   let body: { ziwei: ZiweiResult; gender: string; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
+      rateLimit: { ip: clientIp(request), keyPrefix: "perspectives" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs: allRefs,

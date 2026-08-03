@@ -1,7 +1,7 @@
 export const maxDuration = 30;
 
 import { NextRequest } from "next/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 
@@ -55,7 +55,7 @@ interface DailyBody {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 3, keyPrefix: "daily" })).allowed) return rateLimitResponse();
+  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "daily" })).allowed) return rateLimitResponse();
 
   let body: DailyBody;
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
       tier: "fast",
       maxTokens: 300,
       temperature: 0.7,
+      rateLimit: { ip: clientIp(request), keyPrefix: "daily" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
     })
