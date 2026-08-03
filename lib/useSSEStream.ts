@@ -4,6 +4,32 @@ import { useCallback, useRef, useState } from "react";
 import type { Reference } from "./rag";
 import { gtagEvent } from "./gtag";
 
+// ── Client-side reading concurrency limiter ──────────────────────────────────
+// The result page can start ~18 SSE readings at once (WizardFlow's core streams +
+// BaziDecades' 8-decade preload), all hitting the same AI-provider key. The provider
+// throttles that burst, so calls queue *at the provider* and, on a slow night, time
+// out en masse. Cap how many generations are in flight; the rest wait here in a FIFO
+// queue and start as slots free. 4 keeps the free path (3 concurrent) fully parallel
+// while stopping the paid-unlock burst from saturating the key. A cache hit never
+// acquires a slot (it returns before the fetch), so cached readings stay instant.
+const MAX_CONCURRENT_READINGS = 4;
+let activeReadings = 0;
+const readingWaiters: Array<() => void> = [];
+
+function acquireReadingSlot(): Promise<void> {
+  if (activeReadings < MAX_CONCURRENT_READINGS) {
+    activeReadings++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => readingWaiters.push(resolve));
+}
+
+function releaseReadingSlot(): void {
+  const next = readingWaiters.shift();
+  if (next) next();       // hand this slot straight to the next waiter
+  else activeReadings--;  // no one waiting → free the slot
+}
+
 export type StreamStatus = "idle" | "streaming" | "done" | "error";
 export type ValidationStatus = "idle" | "checking" | "pass" | "fail" | "reprocessing";
 
@@ -142,6 +168,10 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
       // Only reset validation on a fresh (non-retry) run.
       if (retriedRef.current === 0) { setValidation("idle"); setValidationIssues([]); }
 
+      // Wait for a concurrency slot before touching the network (the "streaming"
+      // skeleton is already showing). Released in the finally below no matter how
+      // the attempt ends — success, error, or abort.
+      await acquireReadingSlot();
       try {
         const res = await fetch(url, {
           method: "POST",
@@ -211,6 +241,10 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
           section: url.replace("/api/reading/", ""),
           message: message.slice(0, 100),
         });
+      } finally {
+        // Always free the slot — including the AbortError `return` above (finally
+        // runs on return) — so a cancelled/errored stream never leaks a slot.
+        releaseReadingSlot();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
