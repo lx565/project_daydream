@@ -97,9 +97,12 @@ export async function POST(request: NextRequest) {
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      // 1200, not 900: the two-school context feeds a slightly longer conclusion, and
-      // DeepSeek's reasoning_content eats into this budget — headroom against truncation.
-      maxTokens: 1200,
+      // 3000, not 1200: the conclusion itself is short (~150字), but DeepSeek's
+      // reasoning_content ("thinking") is billed against this same budget and, on the
+      // fast tier especially, can consume 1200 entirely BEFORE any visible token —
+      // producing an empty reading (observed 2026-08-03: 紫薇綜合 rendered refs but no
+      // body). Generous headroom so reasoning never starves the actual output.
+      maxTokens: 3000,
       temperature: 0.5,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
