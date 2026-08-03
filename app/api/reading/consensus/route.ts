@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "consensus" },
+      reasoningEffort: "none", // FREE 總覽 reading — speed over a reasoning pass
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,

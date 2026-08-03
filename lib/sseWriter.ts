@@ -34,6 +34,14 @@ export interface SSEWriterOptions {
    *  against the daily quota. Pass { ip: clientIp(request), keyPrefix: <same
    *  keyPrefix the route used> }. */
   rateLimit?: { ip: string; keyPrefix: string };
+  /** DeepSeek-only. v4 models "think" (emit reasoning_content) before answering,
+   *  which adds latency and is billed against max_tokens. Policy:
+   *    "none" — FREE 總覽 readings (synthesis/consensus/bazi/daily): speed first,
+   *             the teaser doesn't need a reasoning pass.
+   *    "low"  — PAID deep readings (default): a light reasoning pass for accuracy
+   *             on the content people pay for, without the full latency.
+   *  Ignored by non-DeepSeek providers. Defaults to "low" when omitted. */
+  reasoningEffort?: "none" | "low" | "medium" | "high";
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -256,6 +264,12 @@ async function streamDeepSeek(
     max_tokens: opts.maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     stream: true,
+    // DeepSeek v4 models "think" (emit reasoning_content) by default — that phase
+    // adds large latency AND is billed against max_tokens (it starved short readings
+    // to empty output). Free 總覽 readings pass "none" (speed); paid deep readings
+    // default to "low" (light reasoning for accuracy). "none" isn't in OpenAI's
+    // ReasoningEffort union, hence the value cast — DeepSeek's endpoint accepts it.
+    reasoning_effort: (opts.reasoningEffort ?? "low") as "low",
     messages: [
       { role: "system", content: opts.system },
       ...opts.messages,

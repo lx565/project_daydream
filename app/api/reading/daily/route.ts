@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       maxTokens: 300,
       temperature: 0.7,
       rateLimit: { ip: clientIp(request), keyPrefix: "daily" },
+      reasoningEffort: "none", // FREE public 黃曆 — speed over a reasoning pass
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
     })

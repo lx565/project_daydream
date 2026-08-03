@@ -159,6 +159,7 @@ ${baziFacts}
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "synthesis" },
+      reasoningEffort: "none", // FREE 總覽 reading — speed over a reasoning pass
       temperature: 0.5,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
