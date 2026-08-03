@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -251,6 +251,14 @@ ${context||"（暂无）"}
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
       maxTokens: 2800,
+      // This route declares maxDuration=90 (vs the usual 60) because its 8-section
+      // output (甲方/乙方/飞化互入/合盘综析/...) was observed exceeding
+      // streamWithRefs's default 35s deadline while still legitimately streaming
+      // content, which skips the retry (content already sent) and surfaces as a
+      // hard error instead of just finishing slowly. 55s/20s leaves 15s margin
+      // under the 90s ceiling, matching decades/route.ts's fix for the same issue.
+      attemptTimeoutMs: 55_000,
+      retryTimeoutMs: 20_000,
       temperature: 0.7,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],

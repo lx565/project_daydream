@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -75,6 +75,10 @@ ${context || "（無可用參考，請基於八字命理通論嚴謹推演）"}
       messages: [{ role: "user", content: userMsg }],
       refs,
       maxTokens: 1800,
+      // Wider deadline — DeepSeek was observed exceeding the 35s default while still
+      // legitimately streaming; see couple/route.ts for the full rationale.
+      attemptTimeoutMs: 55_000,
+      retryTimeoutMs: 20_000,
       temperature: 0.6,
     })
   );

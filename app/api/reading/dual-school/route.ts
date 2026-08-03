@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -96,6 +96,10 @@ export async function POST(request: NextRequest) {
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
       maxTokens: 3000,
+      // Wider deadline — DeepSeek was observed exceeding the 35s default while still
+      // legitimately streaming; see couple/route.ts for the full rationale.
+      attemptTimeoutMs: 55_000,
+      retryTimeoutMs: 20_000,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs: allRefs,

@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -251,6 +251,10 @@ ${context || "（暫無相關典籍）"}
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
       maxTokens: 2800,
+      // Wider deadline — DeepSeek was observed exceeding the 35s default while still
+      // legitimately streaming; see couple/route.ts for the full rationale.
+      attemptTimeoutMs: 55_000,
+      retryTimeoutMs: 20_000,
       temperature: 0.7,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
