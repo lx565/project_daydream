@@ -61,7 +61,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v28"; // 2026-08-03 couple/bazi-couple: maxTokens truncation fix (same reasoning_content issue as v27)
+const CACHE_VERSION = "v29"; // 2026-08-03 overview: 綜合共識 section removed (moved to /consensus route)
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
@@ -151,7 +151,7 @@ export async function streamWithRefs(
     let fullText = "";
     let gen = 0;
     let sentAnyContent = false;
-    const runAttempt = (attemptGen: number) => {
+    const runAttempt = (attemptGen: number, tierOverride?: ModelTier) => {
       const guardedWrite = async (obj: object) => {
         if (attemptGen !== gen) return;
         if ("text" in obj && typeof (obj as { text: string }).text === "string") {
@@ -160,9 +160,9 @@ export async function streamWithRefs(
         }
         await safeWrite(obj);
       };
-      if (PROVIDER === "gemini") return streamGemini(guardedWrite, opts);
-      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, opts);
-      return streamAnthropic(guardedWrite, opts);
+      if (PROVIDER === "gemini") return streamGemini(guardedWrite, opts, tierOverride);
+      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, opts, tierOverride);
+      return streamAnthropic(guardedWrite, opts, tierOverride);
     };
 
     try {
@@ -170,8 +170,16 @@ export async function streamWithRefs(
       await withDeadline(runAttempt(1), opts.attemptTimeoutMs ?? 35_000);
     } catch (e) {
       if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
+      // Primary model stalled before emitting anything — on DeepSeek this is
+      // v4-pro's reasoning ("thinking") phase eating the whole window on a slow
+      // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
+      // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
+      // the "fast" tier (deepseek-v4-flash / gemini-2.5-flash / claude-haiku) so
+      // the reader gets *a* reading instead of "AI 服务响应较慢". Only safe because
+      // no content was sent yet (guarded by !sentAnyContent above) — restarting
+      // after partial output would duplicate text.
       gen = 2; // invalidates any late write from the abandoned first attempt
-      await withDeadline(runAttempt(2), opts.retryTimeoutMs ?? 15_000);
+      await withDeadline(runAttempt(2, "fast"), opts.retryTimeoutMs ?? 15_000);
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
@@ -202,13 +210,14 @@ export async function streamWithRefs(
 
 async function streamGemini(
   safeWrite: (obj: object) => Promise<void>,
-  opts: SSEWriterOptions
+  opts: SSEWriterOptions,
+  tierOverride?: ModelTier
 ) {
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
   const model = genAI.getGenerativeModel({
-    model: resolveModel(opts.tier),
+    model: resolveModel(tierOverride ?? opts.tier),
     systemInstruction: opts.system,
     generationConfig: { maxOutputTokens: opts.maxTokens, temperature: opts.temperature ?? DEFAULT_TEMPERATURE },
   });
@@ -229,7 +238,8 @@ async function streamGemini(
 
 async function streamDeepSeek(
   safeWrite: (obj: object) => Promise<void>,
-  opts: SSEWriterOptions
+  opts: SSEWriterOptions,
+  tierOverride?: ModelTier
 ) {
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({
@@ -238,7 +248,7 @@ async function streamDeepSeek(
   });
 
   const stream = await client.chat.completions.create({
-    model: resolveModel(opts.tier),
+    model: resolveModel(tierOverride ?? opts.tier),
     max_tokens: opts.maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     stream: true,
@@ -258,7 +268,8 @@ async function streamDeepSeek(
 
 async function streamAnthropic(
   safeWrite: (obj: object) => Promise<void>,
-  opts: SSEWriterOptions
+  opts: SSEWriterOptions,
+  tierOverride?: ModelTier
 ) {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -268,7 +279,7 @@ async function streamAnthropic(
   ];
 
   const stream = client.messages.stream({
-    model: resolveModel(opts.tier),
+    model: resolveModel(tierOverride ?? opts.tier),
     max_tokens: opts.maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     system: systemBlocks,

@@ -13,6 +13,7 @@ export interface ReadingEmailData {
   readings: {
     synthesis?: string;
     overview?: string;
+    consensus?: string;
     bazi?: string;
     palaces?: string;
     decades?: string;
@@ -82,7 +83,7 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
   const sections: { title: string; content: string | undefined }[] = [
     // 總覧 tab
     { title: '混合解讀',           content: data.readings.synthesis },
-    { title: '紫微綜合',           content: data.readings.overview },
+    { title: '紫微綜合',           content: data.readings.consensus },
     { title: '八字綜合',           content: data.readings.bazi },
     // 宮位 tab
     { title: '十二宮位',           content: data.readings.palaces },
@@ -94,6 +95,7 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     { title: '八字各派視角',       content: data.readings.baziSchools },
     { title: '八字大運走勢',       content: data.readings.baziDecades },
     // 眾說 tab
+    { title: '紫微三派詳解',       content: data.readings.overview },
     { title: '三合·四化·飛星 · 三派深解', content: data.readings.dualschool },
     // 注意 tab
     { title: '特別注意',           content: data.readings.cautions },

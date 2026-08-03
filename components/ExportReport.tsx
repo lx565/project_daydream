@@ -35,7 +35,7 @@ export default function ExportReport({ data }: ExportReportProps) {
   const reportRef = useRef<HTMLDivElement>(null);
 
   const { readings } = data;
-  const hasContent = !!(readings.synthesis || readings.overview || readings.bazi);
+  const hasContent = !!(readings.synthesis || readings.consensus || readings.overview || readings.bazi);
 
   async function handleDownload() {
     if (!reportRef.current || capturing) return;
@@ -90,12 +90,13 @@ export default function ExportReport({ data }: ExportReportProps) {
       {/* Reading sections — same order as emailTemplate */}
       <div className="px-4 pb-4">
         {readings.synthesis  && <ReportSection title="綜合解讀"          text={readings.synthesis} />}
-        {readings.overview   && <ReportSection title="紫微綜合"          text={readings.overview} />}
+        {readings.consensus  && <ReportSection title="紫微綜合"          text={readings.consensus} />}
         {readings.palaces    && <ReportSection title="十二宮位"          text={readings.palaces} />}
         {readings.decades    && <ReportSection title="大運流年"          text={readings.decades} />}
         {readings.bazi       && <ReportSection title="八字綜合"          text={readings.bazi} />}
         {readings.baziDeep   && <ReportSection title="八字命理 · 深度詳批" text={readings.baziDeep} />}
         {readings.baziSchools && <ReportSection title="八字各派視角"     text={readings.baziSchools} />}
+        {readings.overview   && <ReportSection title="紫微三派詳解"      text={readings.overview} />}
         {readings.cautions   && <ReportSection title="特別注意"          text={readings.cautions} />}
       </div>
 

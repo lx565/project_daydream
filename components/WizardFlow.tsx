@@ -424,6 +424,8 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
 
   // Free cross-domain synthesis (紫微 + 八字) — the new top of the 總覽 tab.
   const synthesis     = useSSEStream("/api/reading/synthesis",     ck("synthesis"), { validate: true });
+  // FREE — the cheap, single-conclusion 紫薇綜合 teaser (O2). No cross-model validation.
+  const consensus     = useSSEStream("/api/reading/consensus",     ck("consensus"));
   // The deep multi-school 紫微 reading — now a PAID deep-dive below the free teaser.
   const overview      = useSSEStream("/api/reading/overview",      ck("overview"), { validate: true });
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
@@ -463,11 +465,11 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     : undefined;
 
   // The FREE sections always run on mount: cross-domain synthesis (混合解讀),
-  // the 紫微 overview (紫薇綜合 = its 綜合共識 slice), and the bazi reading (八字綜合).
+  // the cheap 紫薇綜合 consensus teaser, and the bazi reading (八字綜合).
   useEffect(() => {
     gtagEvent("reading_started");
     if (synthesis.status === "idle") synthesis.start(synthesisPayload);
-    if (overview.status === "idle")  overview.start(ziweiPayload);
+    if (consensus.status === "idle") consensus.start(ziweiPayload);
     if (bazi_.status === "idle")     bazi_.start(baziPayload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -478,6 +480,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // 宮位 is now a paid section (only 總覽 is free), so it starts here too.
   useEffect(() => {
     if (paywall.loading || gated) return;
+    // The heavy 6-school overview only runs post-unlock now — it feeds the paid
+    // 眾說 tab; the free 紫薇綜合 box uses the cheap `consensus` stream instead.
+    if (overview.status === "idle")     overview.start(ziweiPayload);
     if (palaces.status === "idle")      palaces.start({ ziwei, name });
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
@@ -489,7 +494,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
 
   // Global progress across the auto-run sections. When gated, only the free
   // 總覽 trio runs; 宮位 and the rest are deferred until unlock.
-  const coreStreams = gated ? [synthesis, overview, bazi_] : [synthesis, overview, bazi_, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
+  const coreStreams = gated
+    ? [synthesis, consensus, bazi_]
+    : [synthesis, consensus, bazi_, overview, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
@@ -528,6 +535,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       readings: {
         synthesis:    synthesis.text,
         overview:     overview.text,
+        consensus:    consensus.text,
         bazi:         bazi_.text,
         palaces:      palaces.text,
         decades:      decades.text,
@@ -585,22 +593,23 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <ValidationBadge status={synthesis.validation} />
             </div>
 
-            {/* FREE — 紫薇綜合 (the overview 綜合共識 slice) */}
+            {/* FREE — 紫薇綜合 (cheap standalone consensus teaser, /api/reading/consensus) */}
             <div className="space-y-4 pt-4 border-t border-border-light">
               <SectionTitle accent="gold">紫薇綜合</SectionTitle>
-              {overview.status === "done" ? (
+              {consensus.status === "streaming" ? (
+                <LoadingSkeleton label="正在生成紫薇綜合…" />
+              ) : consensus.status === "done" ? (
                 <div>
-                  <OverviewDualView text={overview.text} refs={overview.refs} mode="consensus" />
-                  <ValidationBadge status={overview.validation} />
+                  <ClassicalMd text={consensus.text} />
+                  <RefList refs={consensus.refs} />
                 </div>
-              ) : overview.status === "error" ? (
+              ) : consensus.status === "error" ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-vermillion">{overview.errorMsg}</p>
-                  <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
+                  <p className="text-sm text-vermillion">{consensus.errorMsg}</p>
+                  <button onClick={() => consensus.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
-                <ReadingCard stream={overview} skeleton="正在生成紫薇綜合…"
-                  onMount={() => overview.status === "idle" && overview.start(ziweiPayload)} />
+                <LoadingSkeleton label="正在初始化…" />
               )}
             </div>
 
