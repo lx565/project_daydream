@@ -11,10 +11,14 @@ interface CallAIOpts {
   maxTokens?: number;
   temperature?: number;
   jsonMode?: boolean;
+  /** DeepSeek reasoning effort. Defaults to "none" — callAI is for structured/JSON
+   *  utility calls (e.g. flow-year scoring) where the thinking phase only adds
+   *  latency and eats the token budget. See sseWriter.ts for the full rationale. */
+  reasoningEffort?: "none" | "low" | "medium" | "high";
 }
 
 async function callOnce(opts: CallAIOpts): Promise<string> {
-  const { system, userMessage, maxTokens = 1500, temperature = 0.3, jsonMode = false } = opts;
+  const { system, userMessage, maxTokens = 1500, temperature = 0.3, jsonMode = false, reasoningEffort = "none" } = opts;
 
   if (PROVIDER === "deepseek") {
     const OpenAI = (await import("openai")).default;
@@ -23,9 +27,13 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
       baseURL: "https://api.deepseek.com",
     });
     const res = await client.chat.completions.create({
-      model: "deepseek-v4-pro",
+      // Match sseWriter's model policy: flash primary (v4-pro's thinking phase was
+      // blowing past callAI's deadline → 500s on flowyears-scores), overridable via
+      // DEEPSEEK_MODEL. reasoning_effort cast because "none" isn't in OpenAI's union.
+      model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
       max_tokens: maxTokens,
       temperature,
+      reasoning_effort: reasoningEffort as "low",
       ...(jsonMode ? { response_format: { type: "json_object" as const } } : {}),
       messages: [
         { role: "system", content: system },
