@@ -248,12 +248,9 @@ export default function Home() {
               <p className="text-sm font-semibold text-ink mb-1">生成你的命盤解讀</p>
               <p className="text-xs text-ink-4 mb-5">輸入出生資訊，AI 即刻推演 · 免費開始</p>
               <FortuneForm />
-              <div className="mt-4 text-center space-y-1">
+              <div className="mt-4 text-center">
                 <p className="text-xs text-ink-3">
-                  總覽免費 · 完整命書 <span className="font-semibold text-vermillion">$6.99</span>
-                </p>
-                <p className="text-[11px] text-ink-4">
-                  人工命理諮詢動輒數千元起跳 · 一次付費永久保存
+                  總覽免費 · 完整命書可永久保存
                 </p>
               </div>
             </div>
@@ -597,11 +594,12 @@ export default function Home() {
         <p className="text-sm text-ink-3 mb-3">
           輸入出生資訊，即刻獲得你的專屬命理解讀
         </p>
-        {/* The highest-intent moment on the page — state the offer here rather
-            than only saying "免費開始", which undersells what the reader gets. */}
+        {/* Value-first: lead with the free 總覽 and never name a price before the
+            reader has experienced the free reading. The price appears only at the
+            paywall (PaywallLock), once they've read the free 總覽 and reached a
+            locked tab — the true peak-intent moment. */}
         <p className="text-sm text-ink-3 mb-8">
-          <span className="font-semibold text-ink">總覽免費</span>，不需註冊 ·
-          完整命書 <span className="font-semibold text-vermillion">$6.99</span> 一次付費永久保存
+          <span className="font-semibold text-ink">總覽免費</span>，不需註冊
         </p>
         <a
           href="#form"
