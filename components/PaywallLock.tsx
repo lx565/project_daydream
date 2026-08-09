@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { startCardCheckout } from "@/lib/checkout";
 import { gtagEvent } from "@/lib/gtag";
+import { chartType } from "@/lib/chartType";
 
 interface Props {
   chartId: string;
@@ -49,14 +50,14 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
   useEffect(() => {
     if (viewed.current || !chartId) return;
     viewed.current = true;
-    gtagEvent("paywall_view", { chart_id: chartId, section: sectionLabel ?? "" });
+    gtagEvent("paywall_view", { chart_id: chartId, chart_type: chartType(chartId), section: sectionLabel ?? "" });
   }, [chartId, sectionLabel]);
 
   async function handleCheckout() {
     if (loading || !chartId) return;
     setLoading(true);
     setErr("");
-    gtagEvent("paywall_checkout_start", { chart_id: chartId, section: sectionLabel ?? "" });
+    gtagEvent("paywall_checkout_start", { chart_id: chartId, chart_type: chartType(chartId), section: sectionLabel ?? "" });
     const result = await startCardCheckout(chartId);
     if (!result.ok) {
       setErr("付款跳轉失敗，請稍後再試");

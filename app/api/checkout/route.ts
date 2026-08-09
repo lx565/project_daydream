@@ -5,6 +5,7 @@
 import { NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { chartType } from "@/lib/chartType";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,9 @@ export async function POST(request: NextRequest) {
       line_items: [{ price, quantity: 1 }],
       payment_method_types: methods,
       locale: "zh", // audience is Chinese-speaking; without this Checkout defaults to browser/English locale
-      metadata: { chartId }, // webhook reads this to mark the chart unlocked
+      // webhook reads chartId to mark the chart unlocked; chart_type ("hepan" |
+      // "solo") lets Stripe/analytics segment couple-compat revenue from solo.
+      metadata: { chartId, chart_type: chartType(chartId) },
       success_url: `${origin}${safeReturn}${sep}paid=1`,
       cancel_url: `${origin}${safeReturn}`,
     };
