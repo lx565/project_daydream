@@ -62,12 +62,12 @@ export function calcCoupleScore(
   const weddingAvg = (aw.score + bw.score) / 2;
   const total = Math.round(dm.score * 0.30 + el.score * 0.25 + weddingAvg * 0.45);
 
-  let label = "缘分深厚";
+  let label = "緣分深厚";
   let color = "#16a34a";
   if (total >= 85) { label = "天作之合"; color = "#8B1A1A"; }
-  else if (total >= 75) { label = "缘分深厚"; color = "#d97706"; }
-  else if (total >= 62) { label = "相辅相成"; color = "#0891b2"; }
-  else { label = "磨合为主"; color = "#6b7280"; }
+  else if (total >= 75) { label = "緣分深厚"; color = "#d97706"; }
+  else if (total >= 62) { label = "相輔相成"; color = "#0891b2"; }
+  else { label = "磨合為主"; color = "#6b7280"; }
 
   return { total, dayMaster: dm, elements: el, aWedding: aw, bWedding: bw, label, color };
 }

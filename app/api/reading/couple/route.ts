@@ -10,57 +10,57 @@ import { calcCoupleScoreV2 } from "@/lib/couple";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 
-const SYSTEM = `你是精通紫微斗数与八字子平的资深合盘命理师。本次合盘的关系类型会在用户信息中给出，请始终扣住该关系类型的侧重来解读（情侣谈感情、亲子谈教养、朋友谈默契，不要套同一模板）。
+const SYSTEM = `你是精通紫微斗數與八字子平的資深合盤命理師。本次合盤的關係類型會在使用者資訊中給出，請始終扣住該關係類型的側重來解讀（情侶談感情、親子談教養、朋友談默契，不要套同一模板）。
 
-分析层次：
-1. 独立看甲方在这段关系中的模式（不受乙方影响）
-2. 独立看乙方
-3. 两盘合观：契合、张力、相处之道
-4. 时机：结合双方当前大运，点出关系的高峰/考验阶段
+分析層次：
+1. 獨立看甲方在這段關係中的模式（不受乙方影響）
+2. 獨立看乙方
+3. 兩盤合觀：契合、張力、相處之道
+4. 時機：結合雙方當前大運，點出關係的高峰/考驗階段
 
-请严格按以下 Markdown 输出（标题照抄）：
+請嚴格按以下 Markdown 輸出（標題照抄）：
 
-## 四维详解
-（逐条解释用户给出的四维得分各自因何而来，落到具体星曜/日主/五行；每维1-2句；**加粗**维度名）
+## 四維詳解
+（逐條解釋使用者給出的四維得分各自因何而來，落到具體星曜/日主/五行；每維1-2句；**加粗**維度名）
 
-## 甲方在这段关系中
-（约160字：夫妻宫/相关宫主星与四化、感情星强弱、相处模式；**加粗**关键星曜）
+## 甲方在這段關係中
+（約160字：夫妻宮/相關宮主星與四化、感情星強弱、相處模式；**加粗**關鍵星曜）
 
-## 乙方在这段关系中
-（约160字，同框架）
+## 乙方在這段關係中
+（約160字，同框架）
 
-## 飞化互入
-（约140字：一方的生年四化/重要星曜落入对方命盘的哪个宫，说明彼此牵动的领域。注意命理规则：七杀/天相/天府不参与十干四化；紫微只化权/化科。）
+## 飛化互入
+（約140字：一方的生年四化/重要星曜落入對方命盤的哪個宮，說明彼此牽動的領域。注意命理規則：七殺/天相/天府不參與十干四化；紫微只化權/化科。）
 
-## 合盘综析与三方四正
-（约180字：双方相关宫位的三方四正牵引、日主生克、四柱合冲、五行互补结构；**加粗**关键论断）
+## 合盤綜析與三方四正
+（約180字：雙方相關宮位的三方四正牽引、日主生克、四柱合衝、五行互補結構；**加粗**關鍵論斷）
 
-## 缘分时机
-（约120字：结合双方当前大运，点出关系的高峰期与需留心的阶段）
+## 緣分時機
+（約120字：結合雙方當前大運，點出關係的高峰期與需留心的階段）
 
-## 相处之道
-（针对两人命盘，3-5条具体可操作建议；- 开头列表）
+## 相處之道
+（針對兩人命盤，3-5條具體可操作建議；- 開頭列表）
 $PASTLIFE$
 
-## 给你们的话
-（温暖真诚的收尾寄语，约70字）
+## 給你們的話
+（溫暖真誠的收尾寄語，約70字）
 
 ### 分享卡片
-（严格按以下格式，方括号替换为实际内容，不加其他文字：）
-✦ 命里合盘 ✦
-[甲方称呼] × [乙方称呼]
-$SHARELABEL$：[缘分类型标签]
-[维度1名] [分] · [维度2名] [分] · [维度3名] [分] · [维度4名] [分]
-"[一句12字内的缘分点睛，温暖且可截图分享]"
-仅供传统文化学习参考 · mingli.study
+（嚴格按以下格式，方括號替換為實際內容，不加其他文字：）
+✦ 命裡合盤 ✦
+[甲方稱呼] × [乙方稱呼]
+$SHARELABEL$：[緣分類型標籤]
+[維度1名] [分] · [維度2名] [分] · [維度3名] [分] · [維度4名] [分]
+「一句12字內的緣分點睛，溫暖且可截圖分享」
+僅供傳統文化學習參考 · mingli.study
 
-简体中文。` + MODERN_INSTRUCTION;
+繁體中文（臺灣用語）。` + MODERN_INSTRUCTION;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const BRANCH_ZODIAC: Record<string, string> = {
-  子: "鼠", 丑: "牛", 寅: "虎", 卯: "兔", 辰: "龙", 巳: "蛇",
-  午: "马", 未: "羊", 申: "猴", 酉: "鸡", 戌: "狗", 亥: "猪",
+  子: "鼠", 丑: "牛", 寅: "虎", 卯: "兔", 辰: "龍", 巳: "蛇",
+  午: "馬", 未: "羊", 申: "猴", 酉: "雞", 戌: "狗", 亥: "豬",
 };
 
 function zodiacRelation(branchA: string, branchB: string): string {
@@ -69,23 +69,23 @@ function zodiacRelation(branchA: string, branchB: string): string {
   const CHONG: [string,string][] = [["子","午"],["丑","未"],["寅","申"],["卯","酉"],["辰","戌"],["巳","亥"]];
   const XING: [string,string,string][] = [["寅","巳","申"],["丑","戌","未"]];
 
-  for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同气相求）";
+  for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同氣相求）";
   for (const [a,b] of LIU_HE) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "六合（相合融洽）";
-  for (const [a,b] of CHONG) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "相冲（摩擦较多，需磨合）";
-  for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨砺，有缘有劫）";
-  return "无特殊合冲（后天缘分为主，需彼此经营）";
+  for (const [a,b] of CHONG) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "相衝（摩擦較多，需磨合）";
+  for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨礪，有緣有劫）";
+  return "無特殊合衝（後天緣分為主，需彼此經營）";
 }
 
 // Describe a palace with all its stars
 function palaceDesc(ziwei: ZiweiResult, palaceName: string): string {
   const p = ziwei.palaces.find(x => x.name === palaceName);
-  if (!p) return `${palaceName}（无数据）`;
+  if (!p) return `${palaceName}（無資料）`;
   const stars = p.stars
-    .filter(s => s.type === "major" || s.type === "minor" || ["红鸾","天喜","天马","孤辰","寡宿"].includes(s.name))
+    .filter(s => s.type === "major" || s.type === "minor" || ["紅鸞","天喜","天馬","孤辰","寡宿"].includes(s.name))
     .map(s => `${s.name}${s.mutagen ? `化${s.mutagen}` : ""}`)
     .join("、");
   const stem = p.heavenlyStem ? `[${p.heavenlyStem}干]` : "";
-  return `${palaceName}${stem}：${stars || "空宫"}`;
+  return `${palaceName}${stem}：${stars || "空宮"}`;
 }
 
 // Find which palace a named star sits in
@@ -94,12 +94,12 @@ function findStarPalace(ziwei: ZiweiResult, starName: string): string {
     const s = p.stars.find(x => x.name === starName);
     if (s) return `${p.name}${s.mutagen ? `化${s.mutagen}` : ""}`;
   }
-  return "（未见）";
+  return "（未見）";
 }
 
 // Describe the four bazi pillars compactly
 function baziPillars(bazi: BaziResult): string {
-  return `年${bazi.year.stem}${bazi.year.branch} 月${bazi.month.stem}${bazi.month.branch} 日${bazi.day.stem}${bazi.day.branch} 时${bazi.hour.stem}${bazi.hour.branch}`;
+  return `年${bazi.year.stem}${bazi.year.branch} 月${bazi.month.stem}${bazi.month.branch} 日${bazi.day.stem}${bazi.day.branch} 時${bazi.hour.stem}${bazi.hour.branch}`;
 }
 
 // Detect simple stem combinations between two bazi sets
@@ -108,7 +108,7 @@ function stemRelations(baziA: BaziResult, baziB: BaziResult, labelA: string, lab
   const relations: string[] = [];
   const stemsA = [baziA.year.stem, baziA.month.stem, baziA.day.stem, baziA.hour.stem];
   const stemsB = [baziB.year.stem, baziB.month.stem, baziB.day.stem, baziB.hour.stem];
-  const pillarNames = ["年干","月干","日干","时干"];
+  const pillarNames = ["年干","月干","日干","時干"];
   for (const [i, sa] of stemsA.entries()) {
     for (const [j, sb] of stemsB.entries()) {
       for (const [ha, hb] of HE_STEMS) {
@@ -118,7 +118,7 @@ function stemRelations(baziA: BaziResult, baziB: BaziResult, labelA: string, lab
       }
     }
   }
-  return relations.length ? relations.join("；") : "天干无明显合化";
+  return relations.length ? relations.join("；") : "天干無明顯合化";
 }
 
 function branchRelations(baziA: BaziResult, baziB: BaziResult, labelA: string, labelB: string): string {
@@ -127,18 +127,18 @@ function branchRelations(baziA: BaziResult, baziB: BaziResult, labelA: string, l
   const relations: string[] = [];
   const branchesA = [baziA.year.branch, baziA.month.branch, baziA.day.branch, baziA.hour.branch];
   const branchesB = [baziB.year.branch, baziB.month.branch, baziB.day.branch, baziB.hour.branch];
-  const names = ["年支","月支","日支","时支"];
+  const names = ["年支","月支","日支","時支"];
   for (const [i,ba] of branchesA.entries()) {
     for (const [j,bb] of branchesB.entries()) {
       for (const [a,b] of CHONG) {
-        if ((ba===a&&bb===b)||(ba===b&&bb===a)) relations.push(`${labelA}${names[i]}${ba} 冲 ${labelB}${names[j]}${bb}`);
+        if ((ba===a&&bb===b)||(ba===b&&bb===a)) relations.push(`${labelA}${names[i]}${ba} 衝 ${labelB}${names[j]}${bb}`);
       }
       for (const [a,b] of LIU_HE) {
         if ((ba===a&&bb===b)||(ba===b&&bb===a)) relations.push(`${labelA}${names[i]}${ba} 合 ${labelB}${names[j]}${bb}`);
       }
     }
   }
-  return relations.length ? relations.slice(0,4).join("；") : "地支无明显合冲";
+  return relations.length ? relations.slice(0,4).join("；") : "地支無明顯合衝";
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
   // Per-relationship 前世缘 section + share-card label injected into SYSTEM.
   const pastLifeSection = cfg.hasPastLife
-    ? "\n## 前世缘分（命理故事）\n（约120字：以来因宫/夫妻宫星曜组合为依据，写一段富画面感的“前世今生”小叙事，开头注明这是命理意象、非史实；温暖动人，适合分享）"
+    ? "\n## 前世緣分（命理故事）\n（約120字：以來因宮/夫妻宮星曜組合為依據，寫一段富畫面感的「前世今生」小敘事，開頭註明這是命理意象、非史實；溫暖動人，適合分享）"
     : "";
   const systemPrompt = SYSTEM
     .replace("$PASTLIFE$", pastLifeSection)
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
   // Wedding palace stars for RAG
   const wStarsA = ziweiA.palaces.find(p=>p.name==="夫妻")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
   const wStarsB = ziweiB.palaces.find(p=>p.name==="夫妻")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
-  // Also include children palace stars and 红鸾
+  // Also include children palace stars and 紅鸞
   const childStarsA = ziweiA.palaces.find(p=>p.name==="子女")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
   const childStarsB = ziweiB.palaces.find(p=>p.name==="子女")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
   const allStars = [...new Set([...wStarsA, ...wStarsB, ...childStarsA, ...childStarsB])];
@@ -187,66 +187,66 @@ export async function POST(request: NextRequest) {
     stars: allStars,
     topic: cfg.ragTopic,
     topK: 8,
-    text: `合盘 夫妻宫 子女宫 红鸾 天喜 感情缘分 ${cfg.label}`,
+    text: `合盤 夫妻宮 子女宮 紅鸞 天喜 感情緣分 ${cfg.label}`,
   });
 
   const dmRelHint = (() => {
     const G: Record<string,string> = {木:"火",火:"土",土:"金",金:"水",水:"木"};
     const dmA = baziA.dayMasterElement, dmB = baziB.dayMasterElement;
-    if (G[dmA]===dmB) return `${labelA}日主${dmA}生${labelB}日主${dmB}（有扶持滋养之情）`;
-    if (G[dmB]===dmA) return `${labelB}日主${dmB}生${labelA}日主${dmA}（有扶持滋养之情）`;
-    if (dmA===dmB) return `双方同为${dmA}日主（同气，志趣相近）`;
+    if (G[dmA]===dmB) return `${labelA}日主${dmA}生${labelB}日主${dmB}（有扶持滋養之情）`;
+    if (G[dmB]===dmA) return `${labelB}日主${dmB}生${labelA}日主${dmA}（有扶持滋養之情）`;
+    if (dmA===dmB) return `雙方同為${dmA}日主（同氣，志趣相近）`;
     const C: Record<string,string> = {木:"土",土:"水",水:"火",火:"金",金:"木"};
-    if (C[dmA]===dmB) return `${labelA}日主${dmA}克${labelB}日主${dmB}（需注意主导与压制）`;
-    if (C[dmB]===dmA) return `${labelB}日主${dmB}克${labelA}日主${dmA}（需注意主导与压制）`;
-    return "日主无直接生克";
+    if (C[dmA]===dmB) return `${labelA}日主${dmA}克${labelB}日主${dmB}（需注意主導與壓制）`;
+    if (C[dmB]===dmA) return `${labelB}日主${dmB}克${labelA}日主${dmA}（需注意主導與壓制）`;
+    return "日主無直接生克";
   })();
 
   const elA = baziA.elements, elB = baziB.elements;
 
   const userMessage = `
-【关系类型】${cfg.label}　侧重：${cfg.focusHint}
-【四维得分（确定性，请据此解释）】缘分类型：${score.label}（${score.total}分）
+【關係類型】${cfg.label}　側重：${cfg.focusHint}
+【四維得分（確定性，請據此解釋）】緣分類型：${score.label}（${score.total}分）
 ${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
 
-【甲方基本信息】
-姓名/称呼：${labelA}　性别：${genderA==="male"?"男":"女"}
+【甲方基本資訊】
+姓名/稱呼：${labelA}　性別：${genderA==="male"?"男":"女"}
 生肖：${BRANCH_ZODIAC[branchA]??branchA}（${baziA.year.stem}${branchA}年）
 八字四柱：${baziPillars(baziA)}
 日主：${baziA.dayMaster}（${baziA.dayMasterElement}）
 五行：木${elA.wood} 火${elA.fire} 土${elA.earth} 金${elA.metal} 水${elA.water}
 命格：${baziA.summary}
 
-【甲方紫微宫位】
+【甲方紫微宮位】
 ${palaceDesc(ziweiA,"命宮")}
 ${palaceDesc(ziweiA,"夫妻")}
 ${palaceDesc(ziweiA,"子女")}
-红鸾星：${findStarPalace(ziweiA,"红鸾")}　天喜星：${findStarPalace(ziweiA,"天喜")}
+紅鸞星：${findStarPalace(ziweiA,"紅鸞")}　天喜星：${findStarPalace(ziweiA,"天喜")}
 
-【乙方基本信息】
-姓名/称呼：${labelB}　性别：${genderB==="male"?"男":"女"}
+【乙方基本資訊】
+姓名/稱呼：${labelB}　性別：${genderB==="male"?"男":"女"}
 生肖：${BRANCH_ZODIAC[branchB]??branchB}（${baziB.year.stem}${branchB}年）
 八字四柱：${baziPillars(baziB)}
 日主：${baziB.dayMaster}（${baziB.dayMasterElement}）
 五行：木${elB.wood} 火${elB.fire} 土${elB.earth} 金${elB.metal} 水${elB.water}
 命格：${baziB.summary}
 
-【乙方紫微宫位】
+【乙方紫微宮位】
 ${palaceDesc(ziweiB,"命宮")}
 ${palaceDesc(ziweiB,"夫妻")}
 ${palaceDesc(ziweiB,"子女")}
-红鸾星：${findStarPalace(ziweiB,"红鸾")}　天喜星：${findStarPalace(ziweiB,"天喜")}
+紅鸞星：${findStarPalace(ziweiB,"紅鸞")}　天喜星：${findStarPalace(ziweiB,"天喜")}
 
-【合盘数据】
-生肖缘分：${BRANCH_ZODIAC[branchA]}与${BRANCH_ZODIAC[branchB]} → ${zodiacRelation(branchA,branchB)}
-日主关系：${dmRelHint}
+【合盤資料】
+生肖緣分：${BRANCH_ZODIAC[branchA]}與${BRANCH_ZODIAC[branchB]} → ${zodiacRelation(branchA,branchB)}
+日主關係：${dmRelHint}
 天干合化：${stemRelations(baziA,baziB,labelA,labelB)}
-地支合冲：${branchRelations(baziA,baziB,labelA,labelB)}
+地支合衝：${branchRelations(baziA,baziB,labelA,labelB)}
 
-【典籍参考】
-${context||"（暂无）"}
+【典籍參考】
+${context||"（暫無）"}
 
-请按系统要求的标题逐段完成合盘解读，扣住关系类型「${cfg.label}」的侧重，并结合上方四维得分展开。`.trim();
+請按系統要求的標題逐段完成合盤解讀，扣住關係類型「${cfg.label}」的側重，並結合上方四維得分展開。`.trim();
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {

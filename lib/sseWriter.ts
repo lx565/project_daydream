@@ -73,7 +73,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v29"; // 2026-08-03 overview: 綜合共識 section removed (moved to /consensus route)
+const CACHE_VERSION = "v30"; // 2026-08-09 couple preview/full: 简体→繁體 (臺灣用語) + 紅鸞/天馬 lookup fix
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
