@@ -1072,3 +1072,20 @@ export const SIHUA_PALACE_HUAJI = PALACE_HUAJI;
 export const SIHUA_PALACE_HUALU = PALACE_HUALU;
 export const SIHUA_PALACE_HUAQUAN = PALACE_HUAQUAN;
 export const SIHUA_PALACE_HUAKE = PALACE_HUAKE;
+
+// Templated FAQ (no AI) — mirrors lib/sihuaData.ts's sihuaFaqItems, but phrased to
+// match the actual GSC queries these pages get impressions for: definitional
+// ("夫妻宮化祿是什麼意思") and evaluative / 化解 ("夫妻宮化祿代表什麼", "…如何化解").
+// Feeds both the FAQPage JSON-LD (People-Also-Ask surface) and the visible accordion.
+export function sihuaPalaceFaqItems(entry: SihuaPalaceEntry): { question: string; answer: string }[] {
+  const isJi = entry.hua === "忌";
+  return [
+    { question: `${entry.name}是什麼意思？`, answer: entry.intro },
+    {
+      question: isJi
+        ? `${entry.palace}${entry.huaName}要如何看待與化解？`
+        : `${entry.palace}${entry.huaName}代表什麼？是好是壞？`,
+      answer: entry.oneLine,
+    },
+  ];
+}

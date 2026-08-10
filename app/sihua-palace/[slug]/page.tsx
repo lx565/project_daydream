@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SIHUA_PALACE, getSihuaPalace, type SihuaPalaceHua } from "@/lib/sihuaPalaceData";
+import { SIHUA_PALACE, getSihuaPalace, sihuaPalaceFaqItems, type SihuaPalaceHua } from "@/lib/sihuaPalaceData";
 import { getSihua } from "@/lib/sihuaData";
 import { getSihuaPalaceContent } from "@/lib/seoContent";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -95,6 +95,7 @@ export default async function SihuaPalaceArticlePage(
   const pagePath = `/sihua-palace/${entry.urlSlug}`;
   const theme = HUA_THEME[entry.hua];
   const parentPillar = getSihua(theme.pillar);
+  const faq = sihuaPalaceFaqItems(entry);
 
   return (
     <>
@@ -112,6 +113,7 @@ export default async function SihuaPalaceArticlePage(
           path: pagePath,
           section: "四化詳解",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -176,6 +178,25 @@ export default async function SihuaPalaceArticlePage(
           <VoteWidget />
 
           <ToolCTA variant="card" sub={`AI 依據逾百部典籍，結合你的完整命盤判斷${entry.huaName}實際落在哪個宮位並給出專屬深度解讀。`} label="生成我的命盤四化詳批" />
+
+          {/* FAQ — matches /sihua; targets the definitional / 化解 query intent + FAQPage rich results */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
 
           {/* Related articles */}
           {relatedEntries.length > 0 && (
