@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BAZI_JIBING, getBaziJibing } from "@/lib/baziJibingData";
 import { getBaziJibingContent } from "@/lib/seoContent";
+import { seoDescription } from "@/lib/seoDescription";
 import JsonLd from "@/components/JsonLd";
 import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
@@ -29,7 +30,7 @@ export async function generateMetadata(
   if (!entry) return {};
 
   const title = `${entry.title} — 命裡`;
-  const description = entry.intro.slice(0, 120) + "…";
+  const description = seoDescription(entry.oneLine, entry.intro);
 
   return {
     title,
