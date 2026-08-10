@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SIHUA_PALACE, getSihuaPalace, sihuaPalaceFaqItems, type SihuaPalaceHua } from "@/lib/sihuaPalaceData";
 import { getSihua } from "@/lib/sihuaData";
 import { getSihuaPalaceContent } from "@/lib/seoContent";
+import { seoDescription } from "@/lib/seoDescription";
 import JsonLd from "@/components/JsonLd";
 import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
@@ -44,7 +45,7 @@ export async function generateMetadata(
   if (!entry) return {};
 
   const title = `${entry.title} — 命裡`;
-  const description = entry.intro.slice(0, 120) + "…";
+  const description = seoDescription(entry.oneLine, entry.intro);
 
   return {
     title,
