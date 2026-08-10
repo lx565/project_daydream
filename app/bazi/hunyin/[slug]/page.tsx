@@ -4,8 +4,9 @@ import Link from "next/link";
 import { BAZI_HUNYIN, getBaziHunyin } from "@/lib/baziHunyinData";
 import { getBaziHunyinContent } from "@/lib/seoContent";
 import { seoDescription } from "@/lib/seoDescription";
+import { seoFaqItems } from "@/lib/seoFaq";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -64,6 +65,8 @@ export default async function BaziHunyinArticlePage(
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
   const pagePath = `/bazi/hunyin/${entry.urlSlug}`;
 
+  const faq = seoFaqItems(entry);
+
   return (
     <>
       <JsonLd data={[
@@ -80,6 +83,7 @@ export default async function BaziHunyinArticlePage(
           path: pagePath,
           section: "八字命理",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -138,6 +142,25 @@ export default async function BaziHunyinArticlePage(
           <VoteWidget />
 
           <ToolCTA variant="card" sub="AI 依據子平命理典籍，結合你的配偶星、日支夫妻宮與大運流年，分析配偶特質、感情模式與正緣時機。" label="解析我的八字婚姻" />
+
+          {/* FAQ — definitional/評價 query intent + FAQPage rich results */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
 
           {relatedEntries.length > 0 && (
             <div className="space-y-3">
