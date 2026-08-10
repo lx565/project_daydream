@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SHENSHA, getShensha } from "@/lib/shenshaData";
 import { getShenshaContent } from "@/lib/seoContent";
+import { seoDescription } from "@/lib/seoDescription";
+import { seoFaqItems } from "@/lib/seoFaq";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -29,7 +31,7 @@ export async function generateMetadata(
   if (!entry) return {};
 
   const title = `${entry.name}详解：八字神煞完全指南 — 命里`;
-  const description = entry.intro.slice(0, 120) + "…";
+  const description = seoDescription(entry.oneLine, entry.intro);
 
   return {
     title,
@@ -69,6 +71,8 @@ export default async function ShenshaPage(
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
   const pagePath = `/bazi/shensha/${entry.urlSlug}`;
 
+  const faq = seoFaqItems(entry);
+
   return (
     <>
       <JsonLd data={[
@@ -84,6 +88,7 @@ export default async function ShenshaPage(
           path: pagePath,
           section: "八字命理",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -156,6 +161,25 @@ export default async function ShenshaPage(
           <ToolCTA variant="card" sub="推算之外，更要看你自己命局里的神煞组合。AI 为你逐项详批命中神煞与大运应期。" label="生成我的八字神煞详批" />
 
           {/* Related 神煞 */}
+          {/* FAQ — definitional/評價 query intent + FAQPage rich results */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+
           {relatedEntries.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs text-ink-4 font-medium">相关神煞</p>
