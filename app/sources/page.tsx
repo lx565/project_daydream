@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SOURCE_BOOKS, getSourcesBySchool, SCHOOL_LABELS, SCHOOL_DESC } from "@/lib/sourcesData";
 import ToolCTA from "@/components/ToolCTA";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -31,12 +33,37 @@ const SCHOOL_COLORS: Record<string, { accent: string; bar: string }> = {
   "其他名家": { accent: "text-ink-3", bar: "bg-ink-4" },
 };
 
+const FAQ = [
+  {
+    question: "命裡的解讀有典籍依據嗎？",
+    answer: "有。命裡 AI 的每一條解讀都基於收錄的命理典籍原文提煉而成，涵蓋紫微斗數三合派、四化派、飛星派、倪師學派，以及八字子平、祿命法、盲派等主流與旁參流派，不憑空杜撰。",
+  },
+  {
+    question: "命裡收錄了哪些流派的典籍？",
+    answer: "紫微斗數方面涵蓋三合派、四化派、飛星派與倪師學派；八字方面涵蓋子平命理、祿命法與盲派；此外也收錄古籍經典與其他名家著作，多流派合參而非偏執一家。",
+  },
+];
+
 export default function SourcesPage() {
   const bySchool = getSourcesBySchool();
   const totalBooks = SOURCE_BOOKS.length;
   const totalChunks = SOURCE_BOOKS.reduce((s, b) => s + b.chunks, 0).toLocaleString();
 
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "典籍書目", path: "/sources" },
+        ]),
+        collectionPageSchema({
+          name: "命理典籍知識庫 — 命裡收錄書目全覽",
+          description: "命裡 AI 讀過的全部命理典籍：三合派·四化派·飛星派·倪師學派·八字子平·祿命法·盲派等，共逾百部典籍、逾三萬條知識。",
+          path: "/sources",
+        }),
+        faqSchema(FAQ),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-ink-4">
@@ -115,8 +142,27 @@ export default function SourcesPage() {
           );
         })}
 
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
         <ToolCTA variant="card" />
       </div>
     </main>
+    </>
   );
 }

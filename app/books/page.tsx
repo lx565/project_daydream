@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BOOK_ARTICLES, bookSystem, type BookSystem } from "@/lib/bookArticles";
 import ToolCTA from "@/components/ToolCTA";
 import JsonLd from "@/components/JsonLd";
-import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -41,6 +41,17 @@ const SYSTEMS: { key: BookSystem; label: string; desc: string; accent: string; b
   { key: "both",  label: "通用 · 跨系統", desc: "入門書單與兩套系統的對比",    accent: "text-jade",      bar: "bg-jade"      },
 ];
 
+const FAQ = [
+  {
+    question: "紫微斗數入門該看哪本書？",
+    answer: "建議先讀導論性的入門書單，掌握星曜、宮位、四化的基本概念，再進入三合派或四化派的經典原著（如中州派講義）。命裡的書單推薦分類，正是依系統與難度整理，幫你選對第一本書。",
+  },
+  {
+    question: "八字入門經典有哪些？",
+    answer: "子平真詮、窮通寶鑑、淵海子平、滴天髓是最常被推薦的四部經典，各有側重：子平真詮重格局理論，窮通寶鑑重調候用神，淵海子平是綜合性入門，滴天髓則偏理氣哲學，較深。可依自己程度選讀。",
+  },
+];
+
 export default function BooksPage() {
   return (
     <>
@@ -55,6 +66,7 @@ export default function BooksPage() {
           description: "紫微斗數與八字命理經典書單，依系統分類：書單推薦、書籍對比、深度解讀與作者傳記，幫你選對書、讀對順序。",
           path: "/books",
         }),
+        faqSchema(FAQ),
       ]} />
     <main className="min-h-screen bg-parchment">
       <div className="px-4 pt-6 pb-2 max-w-3xl mx-auto">
@@ -138,6 +150,24 @@ export default function BooksPage() {
             </section>
           );
         })}
+
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         <ToolCTA variant="card" />
       </div>

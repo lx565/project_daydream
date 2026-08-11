@@ -3,6 +3,8 @@ import Link from "next/link";
 import { STAR_MBTI_LIST, MBTI_ZIWEI_LIST } from "@/lib/personalityData";
 import ToolCTA from "@/components/ToolCTA";
 import LibraryNav from "@/components/LibraryNav";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -38,8 +40,33 @@ const MBTI_COLORS: Record<string, string> = {
   ESFP: "bg-vermillion-l text-vermillion border-vermillion/30",
 };
 
+const FAQ = [
+  {
+    question: "紫微斗數的命宮主星和 MBTI 是同一回事嗎？",
+    answer: "不是。紫微斗數是命理系統，MBTI 是現代心理學的人格分類工具，兩者理論基礎完全不同。這套對照是借用大眾熟悉的 MBTI 語言，類比紫微命宮主星的性格特質，幫助理解，不是說某主星「等於」某個 MBTI 類型。",
+  },
+  {
+    question: "不知道自己的 MBTI 或命宮主星，該從哪裡開始？",
+    answer: "如果已知 MBTI 型別，可以從「MBTI 型別 → 紫微命盤」找到對應介紹；如果還不知道命宮主星，建議先排一次命盤，找到你的命宮主星後，再從「命宮主星 → MBTI 對照」查看深度解讀。",
+  },
+];
+
 export default function PersonalityPage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "紫微×MBTI", path: "/personality" },
+        ]),
+        collectionPageSchema({
+          name: "紫微斗數 × MBTI 性格對照",
+          description: "14顆紫微命宮主星與MBTI 16型人格的深度對照。用兩套語言——中國命理與西方人格學——立體認識你自己。",
+          path: "/personality",
+        }),
+        faqSchema(FAQ),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <LibraryNav category="personality" currentTitle="紫微×MBTI" />
 
@@ -136,7 +163,26 @@ export default function PersonalityPage() {
             幫助你獲得更立體的自我認知——不是算命，是工具。
           </p>
         </div>
+
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
       </div>
     </main>
+    </>
   );
 }

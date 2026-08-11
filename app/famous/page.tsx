@@ -3,6 +3,8 @@ import Link from "next/link";
 import { FAMOUS_PEOPLE } from "@/lib/famousData";
 import ToolCTA from "@/components/ToolCTA";
 import LibraryNav from "@/components/LibraryNav";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -33,8 +35,33 @@ const DOMAIN_COLOR: Record<string, string> = {
   "軍事·政治":       "bg-vermillion-l text-vermillion border-vermillion/30",
 };
 
+const FAQ = [
+  {
+    question: "名人命盤解析的出生資料準確嗎？",
+    answer: "名人的出生日期多可考證，但精確到「時辰」的資料較難完全確認，坊間流傳的時辰可能存在誤差。本欄目排盤僅供學習參考與命理研究，不作為對該人物的定論。",
+  },
+  {
+    question: "為什麼要看名人的命盤？",
+    answer: "透過已知人生軌跡的名人命盤，可以對照格局理論與實際成就，是學習紫微斗數格局判斷的好方式——先看懂別人的盤，再回頭看自己的命盤會更有感覺。",
+  },
+];
+
 export default function FamousPage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "名人命盤", path: "/famous" },
+        ]),
+        collectionPageSchema({
+          name: "名人命盤解析 · 紫微斗數",
+          description: "從李小龍、莫札特到愛因斯坦，命裡依據紫微斗數典籍與精確命盤資料，深度解讀名人的命格格局與人生軌跡。",
+          path: "/famous",
+        }),
+        faqSchema(FAQ),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <LibraryNav category="famous" currentTitle="名人命盤" />
 
@@ -86,8 +113,27 @@ export default function FamousPage() {
           ))}
         </div>
 
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
         <ToolCTA variant="card" label="看你的命盤格局" sub="AI 依據逾百部典籍詳批你的命格與運勢" />
       </div>
     </main>
+    </>
   );
 }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MINGGE_LIST } from "@/lib/minggeData";
 import ToolCTA from "@/components/ToolCTA";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -30,8 +32,33 @@ const TYPE_BADGE: Record<string, string> = {
   特殊: "bg-gold/10 text-gold border-gold/30",
 };
 
+const FAQ = [
+  {
+    question: "什麼是紫微斗數的格局（命格）？",
+    answer: "命格（格局）是命盤中由特定星曜組合、宮位配置形成的特殊模式，是古人觀星斷命的核心工具之一，用來判斷命局的層次高低與人生主要走向，例如殺破狼格、祿馬交馳格等。",
+  },
+  {
+    question: "命盤符合條件就一定成格嗎？",
+    answer: "不一定。入格條件是基礎門檻，但格局的高低還要看是否會照煞星、有無四化加持、三方四正的整體組合，同樣的格局在不同命盤中層次可以差很多，必須整盤合參，不能只看單一條件。",
+  },
+];
+
 export default function MinggePage() {
   return (
+    <>
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
+          { name: "格局大全", path: "/mingge" },
+        ]),
+        collectionPageSchema({
+          name: "紫微斗數格局大全",
+          description: "收錄31個紫微斗數核心命格，包括石中隱玉格、君臣慶會格、殺破狼格、祿馬交馳格等吉凶格局，逐一詳解入格條件、命運特質與古籍依據。",
+          path: "/mingge",
+        }),
+        faqSchema(FAQ),
+      ]} />
     <main className="min-h-screen bg-parchment">
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-ink-4">
@@ -103,8 +130,27 @@ export default function MinggePage() {
           );
         })}
 
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
         <ToolCTA variant="card" label="排命盤 · 看你有哪些格局" sub="AI 解讀你的專屬命盤，識別格局並深度分析" />
       </div>
     </main>
+    </>
   );
 }

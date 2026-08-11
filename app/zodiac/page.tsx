@@ -4,7 +4,7 @@ import { STAR_ZODIAC_LIST, ZODIAC_ZIWEI_LIST } from "@/lib/personalityData";
 import ToolCTA from "@/components/ToolCTA";
 import LibraryNav from "@/components/LibraryNav";
 import JsonLd from "@/components/JsonLd";
-import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
+import { breadcrumbSchema, collectionPageSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -37,6 +37,17 @@ const ZODIAC_COLORS: Record<string, string> = {
   shuangyu: "bg-jade/10 text-jade border-jade/30",
 };
 
+const FAQ = [
+  {
+    question: "紫微斗數的命宮主星和西洋星座是同一回事嗎？",
+    answer: "不是。紫微斗數以出生時間排盤，星座以出生月份對應太陽位置，兩套系統的理論基礎完全不同。這個對照是借用大眾熟悉的星座語言，類比紫微命宮主星的性格特質，幫助理解，不是說某主星「等於」某星座。",
+  },
+  {
+    question: "為什麼要把紫微主星和星座放在一起看？",
+    answer: "很多人熟悉星座性格描述，卻對紫微斗數陌生。用你已經懂的星座原型，類比說明命宮主星的特質，是一個更容易上手的理解切入點，之後再深入紫微斗數本身的宮位與四化系統會更順。",
+  },
+];
+
 export default function ZodiacPage() {
   return (
     <>
@@ -51,6 +62,7 @@ export default function ZodiacPage() {
           description: "14顆紫微命宮主星與12星座的性格原型對照，一東一西、異曲同工，用你熟悉的星座讀懂陌生的紫微主星。",
           path: "/zodiac",
         }),
+        faqSchema(FAQ),
       ]} />
     <main className="min-h-screen bg-parchment">
       <LibraryNav category="zodiac" currentTitle="紫微×星座" />
@@ -145,6 +157,24 @@ export default function ZodiacPage() {
             命裡這套對照做的是「性格原型類比」——用大家熟悉的星座當入口，去理解紫微主星的氣質底色，
             而不是說「紫微星就是獅子座」。兩者是異曲同工，不是同一回事；結合著看，自我認知會更立體。
           </p>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {FAQ.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </div>
     </main>
