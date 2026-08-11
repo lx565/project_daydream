@@ -30,7 +30,7 @@ export async function generateMetadata(
   const entry = getShensha(urlSlug);
   if (!entry) return {};
 
-  const title = `${entry.name}详解：八字神煞完全指南 — 命里`;
+  const title = `${entry.name}詳解：八字神煞完全指南 — 命裡`;
   const description = seoDescription(entry.oneLine, entry.intro);
 
   return {
@@ -40,8 +40,8 @@ export async function generateMetadata(
       title,
       description,
       url: `https://www.mingli.study/bazi/shensha/${entry.urlSlug}`,
-      siteName: "命里",
-      locale: "zh_CN",
+      siteName: "命裡",
+      locale: "zh_TW",
       type: "article",
     },
     alternates: {
@@ -51,9 +51,9 @@ export async function generateMetadata(
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
-  "贵人": "吉神贵人",
+  "貴人": "吉神貴人",
   "凶煞": "凶煞",
-  "杂煞": "杂煞",
+  "雜煞": "雜煞",
 };
 
 export default async function ShenshaPage(
@@ -77,13 +77,13 @@ export default async function ShenshaPage(
     <>
       <JsonLd data={[
         breadcrumbSchema([
-          { name: "命里", path: "/" },
-          { name: "知识库", path: "/library" },
+          { name: "命裡", path: "/" },
+          { name: "知識庫", path: "/library" },
           { name: "八字", path: "/bazi" },
           { name: entry.name, path: pagePath },
         ]),
         articleSchema({
-          headline: `${entry.name}详解 · 八字神煞`,
+          headline: `${entry.name}詳解 · 八字神煞`,
           description: entry.subtitle,
           path: pagePath,
           section: "八字命理",
@@ -126,7 +126,7 @@ export default async function ShenshaPage(
             <p className="text-sm text-ink-2 leading-relaxed">{entry.derivation}</p>
           </div>
 
-          <ToolCTA variant="slim" label="排你的八字 · AI 详解命中神煞与格局 →" />
+          <ToolCTA variant="slim" label="排你的八字 · AI 詳解命中神煞與格局 →" />
 
           {/* Synthesized article */}
           {hasContent && (
@@ -138,7 +138,7 @@ export default async function ShenshaPage(
           {/* Refs */}
           {refs.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs text-ink-4 font-medium">参考典籍</p>
+              <p className="text-xs text-ink-4 font-medium">參考典籍</p>
               <div className="flex flex-wrap gap-2">
                 {refs.map((ref, i) => (
                   <span
@@ -150,7 +150,7 @@ export default async function ShenshaPage(
                 ))}
               </div>
               <p className="text-[11px] text-ink-4/80 leading-relaxed">
-                本文由命里 AI 综合典籍整理，仅供学习参考。
+                本文由命裡 AI 綜合典籍整理，僅供學習參考。
               </p>
             </div>
           )}
@@ -158,9 +158,8 @@ export default async function ShenshaPage(
           <LikeButton />
           <VoteWidget />
 
-          <ToolCTA variant="card" sub="推算之外，更要看你自己命局里的神煞组合。AI 为你逐项详批命中神煞与大运应期。" label="生成我的八字神煞详批" />
+          <ToolCTA variant="card" sub="推算之外，更要看你自己命局裡的神煞組合。AI 為你逐項詳批命中神煞與大運應期。" label="生成我的八字神煞詳批" />
 
-          {/* Related 神煞 */}
           {/* FAQ — definitional/評價 query intent + FAQPage rich results */}
           <div className="space-y-3">
             <p className="text-xs text-ink-4 font-medium">常見問題</p>
@@ -182,7 +181,7 @@ export default async function ShenshaPage(
 
           {relatedEntries.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-ink-4 font-medium">相关神煞</p>
+              <p className="text-xs text-ink-4 font-medium">相關神煞</p>
               <div className="grid grid-cols-2 gap-2">
                 {relatedEntries.map(s => (
                   <Link
@@ -197,7 +196,7 @@ export default async function ShenshaPage(
             </div>
           )}
 
-          <ToolCTA variant="slim" label="八字 + 紫微双系统 · AI 依据逾百部典籍为你详批 →" />
+          <ToolCTA variant="slim" label="八字 + 紫微雙系統 · AI 依據逾百部典籍為你詳批 →" />
 
         </div>
       </main>

@@ -41,7 +41,7 @@ export async function generateMetadata(
       description,
       url: `https://www.mingli.study/bazi/hunyin/${entry.urlSlug}`,
       siteName: "命裡",
-      locale: "zh_CN",
+      locale: "zh_TW",
       type: "article",
     },
     alternates: {
