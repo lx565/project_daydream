@@ -427,12 +427,12 @@ export async function getCaseStudies(query: string, topK = 4): Promise<Knowledge
   };
 }
 
-// ── Shared multi-school retrieval (overview + perspectives tabs) ─────────────
+// ── Shared multi-school retrieval (眾說/總覽 tabs) ────────────────────────────
 
 /**
  * Shared prep for routes that need several school slices of the SAME chart
- * (overview, perspectives, consensus, synthesis) — embeds once, scans once,
- * returns a selector.
+ * (overview, consensus, synthesis) — embeds once, scans once, returns a
+ * selector.
  */
 export async function getSharedRetrieval(query: Omit<RagQuery, "school" | "strict">) {
   const ctx = await prepareRetrieval(query);

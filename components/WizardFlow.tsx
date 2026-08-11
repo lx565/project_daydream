@@ -471,7 +471,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
-    if (baziSchools.status === "idle")  baziSchools.start({ bazi, gender });
+    if (baziSchools.status === "idle")  baziSchools.start({ bazi, gender, ziwei });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
 
@@ -684,7 +684,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <SectionTitle>各派視角 · 祿命法與盲派</SectionTitle>
               <p className="text-xs text-ink-3 mb-3">以子平法（B1）為主軸，以下補充兩種歷史流派的獨特解讀視角，供對照參考。</p>
               <ReadingCard stream={baziSchools} skeleton="正在調取祿命法與盲派視角…"
-                onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender })} />
+                onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender, ziwei })} />
             </div>
             <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} onReady={setBaziDecadesText} />
           </div>
