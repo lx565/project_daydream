@@ -416,6 +416,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
   const decades       = useSSEStream("/api/reading/decades",       ck("decades"), { validate: true });
   const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"), { validate: true });
+  // Single scan across the next 10 flow years — AI picks 2–4 genuinely notable ones
+  // and writes real critique only for those (replaces the old, removed, one-call-per-year design).
+  const flowYearHighlights = useSSEStream("/api/reading/flowyear", ck("flowyear"));
   const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"), { validate: true });         // O3 · 總覽 八字綜合 (summary)
   const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true });  // B1 · 八字 tab (deep, paid)
   const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true });  // B3 · 各派視角 (祿命+盲派)
@@ -429,6 +432,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   if (palaces.text)   backgroundReadings.palaces    = palaces.text;
   if (decades.text)   backgroundReadings.decades    = decades.text;
   if (cautions.text)  backgroundReadings.cautions   = cautions.text;
+  if (flowYearHighlights.text) backgroundReadings.flowYears = flowYearHighlights.text;
 
   const ziweiPayload     = { ziwei, gender, name };
   const ziweiWithBirth   = { ziwei, birthYear, name };
@@ -470,6 +474,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     if (palaces.status === "idle")      palaces.start({ ziwei, name });
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
+    if (flowYearHighlights.status === "idle") flowYearHighlights.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
     if (baziSchools.status === "idle")  baziSchools.start({ bazi, gender, ziwei });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,7 +484,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // 總覽 trio runs; 宮位 and the rest are deferred until unlock.
   const coreStreams = gated
     ? [synthesis, consensus, bazi_]
-    : [synthesis, consensus, bazi_, overview, palaces, decades, cautions, baziDeep, baziSchools];
+    : [synthesis, consensus, bazi_, overview, palaces, decades, cautions, flowYearHighlights, baziDeep, baziSchools];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
@@ -522,7 +527,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         bazi:         bazi_.text,
         palaces:      palaces.text,
         decades:      decades.text,
-        flowYears:    flowYearsText ?? "",
+        flowYears:    [flowYearsText, flowYearHighlights.text].filter(Boolean).join("\n\n"),
         baziDeep:     baziDeep.text,
         baziSchools:  baziSchools.text,
         baziDecades:  baziDecadesText ?? "",
@@ -671,6 +676,11 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             <ValidationBadge status={decades.validation} />
             {/* Per-year 流年 deep reading — moved here from the ziwei chart */}
             <FlowYearDetail ziwei={ziwei} birthYear={birthYear} name={name} onReady={setFlowYearsText} />
+            <div className="pt-2 border-t border-parchment-2">
+              <SectionTitle>流年重點詳批</SectionTitle>
+              <ReadingCard stream={flowYearHighlights} skeleton="正在挑選重點流年…"
+                onMount={() => flowYearHighlights.status === "idle" && flowYearHighlights.start(ziweiWithBirth)} />
+            </div>
           </div>
         );
 

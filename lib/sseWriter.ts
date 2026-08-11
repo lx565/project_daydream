@@ -73,7 +73,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v31"; // 2026-08-11 dual-school (legacy, still emailed): 简体→繁體 (臺灣用語)
+const CACHE_VERSION = "v32"; // 2026-08-11 flowyear: single-year → multi-year scan-and-select (2-4 notable years)
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {

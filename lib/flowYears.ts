@@ -37,7 +37,7 @@ export async function getFlowYears(
   try {
     const { astro } = await import('iztro');
     const birthYear = parseInt(birth.solarDate.slice(0, 4), 10);
-    const astrolabe: any = astro.bySolar(birth.solarDate, birth.timeIndex, birth.gender, true);
+    const astrolabe: any = astro.bySolar(birth.solarDate, birth.timeIndex, birth.gender, true, "zh-TW");
 
     const out: FlowYear[] = [];
     for (let age = fromAge; age <= toAge; age++) {

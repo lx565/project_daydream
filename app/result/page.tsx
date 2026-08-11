@@ -217,19 +217,21 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
                 <span className="w-px h-3 bg-gold inline-block" />
                 <span className="text-gold">命格 · 特殊格局</span>
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {formations.map(f => (
-                  <Link
-                    key={f.slug}
-                    href={`/mingge/${f.urlSlug}`}
-                    className={`text-xs px-3 py-1 rounded-full border font-medium transition-opacity hover:opacity-70 ${TYPE_COLOR[f.type] ?? ""}`}
-                  >
-                    {f.name}
-                  </Link>
+                  <div key={f.slug} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <Link
+                      href={`/mingge/${f.urlSlug}`}
+                      className={`text-xs px-3 py-1 rounded-full border font-medium transition-opacity hover:opacity-70 shrink-0 ${TYPE_COLOR[f.type] ?? ""}`}
+                    >
+                      {f.name}
+                    </Link>
+                    <span className="text-xs text-ink-3 leading-relaxed">{f.brief}</span>
+                  </div>
                 ))}
               </div>
               <p className="text-xs text-ink-4 leading-relaxed">
-                以上格局由命盘自动识别，点击名称可查看详解。
+                以上格局由命盤自動識別，點選名稱可查看完整詳解。
               </p>
             </div>
           );
