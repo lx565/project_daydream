@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "流年命宮 · 流年四化 · 大運與流年疊加，用命盤讀懂今年的重心與課題。",
     url: "https://www.mingli.study/liunian",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/liunian" },
 };

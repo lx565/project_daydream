@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     description: "李小龍、莫札特、愛因斯坦的紫微斗數命格解析。",
     url: "https://www.mingli.study/famous",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/famous" },
 };

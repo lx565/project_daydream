@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     description: "正財偏財 · 身財兩旺 · 求財方式 · 發財時機 · 守財之道，從八字看你的財運。",
     url: "https://www.mingli.study/bazi/caiyun",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/bazi/caiyun" },
 };

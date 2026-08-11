@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     description: "紫微斗數主星與MBTI人格型別的跨文化對照解讀，命裡獨家研究。",
     url: "https://www.mingli.study/personality",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/personality" },
 };

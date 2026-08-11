@@ -17,7 +17,7 @@ export const metadata: Metadata = {
       "輸入兩人出生資訊，從純八字視角測算日主生克、干支合衝、五行互補與大運時機，深度解讀緣分結構。",
     url: "https://www.mingli.study/bazihepan",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
     type: "website",
   },
   alternates: { canonical: "https://www.mingli.study/bazihepan" },

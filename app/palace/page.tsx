@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description: "十二宮位 × 十四主星，依據逾百部典籍整理。",
     url: "https://www.mingli.study/palace",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/palace" },
 };

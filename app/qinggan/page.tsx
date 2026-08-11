@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "桃花運 · 緣分 · 夫妻宮 · 桃花煞，命理雙視角解讀你的感情格局。",
     url: "https://www.mingli.study/qinggan",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/qinggan" },
 };

@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     description: "從入門到進階，瞭解紫微斗數三合派、四化派、飛星派的核心理論。",
     url: "https://www.mingli.study/guide",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/guide" },
 };

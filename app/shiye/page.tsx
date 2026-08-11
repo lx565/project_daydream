@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "14顆主星 × 官祿宮，職業天賦 · 適合行業 · 事業發展軌跡全解析。",
     url: "https://www.mingli.study/shiye",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/shiye" },
 };

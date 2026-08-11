@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "14顆主星 × 疾厄宮 · 體質特徵 · 健康注意方向 · 養生建議，用命盤讀懂先天體質底色。",
     url: "https://www.mingli.study/jibing",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/jibing" },
 };

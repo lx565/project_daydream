@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "14顆主星 × 夫妻宮，配偶特質 · 感情模式 · 婚姻穩定度全解析。",
     url: "https://www.mingli.study/hunyin",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/hunyin" },
 };

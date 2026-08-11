@@ -31,7 +31,7 @@ export async function generateMetadata(
     return {
       title,
       description: starEntry.brief,
-      openGraph: { title, description: starEntry.brief, url: `https://www.mingli.study/personality/${slug}`, siteName: "命裡", locale: "zh_CN", type: "article" },
+      openGraph: { title, description: starEntry.brief, url: `https://www.mingli.study/personality/${slug}`, siteName: "命裡", locale: "zh_TW", type: "article" },
       alternates: { canonical: `https://www.mingli.study/personality/${slug}` },
     };
   }
@@ -42,7 +42,7 @@ export async function generateMetadata(
     return {
       title,
       description: mbtiEntry.brief,
-      openGraph: { title, description: mbtiEntry.brief, url: `https://www.mingli.study/personality/${slug}`, siteName: "命裡", locale: "zh_CN", type: "article" },
+      openGraph: { title, description: mbtiEntry.brief, url: `https://www.mingli.study/personality/${slug}`, siteName: "命裡", locale: "zh_TW", type: "article" },
       alternates: { canonical: `https://www.mingli.study/personality/${slug}` },
     };
   }

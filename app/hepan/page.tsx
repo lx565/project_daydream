@@ -17,7 +17,7 @@ export const metadata: Metadata = {
       "輸入兩人出生資訊，免費測算緣分指數、夫妻宮契合度與相處之道。情侶 · 夫妻 · 朋友 · 親子 · 兄弟姐妹五種關係合盤。",
     url: "https://www.mingli.study/hepan",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
     type: "website",
   },
   alternates: { canonical: "https://www.mingli.study/hepan" },

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "空宮 · 煞星 · 兇格，命理師教你正確讀懂命盤裡的挑戰訊號。",
     url: "https://www.mingli.study/xiong",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/xiong" },
 };

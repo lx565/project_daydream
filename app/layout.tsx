@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   verification: { other: { "msvalidate.01": "REPLACE_WITH_BING_WEBMASTER_TOKEN" } },
   openGraph: {
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "命裡 · 紫微斗數 + 八字 AI命理" }],
   },
   twitter: {

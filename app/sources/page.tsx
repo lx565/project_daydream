@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     description: "命裡 AI 讀過的全部命理典籍：三合、四化、飛星、八字子平、祿命法……逾百部典籍收錄。",
     url: "https://www.mingli.study/sources",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/sources" },
 };

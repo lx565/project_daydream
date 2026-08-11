@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "五行配五臟 · 忌神 · 養生方向 · 安全防範，從八字看你需要多留意保養的方向（非醫學診斷）。",
     url: "https://www.mingli.study/bazi/jibing",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/bazi/jibing" },
 };

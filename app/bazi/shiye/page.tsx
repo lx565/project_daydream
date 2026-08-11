@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     description: "五行喜用定行業 · 官殺格 · 食傷生財 · 創業或上班 · 事業高峰，從八字看你的事業。",
     url: "https://www.mingli.study/bazi/shiye",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/bazi/shiye" },
 };

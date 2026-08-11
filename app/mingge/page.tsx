@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     description: "31個紫微斗數命格完整解讀，吉格兇格一目瞭然。",
     url: "https://www.mingli.study/mingge",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/mingge" },
 };

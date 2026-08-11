@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     description: "配偶星 · 日支夫妻宮 · 桃花 · 正緣時機 · 婚姻穩定度，從八字角度看你的感情婚姻。",
     url: "https://www.mingli.study/bazi/hunyin",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/bazi/hunyin" },
 };

@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     description: "二十八星曜 × 十二宮位，共 336 篇典籍文章。",
     url: "https://www.mingli.study/star",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/star" },
 };

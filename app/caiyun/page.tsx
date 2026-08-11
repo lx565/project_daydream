@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "14顆主星坐財帛宮全解析 · 進財方式 · 理財風格 · 財富積累路徑。",
     url: "https://www.mingli.study/caiyun",
     siteName: "命裡",
-    locale: "zh_CN",
+    locale: "zh_TW",
   },
   alternates: { canonical: "https://www.mingli.study/caiyun" },
 };
