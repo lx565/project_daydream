@@ -431,7 +431,8 @@ export async function getCaseStudies(query: string, topK = 4): Promise<Knowledge
 
 /**
  * Shared prep for routes that need several school slices of the SAME chart
- * (overview, dual-school) — embeds once, scans once, returns a selector.
+ * (overview, perspectives, consensus, synthesis) — embeds once, scans once,
+ * returns a selector.
  */
 export async function getSharedRetrieval(query: Omit<RagQuery, "school" | "strict">) {
   const ctx = await prepareRetrieval(query);

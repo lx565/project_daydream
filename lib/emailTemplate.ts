@@ -21,7 +21,6 @@ export interface ReadingEmailData {
     baziDeep?: string;
     baziSchools?: string;
     baziDecades?: string;
-    dualschool?: string;
     cautions?: string;
   };
 }
@@ -96,7 +95,6 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     { title: '八字大運走勢',       content: data.readings.baziDecades },
     // 眾說 tab
     { title: '紫微三派詳解',       content: data.readings.overview },
-    { title: '三合·四化·飛星 · 三派深解', content: data.readings.dualschool },
     // 注意 tab
     { title: '特別注意',           content: data.readings.cautions },
   ].filter(s => s.content && s.content.trim().length > 50);

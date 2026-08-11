@@ -16,7 +16,7 @@ import { gtagEvent } from "@/lib/gtag";
 import ChartLoadingOverlay from "./ChartLoadingOverlay";
 import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
 
-type Tab = "overview" | "palaces" | "decades" | "bazi" | "dualschool" | "perspectives" | "cautions" | "wenming";
+type Tab = "overview" | "palaces" | "decades" | "bazi" | "perspectives" | "cautions" | "wenming";
 
 // Free tab everyone sees; the rest unlock together with one purchase.
 const FREE_TABS = new Set<Tab>(["overview"]);
@@ -232,14 +232,12 @@ const OVERVIEW_SCHOOLS = [
 ] as const;
 
 // mode controls which slice of the overview reading renders:
-//  "full"      — intro + 3 school cards + 綜合共識 (legacy dual-school tab)
 //  "consensus" — intro + 綜合共識 only (總覽 · 紫薇綜合, the holistic conclusion)
 //  "schools"   — the 3 派 breakdowns only (眾說 · 紫微三派詳解)
-function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: Reference[]; mode?: "full" | "consensus" | "schools" }) {
-  // Consensus marker: Traditional (綜合共識) from overview, Simplified (综合共识) fallback, legacy dual-school (两派共识)
+function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs: Reference[]; mode?: "consensus" | "schools" }) {
+  // Consensus marker: Traditional (綜合共識) from overview, Simplified (综合共识) fallback
   const consensusMarker = text.includes("## 綜合共識") ? "## 綜合共識"
-    : text.includes("## 综合共识") ? "## 综合共识"
-    : "## 两派共识";
+    : "## 综合共识";
 
   const ordered = [
     ...OVERVIEW_SCHOOLS.map((s) => ({ key: s.key as string, marker: s.marker })),
@@ -268,8 +266,8 @@ function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: R
     parts[ordered[i].key] = text.slice(start, end).trim();
   }
 
-  const showSchools = mode === "full" || mode === "schools";
-  const showConsensus = mode === "full" || mode === "consensus";
+  const showSchools = mode === "schools";
+  const showConsensus = mode === "consensus";
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -289,21 +287,8 @@ function OverviewDualView({ text, refs, mode = "full" }: { text: string; refs: R
         </div>
       ))}
 
-      {/* Consensus — boxed only in "full" mode (where it caps the school cards);
-          in "consensus" mode (O2 · 紫薇綜合) render plain, consistent with 八字綜合. */}
-      {showConsensus && parts.consensus && (
-        mode === "full" ? (
-          <div className="rounded-xl border border-jade/30 bg-jade-l/30 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1 h-4 bg-jade rounded-full" />
-              <span className="text-xs font-bold text-jade tracking-wide">綜合共識</span>
-            </div>
-            <ClassicalMd text={parts.consensus} />
-          </div>
-        ) : (
-          <ClassicalMd text={parts.consensus} />
-        )
-      )}
+      {/* Consensus — "consensus" mode (O2 · 紫薇綜合) renders plain, consistent with 八字綜合. */}
+      {showConsensus && parts.consensus && <ClassicalMd text={parts.consensus} />}
 
       <RefList refs={refs} />
     </div>
@@ -430,7 +415,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const overview      = useSSEStream("/api/reading/overview",      ck("overview"), { validate: true });
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
   const decades       = useSSEStream("/api/reading/decades",       ck("decades"), { validate: true });
-  const dualschool    = useSSEStream("/api/reading/dual-school",   ck("dualschool"), { validate: true });
   const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"), { validate: true });
   const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"), { validate: true });         // O3 · 總覽 八字綜合 (summary)
   const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true });  // B1 · 八字 tab (deep, paid)
@@ -488,7 +472,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     if (cautions.status === "idle")     cautions.start(ziweiWithBirth);
     if (baziDeep.status === "idle")     baziDeep.start(baziPayload);
     if (baziSchools.status === "idle")  baziSchools.start({ bazi, gender });
-    if (dualschool.status === "idle")   dualschool.start({ ziwei });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
 
@@ -496,7 +479,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // 總覽 trio runs; 宮位 and the rest are deferred until unlock.
   const coreStreams = gated
     ? [synthesis, consensus, bazi_]
-    : [synthesis, consensus, bazi_, overview, palaces, decades, cautions, baziDeep, baziSchools, dualschool];
+    : [synthesis, consensus, bazi_, overview, palaces, decades, cautions, baziDeep, baziSchools];
   const coreTotal = coreStreams.length;
   const coreDone = coreStreams.filter((s) => s.status === "done").length;
   const coreErrored = coreStreams.filter((s) => s.status === "error").length;
@@ -543,7 +526,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         baziDeep:     baziDeep.text,
         baziSchools:  baziSchools.text,
         baziDecades:  baziDecadesText ?? "",
-        dualschool:   dualschool.text,
         cautions:     cautions.text,
       },
     });
@@ -705,22 +687,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender })} />
             </div>
             <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} onReady={setBaziDecadesText} />
-          </div>
-        );
-
-      case "dualschool":
-        return (
-          <div className="space-y-4">
-            <SectionTitle>三合 · 四化 · 飛星 · 三派深解</SectionTitle>
-            {dualschool.status === "done" ? (
-              <div>
-                <OverviewDualView text={dualschool.text} refs={dualschool.refs} />
-              </div>
-            ) : (
-              <ReadingCard stream={dualschool} skeleton="正在生成三派深解…"
-                onMount={() => dualschool.status === "idle" && dualschool.start({ ziwei })} />
-            )}
-            <ValidationBadge status={dualschool.validation} />
           </div>
         );
 
