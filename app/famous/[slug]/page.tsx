@@ -15,7 +15,7 @@ import LikeButton from "@/components/LikeButton";
 import JsonLd from "@/components/JsonLd";
 import ZiweiChart from "@/components/ZiweiChart";
 import BaziProfile from "@/components/BaziProfile";
-import { articleSchema, breadcrumbSchema, personSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, personSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -91,6 +91,19 @@ export default async function FamousPersonPage(
   const path_ = `/famous/${person.slug}`;
   const birthYear = birthInfo?.year;
 
+  // FAQ: built only from facts already displayed on this page (birth data,
+  // 命宮主星, 格局) — no invented claims about a real, named public figure.
+  const faq = [
+    {
+      question: `${person.name}的命宮主星是什麼？`,
+      answer: `${person.name}命宮為${person.soulPalace}宮，主星${person.mainStars}，具${person.formations.join("、")}格局。`,
+    },
+    {
+      question: "名人命盤的出生時間準確嗎？",
+      answer: "名人的出生日期多可考證，但精確到「時辰」的資料較難完全確認，坊間流傳的時辰可能存在誤差。本頁排盤僅供學習參考與命理研究，不作為對該人物的定論。",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-parchment">
       <JsonLd data={[
@@ -107,6 +120,7 @@ export default async function FamousPersonPage(
           path: path_,
           section: "名人命盤",
         }),
+        faqSchema(faq),
       ]} />
       <LibraryNav category="mingge" currentTitle={`${person.name}命盤`} />
 
@@ -223,6 +237,25 @@ export default async function FamousPersonPage(
               >
                 {f}
               </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
             ))}
           </div>
         </div>

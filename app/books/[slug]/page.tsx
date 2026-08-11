@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BOOK_ARTICLES } from "@/lib/bookArticles";
 import { getBookContent } from "@/lib/seoContent";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -63,6 +63,12 @@ export default async function BookPage(
   const hasContent = markdown.trim().length > 0;
   const path = `/books/${article.urlSlug}`;
 
+  // FAQ: entry-specific pair from intro/subtitle (no invented copy).
+  const faq = [
+    { question: `${article.title}是什麼？`, answer: article.intro },
+    { question: `${article.title}講的是什麼重點？`, answer: article.subtitle },
+  ];
+
   return (
     <>
       <JsonLd data={[
@@ -78,6 +84,7 @@ export default async function BookPage(
           path,
           section: "命理書單",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -144,6 +151,25 @@ export default async function BookPage(
 
           {/* Main CTA */}
           <ToolCTA variant="card" sub="理論之外，更要看你自己的盤。三合、四化、飛星三派合參，AI 依據逾百部典籍為你詳批命格、大限與流年。" label="生成我的命盤詳批" />
+
+          {/* FAQ */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
 
           {/* Related articles */}
           {relatedArticles.length > 0 && (

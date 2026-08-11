@@ -4,7 +4,7 @@ import { MINGGE_LIST } from "@/lib/minggeData";
 import { getMinggeContent } from "@/lib/seoContent";
 import MinggeView from "@/components/MinggeView";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import type { ZiweiResult } from "@/lib/ziwei";
 import minggeExamples from "@/lib/minggeExamples.json";
 
@@ -73,6 +73,17 @@ export default async function MinggePage(
 
   const path = `/mingge/${entry.urlSlug}`;
 
+  // FAQ: entry-specific pair from brief + condition (no invented copy), plus one
+  // general concept pair explaining 入格 for readers new to the term.
+  const faq = [
+    { question: `${entry.name}是什麼？`, answer: entry.brief },
+    { question: `${entry.name}的入格條件是什麼？`, answer: entry.condition },
+    {
+      question: "命盤符合條件就一定成格嗎？",
+      answer: "不一定。入格條件是基礎門檻，但格局的高低還要看是否會照煞星、有無四化加持、三方四正的整體組合，同樣的格局在不同命盤中層次可以差很多，必須整盤合參，不能只看單一條件。",
+    },
+  ];
+
   return (
     <>
       <JsonLd data={[
@@ -88,8 +99,9 @@ export default async function MinggePage(
           path,
           section: "命格格局",
         }),
+        faqSchema(faq),
       ]} />
-      <MinggeView entry={entry} markdown={markdown} refs={refs} chartData={chartData} chartGender={chartGender} chartLabel={chartLabel} />
+      <MinggeView entry={entry} markdown={markdown} refs={refs} faq={faq} chartData={chartData} chartGender={chartGender} chartLabel={chartLabel} />
     </>
   );
 }

@@ -13,9 +13,10 @@ interface Props {
   palace: PalaceDef;
   markdown: string;
   refs: Reference[];
+  faq: { question: string; answer: string }[];
 }
 
-export default function PalaceHubView({ palace, markdown, refs }: Props) {
+export default function PalaceHubView({ palace, markdown, refs, faq }: Props) {
   const hasContent = markdown.trim().length > 0;
 
   return (
@@ -107,6 +108,25 @@ export default function PalaceHubView({ palace, markdown, refs }: Props) {
           sub={`以上為${palace.name}通論。你的${palace.name}由哪顆主星坐守、四化與煞吉如何牽動？AI 綜合三派典籍為你詳批。`}
           label="生成我的命盤詳批"
         />
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         {/* Other palaces */}
         <div className="space-y-3">

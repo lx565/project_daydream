@@ -7,7 +7,7 @@ import ToolCTA from "@/components/ToolCTA";
 import LibraryNav from "@/components/LibraryNav";
 import JsonLd from "@/components/JsonLd";
 import LikeButton from "@/components/LikeButton";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 
 export const dynamic = "force-static";
 
@@ -61,6 +61,22 @@ export default async function StarOverviewPage(
 
   const path = `/star/${starData.urlSlug}`;
 
+  // FAQ: entry-specific pair from starData.brief (no invented copy) + one general
+  // concept pair reused verbatim from the star-palace page's live FAQ, for
+  // consistency across the star cluster's two page types.
+  const starBrief = starData.brief.replace(/。+$/, "");
+  const faq = [
+    { question: `${starData.name}是什麼意思？`, answer: `${starBrief}。` },
+    {
+      question: `${starData.name}在不同宮位代表什麼？`,
+      answer: `同一顆星落入不同宮位，意義大不相同——命宮看性格底色，財帛宮看財運模式，夫妻宮看感情傾向，以此類推。下方可逐宮查看${starData.name}在十二宮的詳細解讀。`,
+    },
+    {
+      question: "同一顆主星，為什麼每個人表現不一樣？",
+      answer: "主星的吉凶不是固定的。同一顆星，落入不同宮位、配不同輔星與四化（化祿、化權、化科、化忌）、處不同三方四正組合，表現可以天差地別，必須整盤合參。",
+    },
+  ];
+
   // 相關閱讀: curated related stars (only major stars carry `related` slugs)
   const majorSelf = MAJOR_STARS.find(s => s.urlSlug === starData.urlSlug);
   const relatedStars = (majorSelf?.related ?? [])
@@ -82,6 +98,7 @@ export default async function StarOverviewPage(
           path,
           section: "星曜",
         }),
+        faqSchema(faq),
       ]} />
       <LibraryNav category="star" currentTitle={starData.name} />
 
@@ -159,6 +176,25 @@ export default async function StarOverviewPage(
           sub={`想知道${starData.name}在你命盤中落於何宮、是吉是兇？AI 綜合三派典籍，為你詳批專屬命格。`}
           label="生成我的命盤詳批"
         />
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         {/* Other stars */}
         <div className="space-y-3">

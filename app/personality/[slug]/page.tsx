@@ -9,7 +9,7 @@ import { getStarMbtiContent, getMbtiZiweiContent } from "@/lib/seoContent";
 import ToolCTA from "@/components/ToolCTA";
 import LikeButton from "@/components/LikeButton";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 
 export const maxDuration = 60;
 export const revalidate = 604800;
@@ -70,6 +70,25 @@ export default async function PersonalityArticlePage(
     : `${mbtiEntry!.mbtiCode} ${mbtiEntry!.mbtiName} · 紫微斗數命盤畫像`;
   const desc = (starEntry ?? mbtiEntry!).brief;
 
+  // FAQ: entry-specific pair from .brief (no invented copy) + a general concept
+  // pair explaining the crossover isn't a literal equivalence — important framing
+  // for this cluster since it maps a Western typology onto 紫微 star placements.
+  const faq = starEntry
+    ? [
+        { question: `${starEntry.starName}星命宮的人是${starEntry.primaryMbti}嗎？`, answer: starEntry.brief },
+        {
+          question: "紫微星曜和 MBTI 是同一回事嗎？",
+          answer: "不是。紫微斗數是命理系統，MBTI 是現代心理學的人格分類工具，兩者理論基礎完全不同。這個對照是借用大眾熟悉的 MBTI 語言，幫助理解星曜特質的一種類比，不是說某星曜「等於」某個 MBTI 類型，實際性格仍需綜合整張命盤判斷。",
+        },
+      ]
+    : [
+        { question: `${mbtiEntry!.mbtiCode} ${mbtiEntry!.mbtiName}對應紫微斗數哪個命盤特質？`, answer: mbtiEntry!.brief },
+        {
+          question: "MBTI 和紫微星曜對照準確嗎？",
+          answer: "這個對照是借用大眾熟悉的 MBTI 語言，類比紫微星曜的特質傾向，供作趣味參考與理解命盤的切入點，並非嚴謹的一對一對應。真正的性格與命格，仍需以完整命盤的星曜組合、宮位與四化綜合判斷。",
+        },
+      ];
+
   return (
     <main className="min-h-screen bg-parchment">
       <JsonLd data={[
@@ -80,6 +99,7 @@ export default async function PersonalityArticlePage(
           { name: headline, path },
         ]),
         articleSchema({ headline, description: desc, path, section: "紫微×MBTI" }),
+        faqSchema(faq),
       ]} />
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-ink-4">
@@ -174,6 +194,25 @@ export default async function PersonalityArticlePage(
             </Link>
           </div>
         )}
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         <LikeButton />
         <ToolCTA variant="slim" label="排你的命盤，看命宮主星 →" />

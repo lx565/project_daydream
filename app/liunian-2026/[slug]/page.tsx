@@ -4,8 +4,10 @@ import Link from "next/link";
 import { LIUNIAN_2026, getLiunian2026 } from "@/lib/liunian2026Data";
 import { getLiuNian } from "@/lib/liuNianData";
 import { getLiunian2026Content } from "@/lib/seoContent";
+import { seoDescription } from "@/lib/seoDescription";
+import { seoFaqItems } from "@/lib/seoFaq";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -30,7 +32,7 @@ export async function generateMetadata(
   if (!entry) return {};
 
   const title = `${entry.title} — 命裡`;
-  const description = entry.intro.slice(0, 120) + "…";
+  const description = seoDescription(entry.oneLine, entry.intro);
 
   return {
     title,
@@ -91,6 +93,8 @@ export default async function Liunian2026ArticlePage(
   const pagePath = `/liunian-2026/${entry.urlSlug}`;
   const badgeClass = RELATION_BADGE[entry.relation] ?? RELATION_BADGE["平順"];
 
+  const faq = seoFaqItems(entry);
+
   return (
     <>
       <JsonLd data={[
@@ -107,6 +111,7 @@ export default async function Liunian2026ArticlePage(
           path: pagePath,
           section: "2026丙午年生肖運勢",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -173,6 +178,25 @@ export default async function Liunian2026ArticlePage(
           <ToolCTA variant="card" sub="生肖只是流年判斷的其中一層——AI 依據逾百部典籍，結合你的完整命盤與大運，給出2026年真正屬於你的深度解讀。" label="生成我的2026年命盤運勢" />
 
           {/* Related articles */}
+          {/* FAQ — definitional/評價 query intent + FAQPage rich results */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+
           {relatedEntries.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs text-ink-4 font-medium">相關話題</p>

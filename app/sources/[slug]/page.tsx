@@ -6,7 +6,7 @@ import path from "path";
 import { SOURCE_BOOKS, SCHOOL_LABELS } from "@/lib/sourcesData";
 import { getSourceContent } from "@/lib/seoContent";
 import JsonLd from "@/components/JsonLd";
-import { articleSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import SeoMarkdown from "@/components/SeoMarkdown";
 import VoteWidget from "@/components/VoteWidget";
 import LikeButton from "@/components/LikeButton";
@@ -122,6 +122,15 @@ export default async function SourcePage(
     .filter(b => b.school === book.school && b.urlSlug !== book.urlSlug)
     .slice(0, 4);
 
+  // FAQ: entry-specific pair from facts already displayed (intro/school/era/author).
+  const faq = [
+    { question: `《${book.title}》是什麼？`, answer: book.intro },
+    {
+      question: `《${book.title}》屬於哪個流派？`,
+      answer: `${book.title}屬於${SCHOOL_LABELS[book.school]}${book.era ? `，成書於${book.era}` : ""}${book.author ? `，作者${book.author}` : ""}。命裡 AI 已收錄此書，讀命時會自動引用其中相關內容。`,
+    },
+  ];
+
   return (
     <>
       <JsonLd data={[
@@ -137,6 +146,7 @@ export default async function SourcePage(
           path: pagePath,
           section: "典籍知識庫",
         }),
+        faqSchema(faq),
       ]} />
 
       <main className="min-h-screen bg-parchment">
@@ -214,6 +224,25 @@ export default async function SourcePage(
           <VoteWidget />
 
           <ToolCTA variant="card" sub="這些典籍是命裡 AI 的知識底座。三合、四化、飛星三派合參，AI 依據逾百部典籍為你詳批命格、大限與流年。" label="生成我的命盤詳批" />
+
+          {/* FAQ */}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">常見問題</p>
+            <div className="space-y-2">
+              {faq.map(item => (
+                <details
+                  key={item.question}
+                  className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+                >
+                  <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                    <span>{item.question}</span>
+                    <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
 
           {/* Same-school books */}
           {related.length > 0 && (

@@ -19,12 +19,13 @@ interface Props {
   entry: MinggeEntry;
   markdown: string;
   refs: Reference[];
+  faq: { question: string; answer: string }[];
   chartData?: ZiweiResult;
   chartGender?: "male" | "female";
   chartLabel?: string;
 }
 
-export default function MinggeView({ entry, markdown, refs, chartData, chartGender, chartLabel }: Props) {
+export default function MinggeView({ entry, markdown, refs, faq, chartData, chartGender, chartLabel }: Props) {
   const hasContent = markdown.trim().length > 0;
 
   return (
@@ -153,6 +154,25 @@ export default function MinggeView({ entry, markdown, refs, chartData, chartGend
           sub={`以上為通論。你命盤中是否具備${entry.name}的入格條件？AI 綜合三派典籍，根據你的完整命盤給出專屬解讀。`}
           label="生成我的命盤詳批"
         />
+
+        {/* FAQ */}
+        <div className="space-y-3">
+          <p className="text-xs text-ink-4 font-medium">常見問題</p>
+          <div className="space-y-2">
+            {faq.map(item => (
+              <details
+                key={item.question}
+                className="paper-card rounded-xl border border-border-warm px-4 py-3 group"
+              >
+                <summary className="text-sm font-semibold text-ink cursor-pointer list-none flex items-center justify-between gap-2">
+                  <span>{item.question}</span>
+                  <span className="text-ink-4 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="text-xs text-ink-3 leading-relaxed pt-2.5">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
 
         {/* Navigator — other 命格 */}
         <div className="space-y-3">

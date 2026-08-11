@@ -4,8 +4,15 @@ import LibraryNav from "@/components/LibraryNav";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "历史命造案例库 | 命里",
-  description: "收录韦千里、潘东光等命理大师真实批断案例，按日主浏览历史命造。",
+  title: "歷史命造案例庫 | 命裡",
+  description: "收錄韋千里、潘東光等命理大師真實批斷案例，按日主瀏覽歷史命造。",
+  openGraph: {
+    title: "歷史命造案例庫 | 命裡",
+    description: "收錄韋千里、潘東光等命理大師真實批斷案例，按日主瀏覽歷史命造。",
+    url: "https://www.mingli.study/cases",
+    siteName: "命裡",
+    locale: "zh_TW",
+  },
   alternates: { canonical: "https://www.mingli.study/cases" },
 };
 
@@ -24,9 +31,9 @@ export default function CasesHubPage() {
     <>
       <LibraryNav category="cases" />
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-ink mb-2">历史命造案例库</h1>
+        <h1 className="text-2xl font-bold text-ink mb-2">歷史命造案例庫</h1>
         <p className="text-sm text-ink-3 mb-8">
-          收录 {index.length} 个真实命造，来自韦千里、潘东光等命理大师批断原文。按日主分类浏览。
+          收錄 {index.length} 個真實命造，來自韋千里、潘東光等命理大師批斷原文。按日主分類瀏覽。
         </p>
 
         {RIZI_ORDER.map((rizi) => {
@@ -48,7 +55,7 @@ export default function CasesHubPage() {
                     <p className="text-xs font-medium text-ink truncate">{c.geju || rizi}</p>
                     <p className="text-[11px] text-ink-4 mt-1 truncate">{c.source.split("-").pop()}</p>
                     {c.hasOutcome && (
-                      <span className="inline-block mt-1.5 text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-sm">有结局</span>
+                      <span className="inline-block mt-1.5 text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-sm">有結局</span>
                     )}
                   </Link>
                 ))}
