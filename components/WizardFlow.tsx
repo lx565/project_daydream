@@ -15,6 +15,7 @@ import { usePaywall } from "@/lib/usePaywall";
 import { gtagEvent } from "@/lib/gtag";
 import ChartLoadingOverlay from "./ChartLoadingOverlay";
 import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
+import ReadingFeedbackPrompt from "./ReadingFeedbackPrompt";
 
 type Tab = "overview" | "palaces" | "decades" | "bazi" | "perspectives" | "cautions" | "wenming";
 
@@ -819,6 +820,12 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         )}
       </div>
 
+      {/* Proactive feedback prompt — only once every paid section has finished */}
+      {allContentReady && !gated && (
+        <div className="pt-4">
+          <ReadingFeedbackPrompt sessionId={sessionId} />
+        </div>
+      )}
 
     </div>
     </>

@@ -8,7 +8,6 @@ import ReadingSession from "@/components/ReadingSession";
 import ReadingCountPing from "@/components/ReadingCountPing";
 import ChartSaver from "@/components/ChartSaver";
 import BugReportButton from "@/components/BugReportButton";
-import CoupleResultView from "@/components/CoupleResultView";
 import MbtiCard from "@/components/MbtiCard";
 import { detectMingge } from "@/lib/detectMingge";
 
@@ -29,8 +28,7 @@ function shichenLabel(h: number) {
 
 interface SearchParams {
   name?: string; date?: string; hour?: string; gender?: string; method?: string;
-  partner?: string; pname?: string; pdate?: string; phour?: string; pgender?: string;
-  location?: string; tz?: string; rel?: string;
+  location?: string; tz?: string;
 }
 
 // Convert local birth time to Beijing time (UTC+8).
@@ -51,14 +49,13 @@ function toBjt(year: number, month: number, day: number, hour: number, tzOffset:
 
 export default async function ResultPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const { name, date, hour: hourStr, gender, partner, pname, pdate, phour: phourStr, pgender } = params;
+  const { name, date, hour: hourStr, gender } = params;
 
   if (!date || !gender || (gender !== "male" && gender !== "female")) redirect("/");
 
   const [year, month, day] = date.split("-").map(Number);
   const localHour = parseInt(hourStr ?? "0", 10);
   const tzOffset = parseFloat(params.tz ?? "8");
-  const isCouple = partner === "true" && !!pdate && !!pgender;
 
   // Convert to Beijing time if needed
   const bjt = toBjt(year, month, day, localHour, tzOffset);
@@ -70,31 +67,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
   const { calculateZiwei } = await import("@/lib/ziwei");
   const ziweiResult: ZiweiResult = await calculateZiwei(bjtYear, bjtMonth, bjtDay, hour, gender as "male" | "female");
 
-  let partnerZiwei: ZiweiResult | undefined;
-  if (isCouple && pdate && pgender) {
-    const [py, pm, pd] = pdate.split("-").map(Number);
-    partnerZiwei = await calculateZiwei(py, pm, pd, parseInt(phourStr ?? "0", 10), pgender as "male" | "female");
-  }
-
   const sessionId = `${bjtYear}${bjtMonth}${bjtDay}${hour}${gender}`;
-
-  // ── Couple mode: dedicated view ──────────────────────────────────────────
-  if (isCouple && partnerZiwei) {
-    const [py, pm, pd] = (pdate ?? "").split("-").map(Number);
-    const partnerBazi = calculateBazi(py, pm, pd, parseInt(phourStr ?? "0", 10), pgender as "male" | "female");
-    return (
-      <main className="min-h-screen bg-parchment px-4 py-10">
-        <ReadingCountPing />
-        <CoupleResultView
-          baziA={baziResult} ziweiA={ziweiResult} nameA={name} genderA={gender as "male" | "female"}
-          baziB={partnerBazi} ziweiB={partnerZiwei} nameB={pname} genderB={pgender as "male" | "female"}
-          sessionId={sessionId}
-          relationshipType={params.rel}
-        />
-        <BugReportButton sessionId={sessionId} page="couple-result" />
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-parchment px-4 py-10">
@@ -129,9 +102,6 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
               <h2 className="text-base font-bold text-ink tracking-wide">
                 {name ? `${name} · ` : ""}命盘
               </h2>
-              {isCouple && (
-                <span className="px-2 py-0.5 rounded text-xs bg-vermillion-l border border-vermillion/30 text-vermillion">合盘</span>
-              )}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-2">
               <span>{formatDate(date)}</span>
@@ -183,24 +153,6 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
           )}
         </div>
 
-        {/* Partner chart */}
-        {partnerZiwei && partnerZiwei.palaces.length > 0 && (
-          <div>
-            <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
-              <span className="w-px h-3 bg-ink-4 inline-block" />对方命盘
-            </p>
-            <ZiweiChart
-              palaces={partnerZiwei.palaces}
-              soulPalace={partnerZiwei.soulPalace}
-              bodyPalace={partnerZiwei.bodyPalace}
-              fiveElementsClass={partnerZiwei.fiveElementsClass}
-              mainStar={partnerZiwei.mainStar}
-              bodyStar={partnerZiwei.bodyStar}
-              name={pname}
-              gender={pgender as "male" | "female"}
-            />
-          </div>
-        )}
 
         {/* 命格 detection card */}
         {ziweiResult.palaces.length > 0 && (() => {
