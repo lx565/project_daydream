@@ -13,7 +13,7 @@ import { calcCoupleScoreV2 } from "@/lib/couple";
 import { getRelationshipConfig, type RelationshipType } from "@/lib/coupleTypes";
 import { useSSEStream } from "@/lib/useSSEStream";
 import { usePaywall } from "@/lib/usePaywall";
-import { parseModernBlocks } from "@/lib/modernBlocks";
+import { parseModernBlocks, stripModern } from "@/lib/modernBlocks";
 import { extractSection, removeSection } from "@/lib/extractSection";
 
 export interface HepanCharts {
@@ -127,11 +127,21 @@ function FullReading({ text, stripHeading }: { text: string; stripHeading?: stri
   const idx = text.indexOf(marker);
   let body = idx >= 0 ? text.slice(0, idx) : text;
   if (stripHeading) body = removeSection(body, stripHeading);
-  const card = idx >= 0 ? text.slice(idx + marker.length).trim() : "";
+  const rawCard = idx >= 0 ? text.slice(idx + marker.length).trim() : "";
+
+  // MODERN_INSTRUCTION tells the model to put [現代]...[/現代] last, but the
+  // share-card template is itself the prompt's last section, so the model
+  // often appends [現代] after the "### 分享卡片" marker — landing inside
+  // rawCard. Split it back out so it renders as a proper collapsible block
+  // instead of literal bracket text inside the share card.
+  const card = stripModern(rawCard);
+  const modernInCard = parseModernBlocks(rawCard).filter((p) => p.type === "modern");
+
   return (
     <div className="space-y-4">
       <ReadingText text={body} />
       {card && <ShareCard text={card} />}
+      {modernInCard.map((part, i) => <ModernBlock key={i} content={part.content} />)}
     </div>
   );
 }
