@@ -9,12 +9,11 @@
 // The full reading only streams when the paywall is off or already unlocked, so
 // we never pay for a locked section (mirrors the app's client-gating pattern).
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { BirthdayWheel } from "./WheelPicker";
 import { calculateBazi, type BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
-import { RELATIONSHIP_TYPES, getRelationshipConfig, type RelationshipType } from "@/lib/coupleTypes";
+import { RELATIONSHIP_TYPES, type RelationshipType } from "@/lib/coupleTypes";
 import HepanResultView from "./HepanResultView";
 
 interface PersonFields {

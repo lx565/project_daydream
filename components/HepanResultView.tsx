@@ -344,7 +344,8 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
       case "timing": {
         const ziweiTiming = coupleFull.status === "done" ? extractSection(coupleFull.text, "緣分時機") : "";
         const baziTiming = baziCoupleFull.status === "done" ? extractSection(baziCoupleFull.text, "大運時機") : "";
-        const stillLoading = coupleFull.status !== "done" || baziCoupleFull.status !== "done";
+        const stillLoading = coupleFull.status === "idle" || coupleFull.status === "streaming" ||
+          baziCoupleFull.status === "idle" || baziCoupleFull.status === "streaming";
         return (
           <div className="space-y-4">
             <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
@@ -355,10 +356,22 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
               {stillLoading && <LoadingSkeleton />}
               {!stillLoading && (
                 <>
+                  {coupleFull.status === "error" && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-vermillion">{coupleFull.errorMsg}</p>
+                      <button onClick={() => coupleFull.start(body)} className="text-xs text-gold underline">重試</button>
+                    </div>
+                  )}
                   {ziweiTiming && (
                     <div>
                       <p className="text-xs font-semibold text-ink-2 mb-1.5">紫微視角</p>
                       <ReadingText text={ziweiTiming} />
+                    </div>
+                  )}
+                  {baziCoupleFull.status === "error" && (
+                    <div className="space-y-2 pt-2 border-t border-border-light">
+                      <p className="text-sm text-vermillion">{baziCoupleFull.errorMsg}</p>
+                      <button onClick={() => baziCoupleFull.start(body)} className="text-xs text-gold underline">重試</button>
                     </div>
                   )}
                   {baziTiming && (
@@ -367,8 +380,8 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
                       <ReadingText text={baziTiming} />
                     </div>
                   )}
-                  {!ziweiTiming && !baziTiming && (
-                    <p className="text-sm text-ink-4">尚未取得時機分析，請稍後重新整理。</p>
+                  {coupleFull.status === "done" && baziCoupleFull.status === "done" && !ziweiTiming && !baziTiming && (
+                    <p className="text-sm text-ink-4">本次未取得時機分析，可至「綫析」頁查看完整解讀。</p>
                   )}
                 </>
               )}
