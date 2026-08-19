@@ -39,7 +39,7 @@ const SYSTEM = `你是精通紫微斗數與八字子平的資深合盤命理師�
 （約120字：結合雙方當前大運，點出關係的高峰期與需留心的階段）
 
 ## 相處之道
-（針對兩人命盤，3-5條具體可操作建議；- 開頭列表）
+（針對兩人命盤，3-5條具體可操作建議；每條先用一句話點出兩人在這方面最可能遇到的具體摩擦或誤解——依附風格、溝通習慣或情緒表達方式的差異，而非籠統的「多溝通」——再給出可操作的化解方式；- 開頭列表）
 $PASTLIFE$
 
 ## 給你們的話
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
   // Per-relationship 前世缘 section + share-card label injected into SYSTEM.
   const pastLifeSection = cfg.hasPastLife
-    ? "\n## 前世緣分（命理故事）\n（約120字：以來因宮/夫妻宮星曜組合為依據，寫一段富畫面感的「前世今生」小敘事，開頭註明這是命理意象、非史實；溫暖動人，適合分享）"
+    ? "\n## 前世緣分（命理故事）\n（約120字：以來因宮/夫妻宮星曜組合為依據，寫一段富畫面感的「前世今生」小敘事，開頭註明這是命理意象、非史實；可自然帶出兩人相處中「似曾相識」的情感連結（如彼此吸引或彼此磨合的模式），但不用心理學術語，維持故事感；溫暖動人，適合分享）"
     : "";
   const systemPrompt = SYSTEM
     .replace("$PASTLIFE$", pastLifeSection)
