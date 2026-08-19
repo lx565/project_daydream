@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import BaziHepanFlow from "@/components/BaziHepanFlow";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 
@@ -84,9 +83,16 @@ export default function BaziHepanPage() {
           </p>
         </header>
 
-        {/* Interactive flow */}
-        <section className="paper-card rounded-2xl border border-border-warm p-5 sm:p-6">
-          <BaziHepanFlow />
+        {/* CTA into the unified /hepan flow — 八字合盤 is now part of the same
+            5-tab experience there, this page keeps its SEO content only. */}
+        <section className="paper-card rounded-2xl border border-border-warm p-6 sm:p-8 text-center space-y-4">
+          <p className="text-sm text-ink-3 leading-relaxed max-w-md mx-auto">
+            八字合盤已併入紫微雙人合盤——一次填寫，同時看到紫微與八字兩套系統的完整分析。
+          </p>
+          <Link href="/hepan"
+            className="inline-flex items-center gap-2 rounded-full bg-vermillion px-6 py-3 text-sm font-semibold text-white hover:bg-vermillion-h transition-colors">
+            開始合盤 →
+          </Link>
         </section>
 
         {/* What it covers */}
