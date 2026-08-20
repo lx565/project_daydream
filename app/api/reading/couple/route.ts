@@ -8,6 +8,7 @@ import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
 import { calcCoupleScoreV2, PALACE_ALIASES } from "@/lib/couple";
 import { detectMingge } from "@/lib/detectMingge";
+import { getFlowYears } from "@/lib/flowYears";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 
@@ -40,7 +41,7 @@ const SYSTEM = `你是精通紫微斗數與八字子平的資深合盤命理師�
 （約180字：雙方相關宮位的三方四正牽引、日主生克、四柱合衝、五行互補結構；**加粗**關鍵論斷）
 
 ## 緣分時機
-（約120字：結合雙方當前大運，點出關係的高峰期與需留心的階段）
+（約160字：先用1-2句結合雙方當前大運，點出關係的高峰期與需留心的階段；接著依下方【今明兩年流年】資料，具體點出今年與明年對這段關係各自的意義——哪一年更適合推進關係、共同決策或旅行，哪一年需要多一分耐心磨合；**加粗**年份與關鍵星曜）
 
 ## 相處之道
 （針對兩人命盤，3-5條具體可操作建議；每條先用一句話點出兩人在這方面最可能遇到的具體摩擦或誤解——依附風格、溝通習慣或情緒表達方式的差異，而非籠統的「多溝通」——再給出可操作的化解方式；- 開頭列表）
@@ -253,6 +254,23 @@ export async function POST(request: NextRequest) {
     minggeB.length ? `${labelB}：${minggeB.map(m => `${m.name}（${m.type}）`).join("、")}` : `${labelB}：無明顯特殊格局`,
   ].join("\n");
 
+  // This-year + next-year 流年 facts for both people, grounding the 緣分時機
+  // section's annual outlook. Reuses getFlowYears (same fixed infra the solo
+  // flowyear route uses) — no new AI call, just deterministic facts.
+  const currentYear = new Date().getFullYear();
+  const flowYearsBlock = await (async () => {
+    const birthYearA = parseInt(ziweiA.birth.solarDate.slice(0, 4), 10);
+    const birthYearB = parseInt(ziweiB.birth.solarDate.slice(0, 4), 10);
+    const [flowsA, flowsB] = await Promise.all([
+      getFlowYears(ziweiA.birth, currentYear - birthYearA, currentYear - birthYearA + 1),
+      getFlowYears(ziweiB.birth, currentYear - birthYearB, currentYear - birthYearB + 1),
+    ]);
+    const describe = (label: string, flows: typeof flowsA) => flows.map(f =>
+      `${label}：${f.year}年 ${f.ganzhi}（${f.age}歲）｜流年命宮：本命${f.flowSoulPalace}宮｜流年四化：${f.yearlyMutagen.join("、") || "—"}`
+    ).join("\n");
+    return [describe(labelA, flowsA), describe(labelB, flowsB)].join("\n");
+  })();
+
   const userMessage = `
 【關係類型】${cfg.label}　側重：${cfg.focusHint}
 【四維得分（確定性，請據此解釋）】緣分類型：${score.label}（${score.total}分）
@@ -285,6 +303,9 @@ ${palaceComparison}
 
 【命格自動識別（僅可引用此清單中的格局名稱，清單之外不可自創）】
 ${minggeBlock}
+
+【今明兩年流年】
+${flowYearsBlock}
 
 【合盤資料】
 生肖緣分：${BRANCH_ZODIAC[branchA]}與${BRANCH_ZODIAC[branchB]} → ${zodiacRelation(branchA,branchB)}

@@ -7,7 +7,9 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
 import { calcBaziCoupleScore } from "@/lib/baziCouple";
+import { getFlowYears } from "@/lib/flowYears";
 import type { BaziResult } from "@/lib/bazi";
+import type { ZiweiResult } from "@/lib/ziwei";
 
 const SYSTEM = `你是精通子平八字的資深命理師，以純八字視角做雙人合盤——不涉及紫微斗數，完全在子平框架內論斷。
 
@@ -40,7 +42,7 @@ const SYSTEM = `你是精通子平八字的資深命理師，以純八字視角�
 （甲方喜用神五行 vs 乙方五行分布：乙方的強勢五行是否補足甲方所缺？反之亦然？落到具體干支；**加粗**喜用神；約130字）
 
 ## 大運時機 · 關係高峰與考驗
-（結合雙方當前大運的天干地支，點出近幾年對這段關係最有利的時間視窗，以及需留心的階段；約120字）
+（先用1-2句結合雙方當前大運的天干地支，點出近幾年對這段關係最有利的時間視窗，以及需留心的階段；接著依下方【今明兩年干支】資料，具體點出今年與明年的干支對雙方日主分別是生扶還是剋洩，這兩年對關係推進的實際影響；**加粗**年份與干支；約160字）
 
 ## 相處之道
 （針對兩人八字特點，給出4條具體、可操作的建議；每條先用一句話點出兩人最可能遇到的具體摩擦——十神互動或五行失衡帶來的溝通/情緒模式差異，而非籠統建議——再給出化解方式；- 開頭列表）
@@ -185,8 +187,8 @@ export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" })).allowed) return rateLimitResponse();
 
   let body: {
-    baziA: BaziResult;
-    baziB: BaziResult;
+    baziA: BaziResult; ziweiA?: ZiweiResult;
+    baziB: BaziResult; ziweiB?: ZiweiResult;
     nameA?: string; nameB?: string;
     genderA: string; genderB: string;
     relationshipType?: string;
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); }
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
-  const { baziA, baziB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
   const cfg = getRelationshipConfig(relationshipType);
   const score = calcBaziCoupleScore(baziA, baziB, cfg.key);
 
@@ -204,6 +206,42 @@ export async function POST(request: NextRequest) {
   const labelB = nameB || (genderB === "male" ? "乙方（男）" : "乙方（女）");
 
   const elA = baziA.elements, elB = baziB.elements;
+
+  // This-year + next-year ganzhi for both people, related to each day master's
+  // element — grounds the 大運時機 section's annual outlook. Reuses getFlowYears
+  // (same fixed infra the solo flowyear route + couple/route.ts use) purely for
+  // its deterministic year/ganzhi/age facts; the 紫微-specific fields (流年命宮
+  // etc.) are intentionally not used here since this route is pure 八字 (見
+  // SYSTEM prompt: "不涉及紫微斗數"). Falls back gracefully if ziweiA/B weren't
+  // sent (this route's body type marks them optional).
+  function yearStemRelation(dayMasterElement: string, yearStem: string): string {
+    const yearElement = STEM_ELEM[STEMS.indexOf(yearStem)];
+    if (!yearElement) return "";
+    if (GENERATES[yearElement] === dayMasterElement) return `（${yearElement}生${dayMasterElement}，有助力）`;
+    if (GENERATES[dayMasterElement] === yearElement) return `（${dayMasterElement}生${yearElement}，主付出耗神）`;
+    if (CONTROLS[yearElement] === dayMasterElement) return `（${yearElement}克${dayMasterElement}，壓力較大）`;
+    if (CONTROLS[dayMasterElement] === yearElement) return `（${dayMasterElement}克${yearElement}，主動出擊）`;
+    if (yearElement === dayMasterElement) return "（同氣，力量加倍）";
+    return "";
+  }
+  const annualBlock = await (async () => {
+    if (!ziweiA?.birth || !ziweiB?.birth) return "（無流年資料）";
+    const currentYear = new Date().getFullYear();
+    const birthYearA = parseInt(ziweiA.birth.solarDate.slice(0, 4), 10);
+    const birthYearB = parseInt(ziweiB.birth.solarDate.slice(0, 4), 10);
+    const [flowsA, flowsB] = await Promise.all([
+      getFlowYears(ziweiA.birth, currentYear - birthYearA, currentYear - birthYearA + 1),
+      getFlowYears(ziweiB.birth, currentYear - birthYearB, currentYear - birthYearB + 1),
+    ]);
+    const describe = (label: string, dayMasterElement: string, flows: typeof flowsA) => flows.map(f => {
+      const yearStem = f.ganzhi.slice(0, 1);
+      return `${label}：${f.year}年 ${f.ganzhi}（${f.age}歲）對日主${dayMasterElement}${yearStemRelation(dayMasterElement, yearStem)}`;
+    }).join("\n");
+    return [
+      describe(labelA, baziA.dayMasterElement, flowsA),
+      describe(labelB, baziB.dayMasterElement, flowsB),
+    ].join("\n");
+  })();
 
   // RAG: fetch 八字 knowledge about relationship + day master elements
   const ragText = `八字合盤 日主 ${baziA.dayMasterElement}日 ${baziB.dayMasterElement}日 十神 ${cfg.ragTopic} 干支合沖 喜用神 大運`;
@@ -237,6 +275,9 @@ ${currentDecadeDesc(baziA)}
 命格：${baziB.summary}
 ${currentDecadeDesc(baziB)}
 
+【今明兩年干支】
+${annualBlock}
+
 【合盤干支分析】
 日主關係：${dmRelationHint(baziA, baziB, labelA, labelB)}
 五行互補：${score.elementDesc}
@@ -250,10 +291,11 @@ ${context || "（暫無相關典籍）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      // 6000, not 2800: same truncation risk as couple/route.ts (DeepSeek's
+      // 6400, not 2800: same truncation risk as couple/route.ts (DeepSeek's
       // reasoning_content eats into this budget — see that file's comment) — this
-      // route asks for a comparably long 9-10 section output.
-      maxTokens: 6000,
+      // route asks for a comparably long 9-10 section output, bumped from 6000
+      // for the 大運時機 section's expanded 今明兩年 annual-outlook content.
+      maxTokens: 6400,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,
