@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { startCardCheckout } from "@/lib/checkout";
 import { gtagEvent } from "@/lib/gtag";
-import { chartType } from "@/lib/chartType";
+import { chartType, CHART_PRICE_USD } from "@/lib/chartType";
+
+interface ProofItem { icon: string; stat: string; label: string }
 
 interface Props {
   chartId: string;
@@ -12,7 +14,17 @@ interface Props {
   /** One dynamic line personalizing the pitch with data already on the client
    *  (e.g. the user's 命宮主星). Optional — omit to fall back to the generic pitch. */
   personalizedHint?: string;
+  /** Quality-proof strip content. Defaults to the $6.99 dual-system pitch —
+   *  pass a product-specific set for other chart types (e.g. monthly). */
+  proofStrip?: ProofItem[];
 }
+
+const DEFAULT_PROOF_STRIP: ProofItem[] = [
+  { icon: "📖", stat: "萬字以上", label: "深度解讀" },
+  { icon: "🔄", stat: "多模型", label: "交叉校對" },
+  { icon: "📚", stat: "上百部", label: "命理典籍加持" },
+  { icon: "⚡", stat: "雙體系", label: "紫微×八字印證" },
+];
 
 // Honest social proof — real reading count from KV; renders nothing until the
 // fetch lands (no seeded/fake number inside a payment surface).
@@ -42,10 +54,12 @@ const DEFAULT_INCLUDED = [
   "永久保存 · 可重複查閱",
 ];
 
-export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED, personalizedHint }: Props) {
+export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED, personalizedHint, proofStrip }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const viewed = useRef(false);
+  const price = CHART_PRICE_USD[chartType(chartId)];
+  const strip = proofStrip ?? DEFAULT_PROOF_STRIP;
 
   useEffect(() => {
     if (viewed.current || !chartId) return;
@@ -79,12 +93,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
 
       {/* Quality proof strip */}
       <div className="mb-4 grid grid-cols-2 gap-2">
-        {[
-          { icon: "📖", stat: "萬字以上", label: "深度解讀" },
-          { icon: "🔄", stat: "多模型", label: "交叉校對" },
-          { icon: "📚", stat: "上百部", label: "命理典籍加持" },
-          { icon: "⚡", stat: "雙體系", label: "紫微×八字印證" },
-        ].map(({ icon, stat, label }) => (
+        {strip.map(({ icon, stat, label }) => (
           <div key={stat} className="flex items-center gap-1.5 rounded-lg bg-gold/8 border border-gold/20 px-2.5 py-2">
             <span className="text-base leading-none">{icon}</span>
             <div className="min-w-0">
@@ -115,7 +124,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
       {/* Price + CTA */}
       <div className="text-center mb-3">
         <p className="text-[11px] text-ink-4 mb-1">人工命理諮詢動輒數千元起跳</p>
-        <span className="text-2xl font-bold text-ink">$6.99</span>
+        <span className="text-2xl font-bold text-ink">${price.toFixed(2)}</span>
         <span className="text-xs text-ink-4 ml-1">USD · 一次付費 · 永久解鎖</span>
       </div>
 

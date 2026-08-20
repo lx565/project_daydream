@@ -5,21 +5,33 @@
 import { NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
-import { chartType } from "@/lib/chartType";
+import { chartType, type ChartType } from "@/lib/chartType";
 
 export const runtime = "nodejs";
+
+// Each product type unlocks against a different Stripe Price ID. "monthly" uses
+// a generic env name (not e.g. STRIPE_PRICE_ID_MONTHLY) because it's meant to
+// cover any future $1.99 one-time short report, not just this one.
+const PRICE_ENV_BY_TYPE: Record<ChartType, string> = {
+  solo: "STRIPE_PRICE_ID",
+  hepan: "STRIPE_PRICE_ID",
+  monthly: "STRIPE_PRICE_ID_SHORT_ONCE",
+};
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "checkout" })).allowed) return rateLimitResponse();
 
   const secret = process.env.STRIPE_SECRET_KEY;
-  const price = process.env.STRIPE_PRICE_ID;
-  if (!secret || !price) return Response.json({ error: "stripe_not_configured" }, { status: 503 });
+  if (!secret) return Response.json({ error: "stripe_not_configured" }, { status: 503 });
 
   let body: { chartId?: string; returnPath?: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
   const chartId = (body.chartId ?? "").slice(0, 100);
   if (!chartId) return Response.json({ error: "missing_chart" }, { status: 400 });
+
+  const type = chartType(chartId);
+  const price = process.env[PRICE_ENV_BY_TYPE[type]];
+  if (!price) return Response.json({ error: "stripe_not_configured" }, { status: 503 });
 
   // Return to the exact chart the user was viewing (its URL carries birth params —
   // a bare /result would redirect home). Same-origin paths only.
@@ -42,9 +54,9 @@ export async function POST(request: NextRequest) {
       line_items: [{ price, quantity: 1 }],
       payment_method_types: methods,
       locale: "zh", // audience is Chinese-speaking; without this Checkout defaults to browser/English locale
-      // webhook reads chartId to mark the chart unlocked; chart_type ("hepan" |
-      // "solo") lets Stripe/analytics segment couple-compat revenue from solo.
-      metadata: { chartId, chart_type: chartType(chartId) },
+      // webhook reads chartId to mark the chart unlocked; chart_type lets
+      // Stripe/analytics segment revenue by product.
+      metadata: { chartId, chart_type: type },
       success_url: `${origin}${safeReturn}${sep}paid=1`,
       cancel_url: `${origin}${safeReturn}`,
     };

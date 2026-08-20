@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gtagEvent } from "@/lib/gtag";
-import { chartType } from "@/lib/chartType";
+import { chartType, CHART_PRICE_USD } from "@/lib/chartType";
 
 // Client hook resolving the paywall state for a chart.
 //
@@ -25,7 +25,8 @@ function trackPurchaseOnce(chartId: string) {
   const key = `ga_purchase_tracked_${chartId}`;
   if (sessionStorage.getItem(key)) return;
   sessionStorage.setItem(key, "1");
-  gtagEvent("purchase", { transaction_id: chartId, value: 6.99, currency: "USD", chart_type: chartType(chartId) });
+  const type = chartType(chartId);
+  gtagEvent("purchase", { transaction_id: chartId, value: CHART_PRICE_USD[type], currency: "USD", chart_type: type });
 }
 
 export interface PaywallState {
