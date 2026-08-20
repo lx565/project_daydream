@@ -66,12 +66,18 @@ function scoreMonth(f: FlowMonth, starPalaceMap: Record<string, string>): MonthS
   }
 
   // Theme: a 忌 in a notable palace takes priority (caution beats opportunity
-  // for what's worth flagging to the user), else the best 祿/權, else neutral.
+  // for what's worth flagging to the user), else the best 祿/權, else a lone
+  // 科 (still worth a nod since it nudges the score), else neutral.
+  // NOTABLE_PALACES mixes naming conventions ("命宮" already has the 宮
+  // suffix; others like "財帛" don't) — normalize before appending 值/迎.
+  const pn = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
   const caution = signals.find((s) => s.type === "忌");
   const opportunity = signals.find((s) => s.type === "祿" || s.type === "權");
+  const steady = signals.find((s) => s.type === "科");
   let theme = "運勢平穩，按部就班";
-  if (caution) theme = `${caution.palace}宮值${caution.star}化忌，宜謹慎`;
-  else if (opportunity) theme = `${opportunity.palace}宮迎${opportunity.star}化${opportunity.type}，機會浮現`;
+  if (caution) theme = `${pn(caution.palace)}值${caution.star}化忌，宜謹慎`;
+  else if (opportunity) theme = `${pn(opportunity.palace)}迎${opportunity.star}化${opportunity.type}，機會浮現`;
+  else if (steady) theme = `${pn(steady.palace)}迎${steady.star}化科，運勢趨穩`;
 
   const clamp = (n: number) => Math.min(5, Math.max(1, Math.round(n)));
   return {
