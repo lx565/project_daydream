@@ -14,10 +14,16 @@ const CHALLENGING_STARS = new Set(["七殺", "破軍", "貪狼", "廉貞"]);
 
 // iztro's zh-TW locale names this palace 僕役 (classical term); the rest of
 // this app (RelationshipConfig, prompts, UI copy) says 交友 (modern usage) —
-// same palace, different label. Resolve the alias here rather than renaming
-// coupleTypes.ts's user-facing "交友", which is also used for RAG topic search
-// text where "交友" is likely the better-indexed modern term.
-const PALACE_ALIASES: Record<string, string> = { "交友": "僕役" };
+// same palace, different label. "命" needs a suffix too: only 命宮 carries the
+// 宮 suffix in ZiweiResult.palaces[].name (see lib/ziwei.ts), the other 11
+// palaces are stored as short names. "交友"/"命" are the two coupleTypes.ts
+// palette labels that don't already match a real palaces[].name value.
+// Resolve both aliases here rather than renaming coupleTypes.ts's user-facing
+// labels, which are also used for RAG topic search text and UI copy where the
+// short/modern form is preferable. Exported so any consumer of
+// RelationshipConfig.palaces (e.g. AI-prompt grounding builders) can resolve
+// the same way instead of re-deriving this mapping.
+export const PALACE_ALIASES: Record<string, string> = { "交友": "僕役", "命": "命宮" };
 
 export function palaceStarScore(ziwei: ZiweiResult, palaceName: string): { score: number; stars: string[] } {
   const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;

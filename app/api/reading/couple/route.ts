@@ -6,7 +6,8 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
-import { calcCoupleScoreV2 } from "@/lib/couple";
+import { calcCoupleScoreV2, PALACE_ALIASES } from "@/lib/couple";
+import { detectMingge } from "@/lib/detectMingge";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 
@@ -24,10 +25,13 @@ const SYSTEM = `你是精通紫微斗數與八字子平的資深合盤命理師�
 （逐條解釋使用者給出的四維得分各自因何而來，落到具體星曜/日主/五行；每維1-2句；**加粗**維度名）
 
 ## 甲方在這段關係中
-（約160字：夫妻宮/相關宮主星與四化、感情星強弱、相處模式；**加粗**關鍵星曜）
+（約160字：下方列出的相關宮位主星與四化、感情星強弱、相處模式；若相關宮位有化忌或煞星（擎羊/陀羅/火星/鈴星/地空/地劫），具體點出並溫和說明可能的張力；**加粗**關鍵星曜）
 
 ## 乙方在這段關係中
 （約160字，同框架）
+
+## 宮位對照
+（約150字：逐一對照下方【宮位對照】資料中雙方在同一宮位的星曜配置，說明彼此在該領域容易被對方哪一面吸引、契合或需要磨合之處；若下方【命格自動識別】清單中有格局涉及這些宮位（尤其凶格），可自然帶出並說明如何應對，不誇大不恐嚇；**加粗**關鍵星曜與宮位名）
 
 ## 飛化互入
 （約140字：一方的生年四化/重要星曜落入對方命盤的哪個宮，說明彼此牽動的領域。注意命理規則：七殺/天相/天府不參與十干四化；紫微只化權/化科。）
@@ -76,9 +80,12 @@ function zodiacRelation(branchA: string, branchB: string): string {
   return "無特殊合衝（後天緣分為主，需彼此經營）";
 }
 
-// Describe a palace with all its stars
+// Describe a palace with all its stars. Resolves coupleTypes.ts's short/modern
+// palace labels (e.g. "交友", "命") against ZiweiResult.palaces[].name's actual
+// stored form (e.g. "僕役", "命宮") via the shared PALACE_ALIASES table.
 function palaceDesc(ziwei: ZiweiResult, palaceName: string): string {
-  const p = ziwei.palaces.find(x => x.name === palaceName);
+  const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;
+  const p = ziwei.palaces.find(x => x.name === palaceName || x.name === resolvedName);
   if (!p) return `${palaceName}（無資料）`;
   const stars = p.stars
     .filter(s => s.type === "major" || s.type === "minor" || ["紅鸞","天喜","天馬","孤辰","寡宿"].includes(s.name))
@@ -86,6 +93,19 @@ function palaceDesc(ziwei: ZiweiResult, palaceName: string): string {
     .join("、");
   const stem = p.heavenlyStem ? `[${p.heavenlyStem}干]` : "";
   return `${palaceName}${stem}：${stars || "空宮"}`;
+}
+
+// Real ZiweiResult.palaces[].name values (post-alias-resolution) — used to
+// filter out non-palace entries like coupleTypes.ts's sibling config's "六亲"
+// (a loose relational grouping, not one of the 12 actual palaces).
+const REAL_PALACE_NAMES = new Set([
+  "命宮", "兄弟", "夫妻", "子女", "財帛", "疾厄",
+  "遷移", "僕役", "官祿", "田宅", "福德", "父母",
+]);
+
+function isRealPalace(palaceName: string): boolean {
+  const resolved = PALACE_ALIASES[palaceName] ?? palaceName;
+  return REAL_PALACE_NAMES.has(resolved);
 }
 
 // Find which palace a named star sits in
@@ -175,19 +195,23 @@ export async function POST(request: NextRequest) {
   const branchA = baziA.year.branch;
   const branchB = baziB.year.branch;
 
-  // Wedding palace stars for RAG
-  const wStarsA = ziweiA.palaces.find(p=>p.name==="夫妻")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
-  const wStarsB = ziweiB.palaces.find(p=>p.name==="夫妻")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
-  // Also include children palace stars and 紅鸞
-  const childStarsA = ziweiA.palaces.find(p=>p.name==="子女")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
-  const childStarsB = ziweiB.palaces.find(p=>p.name==="子女")?.stars.filter(s=>s.type==="major").map(s=>s.name) ?? [];
-  const allStars = [...new Set([...wStarsA, ...wStarsB, ...childStarsA, ...childStarsB])];
+  // Relevant-palace stars for RAG — driven by cfg.palaces (per relationship
+  // type), not hardcoded to 夫妻/子女. A friend/sibling/parentchild reading
+  // pulls stars from 交友/兄弟/父母 etc. instead of irrelevant marriage palaces.
+  const relevantPalaces = cfg.palaces.filter(isRealPalace);
+  const relevantStars = relevantPalaces.flatMap(pName => {
+    const resolved = PALACE_ALIASES[pName] ?? pName;
+    const starsA = ziweiA.palaces.find(p => p.name === pName || p.name === resolved)?.stars.filter(s => s.type === "major").map(s => s.name) ?? [];
+    const starsB = ziweiB.palaces.find(p => p.name === pName || p.name === resolved)?.stars.filter(s => s.type === "major").map(s => s.name) ?? [];
+    return [...starsA, ...starsB];
+  });
+  const allStars = [...new Set(relevantStars)];
 
   const { context, refs } = await getKnowledge({
     stars: allStars,
     topic: cfg.ragTopic,
     topK: 8,
-    text: `合盤 夫妻宮 子女宮 紅鸞 天喜 感情緣分 ${cfg.label}`,
+    text: `合盤 ${relevantPalaces.join("宮 ")}宮 感情緣分 ${cfg.label}`,
   });
 
   const dmRelHint = (() => {
@@ -204,6 +228,31 @@ export async function POST(request: NextRequest) {
 
   const elA = baziA.elements, elB = baziB.elements;
 
+  // 紅鸞/天喜 are romance-signal stars — only meaningful when 夫妻宮 is actually
+  // among this relationship type's relevant palaces (lover/spouse).
+  const showRomanceStars = relevantPalaces.includes("夫妻");
+  const palaceBlockA = relevantPalaces.map(p => palaceDesc(ziweiA, p)).join("\n") +
+    (showRomanceStars ? `\n紅鸞星：${findStarPalace(ziweiA,"紅鸞")}　天喜星：${findStarPalace(ziweiA,"天喜")}` : "");
+  const palaceBlockB = relevantPalaces.map(p => palaceDesc(ziweiB, p)).join("\n") +
+    (showRomanceStars ? `\n紅鸞星：${findStarPalace(ziweiB,"紅鸞")}　天喜星：${findStarPalace(ziweiB,"天喜")}` : "");
+
+  // Side-by-side same-palace comparison for the new 宮位對照 section
+  // (palaceDesc already prefixes the palace name, so no need to repeat it).
+  const palaceComparison = relevantPalaces
+    .map(p => `${labelA}${palaceDesc(ziweiA, p)}　|　${labelB}${palaceDesc(ziweiB, p)}`)
+    .join("\n");
+
+  // Deterministic 命格 detection (same function solo readings use) — grounds
+  // any 凶格 mention in the 宮位對照 section. SAFETY_GUARDRAIL already forbids
+  // inventing 格局 names outside a provided 【命格自動識別】 list, so labeling
+  // this block with that exact bracket name reuses that existing enforcement.
+  const minggeA = detectMingge(ziweiA.palaces);
+  const minggeB = detectMingge(ziweiB.palaces);
+  const minggeBlock = [
+    minggeA.length ? `${labelA}：${minggeA.map(m => `${m.name}（${m.type}）`).join("、")}` : `${labelA}：無明顯特殊格局`,
+    minggeB.length ? `${labelB}：${minggeB.map(m => `${m.name}（${m.type}）`).join("、")}` : `${labelB}：無明顯特殊格局`,
+  ].join("\n");
+
   const userMessage = `
 【關係類型】${cfg.label}　側重：${cfg.focusHint}
 【四維得分（確定性，請據此解釋）】緣分類型：${score.label}（${score.total}分）
@@ -218,10 +267,7 @@ ${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
 命格：${baziA.summary}
 
 【甲方紫微宮位】
-${palaceDesc(ziweiA,"命宮")}
-${palaceDesc(ziweiA,"夫妻")}
-${palaceDesc(ziweiA,"子女")}
-紅鸞星：${findStarPalace(ziweiA,"紅鸞")}　天喜星：${findStarPalace(ziweiA,"天喜")}
+${palaceBlockA}
 
 【乙方基本資訊】
 姓名/稱呼：${labelB}　性別：${genderB==="male"?"男":"女"}
@@ -232,10 +278,13 @@ ${palaceDesc(ziweiA,"子女")}
 命格：${baziB.summary}
 
 【乙方紫微宮位】
-${palaceDesc(ziweiB,"命宮")}
-${palaceDesc(ziweiB,"夫妻")}
-${palaceDesc(ziweiB,"子女")}
-紅鸞星：${findStarPalace(ziweiB,"紅鸞")}　天喜星：${findStarPalace(ziweiB,"天喜")}
+${palaceBlockB}
+
+【宮位對照（雙方相同宮位並列，供撰寫宮位對照段落使用）】
+${palaceComparison}
+
+【命格自動識別（僅可引用此清單中的格局名稱，清單之外不可自創）】
+${minggeBlock}
 
 【合盤資料】
 生肖緣分：${BRANCH_ZODIAC[branchA]}與${BRANCH_ZODIAC[branchB]} → ${zodiacRelation(branchA,branchB)}
@@ -250,11 +299,11 @@ ${context||"（暫無）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      // 6000, not 2800: DeepSeek's v4-pro model emits reasoning_content that counts
+      // 6800, not 2800: DeepSeek's v4-pro model emits reasoning_content that counts
       // against this same budget (see lib/synthesize.ts's note on the 2026-07-25 model
-      // change) — 2800 was observed truncating output mid-section (this route asks for
-      // 9 sections, more than decades' 4 that already needed 6000 for the same reason).
-      maxTokens: 6000,
+      // change) — 2800 was observed truncating output mid-section. This route now asks
+      // for 10 sections (added 宮位對照), bumped from 6000 to keep headroom.
+      maxTokens: 6800,
       // This route declares maxDuration=90 (vs the usual 60) because its 8-section
       // output (甲方/乙方/飞化互入/合盘综析/...) was observed exceeding
       // streamWithRefs's default 35s deadline while still legitimately streaming
