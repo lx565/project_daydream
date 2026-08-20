@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Md from "./Md";
 import PaywallLock from "./PaywallLock";
@@ -9,21 +9,7 @@ import ZiweiChart from "./ZiweiChart";
 import type { MonthlyCharts } from "./MonthlyFortuneFlow";
 import { useSSEStream, type StreamResult } from "@/lib/useSSEStream";
 import { usePaywall } from "@/lib/usePaywall";
-
-interface MonthScore {
-  year: number;
-  month: number;
-  ganzhi: string;
-  overall: number;
-  career: number;
-  romance: number;
-  theme: string;
-}
-
-interface PreviewData {
-  months: MonthScore[];
-  teaser: string;
-}
+import type { MonthScore, MonthlyPreviewResult } from "@/app/api/reading/monthly/preview/route";
 
 function Dots({ n, type }: { n: number; type: "overall" | "career" | "romance" }) {
   const colors = {
@@ -76,12 +62,16 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
   const paywall = usePaywall(chartId);
   const gated = paywall.enabled && !paywall.unlocked;
 
-  const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [preview, setPreview] = useState<MonthlyPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState(true);
   const [previewError, setPreviewError] = useState(false);
+  // Guards against a stale response (e.g. a retry fired after sessionId already
+  // changed) overwriting newer state — each call stamps its own request id and
+  // only applies its result if still the most recent one in flight.
+  const previewRequestRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchPreview = useCallback(() => {
+    const requestId = ++previewRequestRef.current;
     setPreviewLoading(true);
     setPreviewError(false);
     fetch("/api/reading/monthly/preview", {
@@ -90,12 +80,15 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
       body: JSON.stringify({ ziwei, name }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: PreviewData) => { if (!cancelled) setPreview(d); })
-      .catch(() => { if (!cancelled) setPreviewError(true); })
-      .finally(() => { if (!cancelled) setPreviewLoading(false); });
-    return () => { cancelled = true; };
+      .then((d: MonthlyPreviewResult) => { if (previewRequestRef.current === requestId) setPreview(d); })
+      .catch(() => { if (previewRequestRef.current === requestId) setPreviewError(true); })
+      .finally(() => { if (previewRequestRef.current === requestId) setPreviewLoading(false); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  useEffect(() => {
+    fetchPreview();
+  }, [fetchPreview]);
 
   const body = { ziwei, name };
   const batch1 = useSSEStream("/api/reading/monthly", `${chartId}_b1`);
@@ -111,10 +104,6 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
   }, [paywall.loading, gated]);
 
   const batches: [StreamResult, StreamResult, StreamResult] = [batch1, batch2, batch3];
-  const allDone = batches.every((b) => b.status === "done");
-  const anyLoading = batches.some((b) => b.status === "idle" || b.status === "streaming");
-  const firstError = batches.find((b) => b.status === "error");
-  const firstErrorBatchNum = firstError ? batches.indexOf(firstError) + 1 : 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -131,7 +120,10 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
 
         {previewLoading && <LoadingSkeleton />}
         {previewError && !previewLoading && (
-          <p className="text-sm text-vermillion">推算失敗，請重新整理重試。</p>
+          <div className="space-y-1.5">
+            <p className="text-sm text-vermillion">推算失敗，請重新整理重試。</p>
+            <button onClick={fetchPreview} className="text-xs text-gold underline">重試</button>
+          </div>
         )}
 
         {preview && !previewLoading && (
@@ -143,7 +135,7 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
               <span className="text-center">感情</span>
             </div>
             <div className="divide-y divide-border-light">
-              {preview.months.map((m, i) => (
+              {preview.months.map((m: MonthScore, i) => (
                 <div key={`${m.year}-${m.month}`}
                   className={`grid grid-cols-[1fr_2.5rem_2.5rem_2.5rem] items-center gap-x-3 px-1 py-2 ${i === 0 ? "bg-vermillion-l/40" : ""}`}>
                   <div className="min-w-0">
@@ -183,20 +175,22 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
           <PaywallLock chartId={chartId} sectionLabel="逐月詳細解讀" included={MONTHLY_INCLUDED} proofStrip={MONTHLY_PROOF_STRIP} />
         ) : (
           <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5 space-y-4">
-            {anyLoading && <LoadingSkeleton />}
-            {firstError && (
-              <div className="space-y-2">
-                <p className="text-sm text-vermillion">{firstError.errorMsg}</p>
-                <button onClick={() => firstError.start({ ...body, batch: firstErrorBatchNum })} className="text-xs text-gold underline">重試</button>
+            {batches.map((b, i) => (
+              <div key={i}>
+                {(b.status === "idle" || b.status === "streaming") && <LoadingSkeleton />}
+                {b.status === "error" && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-vermillion">{b.errorMsg}</p>
+                    <button onClick={() => b.start({ ...body, batch: i + 1 })} className="text-xs text-gold underline">重試</button>
+                  </div>
+                )}
+                {b.status === "done" && (
+                  <div className="animate-fade-in prose max-w-none text-sm [&_h3]:text-vermillion [&_h3]:font-bold [&_h3]:text-sm [&_h3]:mt-4 [&_h3]:mb-1.5 [&_p]:text-ink-2 [&_p]:leading-relaxed [&_p]:text-sm [&_strong]:text-ink [&_strong]:font-semibold">
+                    <Md>{b.text}</Md>
+                  </div>
+                )}
               </div>
-            )}
-            {allDone && (
-              <div className="animate-fade-in prose max-w-none text-sm [&_h3]:text-vermillion [&_h3]:font-bold [&_h3]:text-sm [&_h3]:mt-4 [&_h3]:mb-1.5 [&_p]:text-ink-2 [&_p]:leading-relaxed [&_p]:text-sm [&_strong]:text-ink [&_strong]:font-semibold">
-                <Md>{batch1.text}</Md>
-                <Md>{batch2.text}</Md>
-                <Md>{batch3.text}</Md>
-              </div>
-            )}
+            ))}
           </div>
         )}
       </div>

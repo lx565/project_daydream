@@ -331,6 +331,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/palace`,     changeFrequency: "monthly" as const, priority: 0.8,  lastModified: LAST_CONTENT_UPDATE },
     { url: `${BASE}/hepan`,      changeFrequency: "monthly" as const, priority: 0.9,  lastModified: LAST_CONTENT_UPDATE },
     { url: `${BASE}/bazihepan`,  changeFrequency: "monthly" as const, priority: 0.9,  lastModified: LAST_CONTENT_UPDATE },
+    { url: `${BASE}/yueyun`,     changeFrequency: "monthly" as const, priority: 0.9,  lastModified: LAST_CONTENT_UPDATE },
     ...guidePages,
     ...minggePages,
     ...palaceHubs,

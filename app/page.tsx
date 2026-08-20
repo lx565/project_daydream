@@ -185,6 +185,12 @@ export default function Home() {
               雙人合盤
             </Link>
             <Link
+              href="/yueyun"
+              className="hidden sm:block text-sm text-ink-3 hover:text-vermillion transition-colors"
+            >
+              逐月運勢
+            </Link>
+            <Link
               href="/library"
               className="hidden sm:block text-sm text-ink-3 hover:text-vermillion transition-colors"
             >
