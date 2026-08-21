@@ -7,8 +7,15 @@
 // full reading. Mirrors components/HepanFlow.tsx's form half, minus the
 // second person, the relationship-type selector, and bazi (this product is
 // 紫微-only).
+//
+// Birth data is mirrored into the URL query string on submit (raw
+// history.replaceState, not next/navigation, to avoid re-triggering this
+// component's own effects). lib/checkout.ts builds the Stripe return URL from
+// window.location.pathname+search, so this is what lets a return-from-Stripe
+// reload land back on the same chart instead of a blank form — the exact gap
+// solo's /result avoided by reading birth params server-side from the start.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BirthdayWheel } from "./WheelPicker";
 import type { ZiweiResult } from "@/lib/ziwei";
 import MonthlyResultView from "./MonthlyResultView";
@@ -31,11 +38,57 @@ function personKey(p: PersonFields) {
   return `${p.date.replace(/-/g, "")}${p.hour}${p.gender}`;
 }
 
+/** Writes the submitted birth fields into the URL so a reload (e.g. returning
+ *  from Stripe checkout) can restore the same chart. Uses raw history.replaceState
+ *  (not router.replace) so it never re-renders/re-triggers this component's effects. */
+function syncUrl(p: PersonFields) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams();
+  params.set("date", p.date);
+  params.set("hour", p.hour);
+  params.set("gender", p.gender);
+  if (p.name) params.set("name", p.name);
+  window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+}
+
+/** Reads birth fields back out of the URL, if present. Returns null if the
+ *  required fields (date/hour/gender) are missing or malformed. */
+function personFromUrl(): PersonFields | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const date = params.get("date") ?? "";
+  const hour = params.get("hour") ?? "";
+  const gender = params.get("gender");
+  if (!date || hour === "" || (gender !== "male" && gender !== "female")) return null;
+  return { name: params.get("name") ?? "", date, hour, gender };
+}
+
+async function computeCharts(p: PersonFields): Promise<MonthlyCharts> {
+  const { calculateZiwei } = await import("@/lib/ziwei");
+  const [y, m, d] = p.date.split("-").map(Number);
+  const h = parseInt(p.hour, 10);
+  const gender = p.gender as "male" | "female";
+  const ziwei = await calculateZiwei(y, m, d, h, gender);
+  return { ziwei, name: p.name || undefined, gender, sessionId: personKey(p) };
+}
+
 export default function MonthlyFortuneFlow() {
   const [person, setPerson] = useState<PersonFields>({ name: "", date: "", hour: "", gender: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [computing, setComputing] = useState(false);
   const [charts, setCharts] = useState<MonthlyCharts | null>(null);
+  // True only while checking the URL for restorable birth params on first mount —
+  // keeps the form from flashing before a Stripe-return reload finishes restoring.
+  const [restoring, setRestoring] = useState(true);
+
+  useEffect(() => {
+    const restored = personFromUrl();
+    if (!restored) { setRestoring(false); return; }
+    computeCharts(restored)
+      .then((c) => { setPerson(restored); setCharts(c); })
+      .catch(() => {}) // malformed/edge-case URL params — fall back to the blank form
+      .finally(() => setRestoring(false));
+  }, []);
 
   const ready = !!person.date && !!person.gender && person.hour !== "";
 
@@ -53,26 +106,27 @@ export default function MonthlyFortuneFlow() {
     if (!validate() || computing) return;
     setComputing(true);
     try {
-      const { calculateZiwei } = await import("@/lib/ziwei");
-      const [y, m, d] = person.date.split("-").map(Number);
-      const h = parseInt(person.hour, 10);
-      const gender = person.gender as "male" | "female";
-      const ziwei = await calculateZiwei(y, m, d, h, gender);
-
-      setCharts({
-        ziwei,
-        name: person.name || undefined,
-        gender,
-        sessionId: personKey(person),
-      });
+      const c = await computeCharts(person);
+      syncUrl(person);
+      setCharts(c);
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setComputing(false);
     }
   }
 
+  if (restoring) return null;
+
   if (charts) {
-    return <MonthlyResultView charts={charts} onReset={() => setCharts(null)} />;
+    return (
+      <MonthlyResultView
+        charts={charts}
+        onReset={() => {
+          setCharts(null);
+          if (typeof window !== "undefined") window.history.replaceState(null, "", window.location.pathname);
+        }}
+      />
+    );
   }
 
   const labelClass = "block text-xs text-ink-3 tracking-widest uppercase mb-1.5";
