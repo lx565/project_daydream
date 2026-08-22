@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Md from "./Md";
+import Dots from "./Dots";
 import PaywallLock from "./PaywallLock";
 import BugReportButton from "./BugReportButton";
 import ZiweiChart from "./ZiweiChart";
@@ -10,22 +11,6 @@ import type { MonthlyCharts } from "./MonthlyFortuneFlow";
 import { useSSEStream, type StreamResult } from "@/lib/useSSEStream";
 import { usePaywall } from "@/lib/usePaywall";
 import type { MonthScore, MonthlyPreviewResult } from "@/app/api/reading/monthly/preview/route";
-
-function Dots({ n, type }: { n: number; type: "overall" | "career" | "romance" }) {
-  const colors = {
-    overall: ["bg-vermillion", "bg-vermillion/12"],
-    career:  ["bg-amber-500",  "bg-amber-100"],
-    romance: ["bg-rose-400",   "bg-rose-100"],
-  };
-  const [filled, empty] = colors[type];
-  return (
-    <span className="flex gap-px items-center justify-center">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={`w-1.5 h-1.5 rounded-full ${i < n ? filled : empty}`} />
-      ))}
-    </span>
-  );
-}
 
 function LoadingSkeleton() {
   return (
