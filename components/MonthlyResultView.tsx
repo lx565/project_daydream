@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Md from "./Md";
 import Dots from "./Dots";
 import PaywallLock from "./PaywallLock";
 import BugReportButton from "./BugReportButton";
 import ZiweiChart from "./ZiweiChart";
+import MonthCard from "./MonthCard";
 import type { MonthlyCharts } from "./MonthlyFortuneFlow";
-import { useSSEStream, type StreamResult } from "@/lib/useSSEStream";
 import { usePaywall } from "@/lib/usePaywall";
 import type { MonthScore, MonthlyPreviewResult } from "@/app/api/reading/monthly/preview/route";
+import type { MonthlyDetail, MonthlyBatchResult } from "@/app/api/reading/monthly/route";
+import type { ZiweiResult } from "@/lib/ziwei";
 
 function LoadingSkeleton() {
   return (
@@ -23,6 +24,44 @@ function LoadingSkeleton() {
       ))}
     </div>
   );
+}
+
+interface BatchState {
+  data: MonthlyDetail[] | null;
+  loading: boolean;
+  error: boolean;
+}
+
+/** Fetches one paid batch (4 months of structured fields) from
+ *  /api/reading/monthly. Mirrors this file's existing fetchPreview
+ *  stale-response-guard pattern (a request-id ref, not just a boolean),
+ *  so a retry firing after this component has moved on doesn't clobber
+ *  newer state. */
+function useMonthlyBatch(ziwei: ZiweiResult, name: string | undefined, batch: 1 | 2 | 3, enabled: boolean) {
+  const [state, setState] = useState<BatchState>({ data: null, loading: false, error: false });
+  const requestRef = useRef(0);
+
+  const fetchBatch = useCallback(() => {
+    const requestId = ++requestRef.current;
+    setState({ data: null, loading: true, error: false });
+    fetch("/api/reading/monthly", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ziwei, name, batch }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: MonthlyBatchResult) => { if (requestRef.current === requestId) setState({ data: d.months, loading: false, error: false }); })
+      .catch(() => { if (requestRef.current === requestId) setState({ data: null, loading: false, error: true }); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch]);
+
+  useEffect(() => {
+    if (!enabled || state.data || state.loading) return;
+    fetchBatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, fetchBatch]);
+
+  return { ...state, retry: fetchBatch };
 }
 
 const MONTHLY_INCLUDED = [
@@ -75,20 +114,11 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
     fetchPreview();
   }, [fetchPreview]);
 
-  const body = { ziwei, name };
-  const batch1 = useSSEStream("/api/reading/monthly", `${chartId}_b1`);
-  const batch2 = useSSEStream("/api/reading/monthly", `${chartId}_b2`);
-  const batch3 = useSSEStream("/api/reading/monthly", `${chartId}_b3`);
-
-  useEffect(() => {
-    if (paywall.loading || gated) return;
-    if (batch1.status === "idle") batch1.start({ ...body, batch: 1 });
-    if (batch2.status === "idle") batch2.start({ ...body, batch: 2 });
-    if (batch3.status === "idle") batch3.start({ ...body, batch: 3 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paywall.loading, gated]);
-
-  const batches: [StreamResult, StreamResult, StreamResult] = [batch1, batch2, batch3];
+  const batchEnabled = !paywall.loading && !gated;
+  const batch1 = useMonthlyBatch(ziwei, name, 1, batchEnabled);
+  const batch2 = useMonthlyBatch(ziwei, name, 2, batchEnabled);
+  const batch3 = useMonthlyBatch(ziwei, name, 3, batchEnabled);
+  const batches = [batch1, batch2, batch3];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -159,23 +189,39 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
         {gated ? (
           <PaywallLock chartId={chartId} sectionLabel="逐月詳細解讀" included={MONTHLY_INCLUDED} proofStrip={MONTHLY_PROOF_STRIP} />
         ) : (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5 space-y-4">
-            {batches.map((b, i) => (
-              <div key={i}>
-                {(b.status === "idle" || b.status === "streaming") && <LoadingSkeleton />}
-                {b.status === "error" && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-vermillion">{b.errorMsg}</p>
-                    <button onClick={() => b.start({ ...body, batch: i + 1 })} className="text-xs text-gold underline">重試</button>
-                  </div>
-                )}
-                {b.status === "done" && (
-                  <div className="animate-fade-in prose max-w-none text-sm [&_h3]:text-vermillion [&_h3]:font-bold [&_h3]:text-sm [&_h3]:mt-4 [&_h3]:mb-1.5 [&_p]:text-ink-2 [&_p]:leading-relaxed [&_p]:text-sm [&_strong]:text-ink [&_strong]:font-semibold">
-                    <Md>{b.text}</Md>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="space-y-4">
+            {batches.map((b, i) => {
+              // Each batch covers a fixed 4-month slice of the same 12-month
+              // window the free preview already computed — pairing by index
+              // is safe because both this route and the preview route derive
+              // their ordering from the same getFlowMonths() call, and the
+              // paid route's own (year,month) matching (Task 2) guarantees
+              // its 4 returned entries are in that same flow order.
+              const scoreSlice = preview?.months.slice(i * 4, i * 4 + 4) ?? [];
+              return (
+                <div key={i} className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+                  {(b.loading || (!b.data && !b.error)) && <LoadingSkeleton />}
+                  {b.error && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-vermillion">推算失敗，請重新整理重試。</p>
+                      <button onClick={b.retry} className="text-xs text-gold underline">重試</button>
+                    </div>
+                  )}
+                  {b.data && scoreSlice.length === b.data.length && (
+                    <div className="space-y-4 animate-fade-in">
+                      {b.data.map((detail, j) => (
+                        <MonthCard
+                          key={`${detail.year}-${detail.month}`}
+                          score={scoreSlice[j]}
+                          detail={detail}
+                          isCurrentMonth={i === 0 && j === 0}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
