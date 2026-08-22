@@ -198,6 +198,14 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
               // paid route's own (year,month) matching (Task 2) guarantees
               // its 4 returned entries are in that same flow order.
               const scoreSlice = preview?.months.slice(i * 4, i * 4 + 4) ?? [];
+              // preview is ONE shared piece of state feeding all three batch panels.
+              // If it hasn't resolved yet (still loading / not started), the batch's
+              // AI content may already be in even though we don't have scores to pair
+              // it with yet — show a skeleton rather than nothing. If preview has
+              // failed (or, defensively, resolved but still doesn't line up), show an
+              // error with a retry that re-fetches the actual thing that's broken
+              // (the preview), not the batch (which already succeeded).
+              const previewPending = previewLoading || (!preview && !previewError);
               return (
                 <div key={i} className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
                   {(b.loading || (!b.data && !b.error)) && <LoadingSkeleton />}
@@ -205,6 +213,13 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
                     <div className="space-y-2">
                       <p className="text-sm text-vermillion">推算失敗，請重新整理重試。</p>
                       <button onClick={b.retry} className="text-xs text-gold underline">重試</button>
+                    </div>
+                  )}
+                  {b.data && scoreSlice.length !== b.data.length && previewPending && <LoadingSkeleton />}
+                  {b.data && scoreSlice.length !== b.data.length && !previewPending && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-vermillion">總覽資料載入失敗，請重新整理重試。</p>
+                      <button onClick={fetchPreview} className="text-xs text-gold underline">重試</button>
                     </div>
                   )}
                   {b.data && scoreSlice.length === b.data.length && (

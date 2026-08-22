@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
     const parsed = JSON.parse(cleaned) as { months?: RawMonthEntry[] };
     if (Array.isArray(parsed.months)) parsedMonths = parsed.months;
   } catch {
+    console.error("[monthly] JSON parse failed, raw:", raw.slice(0, 300));
     parsedMonths = [];
   }
 
