@@ -6,11 +6,12 @@ import Dots from "./Dots";
 import PaywallLock from "./PaywallLock";
 import BugReportButton from "./BugReportButton";
 import ZiweiChart from "./ZiweiChart";
-import MonthCard from "./MonthCard";
+import MonthCard, { MonthCardBody } from "./MonthCard";
 import type { MonthlyCharts } from "./MonthlyFortuneFlow";
 import { usePaywall } from "@/lib/usePaywall";
 import type { MonthScore, MonthlyPreviewResult } from "@/app/api/reading/monthly/preview/route";
 import type { MonthlyDetail, MonthlyBatchResult } from "@/app/api/reading/monthly/route";
+import type { MonthlySummaryResult } from "@/app/api/reading/monthly/summary/route";
 import type { ZiweiResult } from "@/lib/ziwei";
 
 function LoadingSkeleton() {
@@ -62,6 +63,44 @@ function useMonthlyBatch(ziwei: ZiweiResult, name: string | undefined, batch: 1 
   }, [enabled, fetchBatch]);
 
   return { ...state, retry: fetchBatch };
+}
+
+interface SummaryState {
+  data: string | null;
+  loading: boolean;
+  error: boolean;
+}
+
+/** Fetches the whole-year synthesis paragraph from
+ *  /api/reading/monthly/summary. Same stale-response-guard shape as
+ *  useMonthlyBatch/fetchPreview, just for a single string instead of an
+ *  array — kept separate rather than generalized into a shared hook since
+ *  the three call sites' response shapes genuinely differ. */
+function useMonthlySummary(ziwei: ZiweiResult, name: string | undefined, enabled: boolean) {
+  const [state, setState] = useState<SummaryState>({ data: null, loading: false, error: false });
+  const requestRef = useRef(0);
+
+  const fetchSummary = useCallback(() => {
+    const requestId = ++requestRef.current;
+    setState({ data: null, loading: true, error: false });
+    fetch("/api/reading/monthly/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ziwei, name }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: MonthlySummaryResult) => { if (requestRef.current === requestId) setState({ data: d.summary, loading: false, error: false }); })
+      .catch(() => { if (requestRef.current === requestId) setState({ data: null, loading: false, error: true }); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || state.data || state.loading) return;
+    fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, fetchSummary]);
+
+  return { ...state, retry: fetchSummary };
 }
 
 const MONTHLY_INCLUDED = [
@@ -119,6 +158,49 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
   const batch2 = useMonthlyBatch(ziwei, name, 2, batchEnabled);
   const batch3 = useMonthlyBatch(ziwei, name, 3, batchEnabled);
   const batches = [batch1, batch2, batch3];
+  const summary = useMonthlySummary(ziwei, name, batchEnabled);
+
+  // "Download all 12 as one long image" needs every piece of paid content —
+  // the year summary and all 3 batches paired with their preview scores —
+  // ready at once, otherwise the long image would have gaps.
+  const allMonthsReady = !!preview && !!summary.data && batches.every((b) => b.data && b.data.length === 4);
+  const allPairs = allMonthsReady
+    ? batches.flatMap((b, i) => {
+        const scoreSlice = preview!.months.slice(i * 4, i * 4 + 4);
+        return b.data!.map((detail, j) => ({ score: scoreSlice[j], detail, isCurrentMonth: i === 0 && j === 0 }));
+      })
+    : [];
+
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const allCaptureRef = useRef<HTMLDivElement>(null);
+
+  async function handleDownloadAll() {
+    if (!allCaptureRef.current || downloadingAll || !allMonthsReady) return;
+    setDownloadingAll(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const el = allCaptureRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#faf7f2",
+        logging: false,
+        width: el.offsetWidth,
+        height: el.scrollHeight,
+        windowHeight: el.scrollHeight,
+        scrollY: 0,
+        scrollX: 0,
+      });
+      const link = document.createElement("a");
+      const first = allPairs[0]?.score;
+      const stamp = first ? `${first.year}${String(first.month).padStart(2, "0")}` : "";
+      link.download = `命裡-逐月運勢全年-${stamp}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -182,14 +264,39 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
       </div>
 
       <div>
-        <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
-          <span className="w-px h-3 bg-vermillion inline-block" />
-          <span className="text-vermillion">逐月詳細解讀</span>
-        </p>
+        <div className="flex items-center justify-between gap-2 mb-2 px-1">
+          <p className="text-xs text-ink-4 tracking-widest uppercase flex items-center gap-2">
+            <span className="w-px h-3 bg-vermillion inline-block" />
+            <span className="text-vermillion">逐月詳細解讀</span>
+          </p>
+          {!gated && allMonthsReady && (
+            <button
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+              className="text-[11px] text-ink-3 hover:text-vermillion underline underline-offset-2 disabled:opacity-60 whitespace-nowrap"
+            >
+              {downloadingAll ? "正在生成長圖…" : "↓ 下載全年長圖"}
+            </button>
+          )}
+        </div>
         {gated ? (
           <PaywallLock chartId={chartId} sectionLabel="逐月詳細解讀" included={MONTHLY_INCLUDED} proofStrip={MONTHLY_PROOF_STRIP} />
         ) : (
           <div className="space-y-4">
+            <div className="paper-card rounded-2xl border-2 border-gold/40 bg-gradient-to-b from-gold-l/20 to-paper p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-5 bg-vermillion rounded-full" />
+                <h3 className="text-sm font-bold text-ink tracking-wide">全年運勢總覽</h3>
+              </div>
+              {(summary.loading || (!summary.data && !summary.error)) && <LoadingSkeleton />}
+              {summary.error && (
+                <div className="space-y-2">
+                  <p className="text-sm text-vermillion">推算失敗，請重新整理重試。</p>
+                  <button onClick={summary.retry} className="text-xs text-gold underline">重試</button>
+                </div>
+              )}
+              {summary.data && <p className="text-sm text-ink-2 leading-relaxed animate-fade-in">{summary.data}</p>}
+            </div>
             {batches.map((b, i) => {
               // Each batch covers a fixed 4-month slice of the same 12-month
               // window the free preview already computed — pairing by index
@@ -237,6 +344,27 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
                 </div>
               );
             })}
+          </div>
+        )}
+        {/* Hidden capture target for "download all as one long image" —
+            fixed off-screen, matches ExportReport.tsx's/MonthCard's
+            established html2canvas pattern in this codebase. Only rendered
+            once every piece of paid content is ready, so the long image
+            never has a gap. */}
+        {!gated && allMonthsReady && (
+          <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1, pointerEvents: "none" }}>
+            <div ref={allCaptureRef} className="bg-[#faf7f2] p-4 space-y-4" style={{ width: 392 }}>
+              <div className="rounded-xl border-2 border-gold/40 bg-gradient-to-b from-gold-l/20 to-paper p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-5 bg-vermillion rounded-full" />
+                  <h3 className="text-sm font-bold text-ink tracking-wide">全年運勢總覽</h3>
+                </div>
+                <p className="text-sm text-ink-2 leading-relaxed">{summary.data}</p>
+              </div>
+              {allPairs.map((p) => (
+                <MonthCardBody key={`${p.score.year}-${p.score.month}`} score={p.score} detail={p.detail} isCurrentMonth={p.isCurrentMonth} />
+              ))}
+            </div>
           </div>
         )}
       </div>

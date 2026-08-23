@@ -6,50 +6,21 @@ import { monthlyLuck } from "@/lib/monthlyLuck";
 import type { MonthScore } from "@/app/api/reading/monthly/preview/route";
 import type { MonthlyDetail } from "@/app/api/reading/monthly/route";
 
-interface MonthCardProps {
+interface MonthCardBodyProps {
   score: MonthScore;
   detail: MonthlyDetail;
   isCurrentMonth: boolean;
 }
 
-export default function MonthCard({ score, detail, isCurrentMonth }: MonthCardProps) {
-  const [capturing, setCapturing] = useState(false);
-  const captureRef = useRef<HTMLDivElement>(null);
+// Pure presentational card — no download logic, no ref. Reused both by
+// MonthCard's own per-card capture and by MonthlyResultView's "download all
+// 12 as one long image" feature, so the two exports never drift apart.
+export function MonthCardBody({ score, detail, isCurrentMonth }: MonthCardBodyProps) {
   const luck = monthlyLuck(score.ganzhi);
   const headline = detail.headline || score.theme;
 
-  async function handleDownload() {
-    if (!captureRef.current || capturing) return;
-    setCapturing(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const el = captureRef.current;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#faf7f2",
-        logging: false,
-        width: el.offsetWidth,
-        height: el.scrollHeight,
-        windowHeight: el.scrollHeight,
-        scrollY: 0,
-        scrollX: 0,
-      });
-      const link = document.createElement("a");
-      link.download = `命裡-逐月-${score.year}${score.month}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } finally {
-      setCapturing(false);
-    }
-  }
-
-  const CardBody = ({ forCapture = false }: { forCapture?: boolean }) => (
-    <div
-      ref={forCapture ? captureRef : undefined}
-      className={`rounded-xl border p-4 bg-paper ${isCurrentMonth ? "border-vermillion/50 ring-1 ring-vermillion/20" : "border-border-warm"}`}
-      style={forCapture ? { width: 360 } : undefined}
-    >
+  return (
+    <div className={`rounded-xl border p-4 bg-paper ${isCurrentMonth ? "border-vermillion/50 ring-1 ring-vermillion/20" : "border-border-warm"}`}>
       <div className="flex items-center gap-1.5 mb-1">
         <span className={`text-sm font-bold tabular-nums ${isCurrentMonth ? "text-vermillion" : "text-ink"}`}>
           {score.year}年{score.month}月 {score.ganzhi}
@@ -81,10 +52,47 @@ export default function MonthCard({ score, detail, isCurrentMonth }: MonthCardPr
       </p>
     </div>
   );
+}
+
+interface MonthCardProps {
+  score: MonthScore;
+  detail: MonthlyDetail;
+  isCurrentMonth: boolean;
+}
+
+export default function MonthCard({ score, detail, isCurrentMonth }: MonthCardProps) {
+  const [capturing, setCapturing] = useState(false);
+  const captureRef = useRef<HTMLDivElement>(null);
+
+  async function handleDownload() {
+    if (!captureRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const el = captureRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#faf7f2",
+        logging: false,
+        width: el.offsetWidth,
+        height: el.scrollHeight,
+        windowHeight: el.scrollHeight,
+        scrollY: 0,
+        scrollX: 0,
+      });
+      const link = document.createElement("a");
+      link.download = `命裡-逐月-${score.year}${String(score.month).padStart(2, "0")}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setCapturing(false);
+    }
+  }
 
   return (
     <div className="relative">
-      <CardBody />
+      <MonthCardBody score={score} detail={detail} isCurrentMonth={isCurrentMonth} />
       <button
         onClick={handleDownload}
         disabled={capturing}
@@ -102,7 +110,9 @@ export default function MonthCard({ score, detail, isCurrentMonth }: MonthCardPr
       {/* Hidden capture target — fixed off-screen, matches ExportReport.tsx's
           established pattern for html2canvas exports in this codebase. */}
       <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1, pointerEvents: "none" }}>
-        <CardBody forCapture />
+        <div ref={captureRef} style={{ width: 360 }}>
+          <MonthCardBody score={score} detail={detail} isCurrentMonth={isCurrentMonth} />
+        </div>
       </div>
     </div>
   );
