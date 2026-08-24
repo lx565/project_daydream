@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gtagEvent } from "@/lib/gtag";
-import { chartType, CHART_PRICE_USD } from "@/lib/chartType";
+import { chartType, CHART_PRICE_USD, type ChartType } from "@/lib/chartType";
 
 // Client hook resolving the paywall state for a chart.
 //
-//   enabled  — master switch (NEXT_PUBLIC_PAYWALL_ENABLED === "true").
+//   enabled  — master switch (NEXT_PUBLIC_PAYWALL_ENABLED === "true") AND the
+//              chart's own product type isn't in the per-type override below.
 //              While false the whole feature is inert: every section stays free,
 //              so deploying the paywall code changes nothing until you flip the
 //              env var in Vercel.
@@ -17,6 +18,18 @@ import { chartType, CHART_PRICE_USD } from "@/lib/chartType";
 //              start (pay for) gated AI sections while loading.
 
 const PAYWALL_ENABLED = process.env.NEXT_PUBLIC_PAYWALL_ENABLED === "true";
+
+// Comma-separated ChartType values to force-free regardless of the master
+// switch, e.g. "hepan" or "hepan,monthly" — a temporary, reversible way to
+// give one product away for testing/promotion without touching the others.
+// Unset (default) disables nothing; remove the env var to restore normal
+// paywall behavior for that type.
+const DISABLED_TYPES = new Set(
+  (process.env.NEXT_PUBLIC_PAYWALL_DISABLED_TYPES ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean) as ChartType[]
+);
 
 // Fires "purchase" at most once per chart per browser session — guards against
 // re-firing on a manual refresh of the ?paid=1 return page (refs alone don't
@@ -36,12 +49,13 @@ export interface PaywallState {
 }
 
 export function usePaywall(chartId?: string): PaywallState {
+  const enabled = PAYWALL_ENABLED && !(chartId && DISABLED_TYPES.has(chartType(chartId)));
   const [unlocked, setUnlocked] = useState(false);
-  const [loading, setLoading] = useState(PAYWALL_ENABLED);
+  const [loading, setLoading] = useState(enabled);
   const polled = useRef(false);
 
   useEffect(() => {
-    if (!PAYWALL_ENABLED || !chartId) {
+    if (!enabled || !chartId) {
       setLoading(false);
       return;
     }
@@ -93,5 +107,5 @@ export function usePaywall(chartId?: string): PaywallState {
     return () => { cancelled = true; };
   }, [chartId]);
 
-  return { enabled: PAYWALL_ENABLED, unlocked, loading };
+  return { enabled, unlocked, loading };
 }
