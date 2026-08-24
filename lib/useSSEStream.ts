@@ -50,8 +50,8 @@ export interface StreamOpts {
   validate?: boolean;
 }
 
-// v16: 2026-06-30 couple v2 — relationship-aware reading + preview/full split.
-const CACHE_PREFIX = "ziwei_rd_v20_";
+// v21: 2026-08-24 couple/preview: full relevant-palace/star/四化 grounding (was 夫妻宮-only).
+const CACHE_PREFIX = "ziwei_rd_v21_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
