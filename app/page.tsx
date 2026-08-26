@@ -180,15 +180,17 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <Link
               href="/hepan"
-              className="hidden sm:block text-sm text-ink-3 hover:text-vermillion transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors"
             >
               雙人合盤
+              <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">免費</span>
             </Link>
             <Link
               href="/yueyun"
-              className="hidden sm:block text-sm text-ink-3 hover:text-vermillion transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors"
             >
               逐月運勢
+              <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">免費</span>
             </Link>
             <Link
               href="/library"
@@ -205,6 +207,15 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      {/* ── 1.5 限時免費 Promo Banner ── */}
+      <div className="bg-vermillion text-paper text-center py-2 px-4 text-xs sm:text-sm">
+        🎉 限時免費：
+        <Link href="/hepan" className="underline underline-offset-2 hover:opacity-80 transition-opacity">雙人合盤</Link>
+        {" "}與{" "}
+        <Link href="/yueyun" className="underline underline-offset-2 hover:opacity-80 transition-opacity">逐月運勢</Link>
+        {" "}現正完全免費，把握機會體驗完整解讀！
+      </div>
 
       {/* ── 2. Hero ── */}
       <section className="py-8 lg:py-16 px-4">

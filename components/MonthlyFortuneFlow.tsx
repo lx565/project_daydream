@@ -31,6 +31,11 @@ export interface MonthlyCharts {
   ziwei: ZiweiResult;
   name?: string;
   gender: "male" | "female";
+  // Raw submitted date/hour (not derivable losslessly from ZiweiResult.birth,
+  // which stores an iztro shichen index, not a clock hour) — carried through
+  // so MonthlyResultView can log entries via the same schema ChartSaver uses.
+  date: string;
+  hour: number;
   sessionId: string;
 }
 
@@ -69,7 +74,7 @@ async function computeCharts(p: PersonFields): Promise<MonthlyCharts> {
   const h = parseInt(p.hour, 10);
   const gender = p.gender as "male" | "female";
   const ziwei = await calculateZiwei(y, m, d, h, gender);
-  return { ziwei, name: p.name || undefined, gender, sessionId: personKey(p) };
+  return { ziwei, name: p.name || undefined, gender, date: p.date, hour: h, sessionId: personKey(p) };
 }
 
 export default function MonthlyFortuneFlow() {
@@ -185,7 +190,7 @@ export default function MonthlyFortuneFlow() {
       </button>
 
       <p className="text-center text-[11px] text-ink-4">
-        出生時間預設按北京時間（UTC+8）排盤 · 資訊僅用於本次推算，不會儲存
+        出生時間預設按北京時間（UTC+8）排盤 · 資訊僅用於本次推算與網站使用統計，不會用於其他用途
       </p>
     </form>
   );

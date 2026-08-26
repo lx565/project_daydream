@@ -5,6 +5,7 @@ import Link from "next/link";
 import Dots from "./Dots";
 import PaywallLock from "./PaywallLock";
 import BugReportButton from "./BugReportButton";
+import EntryTracker from "./EntryTracker";
 import ZiweiChart from "./ZiweiChart";
 import MonthCard, { MonthCardBody } from "./MonthCard";
 import type { MonthlyCharts } from "./MonthlyFortuneFlow";
@@ -118,7 +119,7 @@ const MONTHLY_PROOF_STRIP = [
 ];
 
 export default function MonthlyResultView({ charts, onReset }: { charts: MonthlyCharts; onReset: () => void }) {
-  const { ziwei, name, gender, sessionId } = charts;
+  const { ziwei, name, gender, date, hour, sessionId } = charts;
   const label = name || (gender === "male" ? "命主（男）" : "命主（女）");
 
   const chartId = `yueyun_${sessionId}`;
@@ -204,6 +205,8 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <EntryTracker date={date} hour={hour} gender={gender} name={name} method="monthly" dedupeKey="monthly_birth" />
+
       <button onClick={onReset}
         className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors">
         ← 重新填寫

@@ -35,6 +35,10 @@ interface Charts {
   baziB: BaziResult; ziweiB: ZiweiResult;
   nameA?: string; nameB?: string;
   genderA: "male" | "female"; genderB: "male" | "female";
+  // Raw submitted date/hour (not derivable losslessly from ZiweiResult.birth,
+  // which stores an iztro shichen index, not a clock hour) — carried through
+  // so HepanResultView can log entries via the same schema ChartSaver uses.
+  dateA: string; hourA: number; dateB: string; hourB: number;
   sessionId: string;
   relType: RelationshipType;
 }
@@ -168,6 +172,7 @@ async function computeCharts(a: PersonFields, b: PersonFields, relType: Relation
     nameA: a.name || undefined,
     nameB: b.name || undefined,
     genderA: gA, genderB: gB,
+    dateA: a.date, hourA: ha, dateB: b.date, hourB: hb,
     sessionId: `${personKey(a)}_${personKey(b)}_${relType}`,
     relType,
   };
@@ -287,7 +292,7 @@ export default function HepanFlow() {
       </button>
 
       <p className="text-center text-[11px] text-ink-4">
-        出生時間預設按北京時間（UTC+8）排盤 · 雙方資訊僅用於本次推算，不會儲存
+        出生時間預設按北京時間（UTC+8）排盤 · 雙方資訊僅用於本次推算與網站使用統計，不會用於其他用途
       </p>
     </form>
   );

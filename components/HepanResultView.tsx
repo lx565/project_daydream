@@ -7,6 +7,7 @@ import ZiweiChart from "./ZiweiChart";
 import PaywallLock from "./PaywallLock";
 import ChatInterface from "./ChatInterface";
 import BugReportButton from "./BugReportButton";
+import EntryTracker from "./EntryTracker";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { calcCoupleScoreV2 } from "@/lib/couple";
@@ -21,6 +22,7 @@ export interface HepanCharts {
   baziB: BaziResult; ziweiB: ZiweiResult;
   nameA?: string; nameB?: string;
   genderA: "male" | "female"; genderB: "male" | "female";
+  dateA: string; hourA: number; dateB: string; hourB: number;
   sessionId: string;
   relType: RelationshipType;
 }
@@ -192,7 +194,7 @@ const FREE_TABS = new Set<Tab>(["overview"]);
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function HepanResultView({ charts, onReset }: { charts: HepanCharts; onReset: () => void }) {
-  const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, sessionId, relType } = charts;
+  const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, dateA, hourA, dateB, hourB, sessionId, relType } = charts;
   const cfg = getRelationshipConfig(relType);
   const score = calcCoupleScoreV2(baziA, ziweiA, baziB, ziweiB, cfg.key);
   const labelA = nameA || (genderA === "male" ? "甲方（男）" : "甲方（女）");
@@ -418,6 +420,9 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
 
   return (
     <div className="max-w-2xl mx-auto space-y-0">
+      <EntryTracker date={dateA} hour={hourA} gender={genderA} name={nameA} method="hepan" dedupeKey="hepan_birth" />
+      <EntryTracker date={dateB} hour={hourB} gender={genderB} name={nameB} method="hepan" dedupeKey="hepan_birth" />
+
       <button onClick={onReset}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors">
         ← 重新填寫
