@@ -32,8 +32,16 @@ function resolveModel(): string {
 const CACHE_VERSION = "seo-v2"; // v2: deep 7-section structure + R1 model
 const CACHE_TTL = 60 * 60 * 24 * 90; // 90 days
 
+// Hash the FULL system string, not a prefix. Several callers (getSihuaContent,
+// getSihuaPalaceContent, getXiongContent, getStarPalaceContent) append an
+// optional `revisionNote` onto the END of `system` to request targeted
+// regeneration — base system prompts here run well past 80 chars (e.g.
+// SIHUA_BASE_RULES alone is 1400+), so a prefix-only hash made every
+// revisionNote call collide with the original cache entry and silently
+// re-serve the stale (unrevised) content instead of regenerating. Found
+// 2026-08-25 when a revision request returned byte-identical output twice.
 function cacheKey(tag: string, model: string, system: string, prompt: string): string {
-  const hash = createHash("md5").update(model + "|" + system.slice(0, 80) + "|" + prompt).digest("hex");
+  const hash = createHash("md5").update(model + "|" + system + "|" + prompt).digest("hex");
   return `seo:${CACHE_VERSION}:${tag}:${hash}`;
 }
 
