@@ -8,6 +8,7 @@ import PaywallLock from "./PaywallLock";
 import ChatInterface from "./ChatInterface";
 import BugReportButton from "./BugReportButton";
 import EntryTracker from "./EntryTracker";
+import ToolCTA from "./ToolCTA";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { calcCoupleScoreV2 } from "@/lib/couple";
@@ -447,6 +448,14 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
         {isLocked(activeTab) ? (
           <PaywallLock chartId={coupleChartId} sectionLabel={TABS.find((t) => t.id === activeTab)?.label} included={COUPLE_INCLUDED} />
         ) : renderContent()}
+      </div>
+
+      <div className="mb-6">
+        <ToolCTA
+          source="hepan"
+          sub="看完兩人的合盤，也來看看你自己的命盤吧——三合、四化、飛星三派合參，AI 依據逾百部典籍，為你逐宮詳批命格、大限與流年。"
+          label="生成我的個人命盤詳批"
+        />
       </div>
 
       <div className="space-y-4 mb-6">

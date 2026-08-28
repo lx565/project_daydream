@@ -6,6 +6,7 @@ import Dots from "./Dots";
 import PaywallLock from "./PaywallLock";
 import BugReportButton from "./BugReportButton";
 import EntryTracker from "./EntryTracker";
+import ToolCTA from "./ToolCTA";
 import ZiweiChart from "./ZiweiChart";
 import MonthCard, { MonthCardBody } from "./MonthCard";
 import type { MonthlyCharts } from "./MonthlyFortuneFlow";
@@ -370,6 +371,14 @@ export default function MonthlyResultView({ charts, onReset }: { charts: Monthly
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mb-6">
+        <ToolCTA
+          source="monthly"
+          sub="看完逐月運勢，也來看看你的完整命盤吧——三合、四化、飛星三派合參，AI 依據逾百部典籍，為你逐宮詳批命格、大限與流年。"
+          label="生成我的個人命盤詳批"
+        />
       </div>
 
       <div>

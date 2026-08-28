@@ -3,23 +3,25 @@
 import Link from "next/link";
 import { gtagEvent } from "@/lib/gtag";
 
-const HREF = "/?from=seo#form";
-
 interface Props {
   variant?: "card" | "slim";
   sub?: string;
   label?: string;
+  /** Attribution tag for the ?from= query param + gtag event, e.g. "hepan" / "monthly". Defaults to the original SEO-page usage. */
+  source?: string;
 }
 
-export default function ToolCTA({ variant = "card", sub, label }: Props) {
+export default function ToolCTA({ variant = "card", sub, label, source = "seo" }: Props) {
+  const href = `/?from=${source}#form`;
+
   function handleClick() {
-    gtagEvent("library_to_tool", { variant });
+    gtagEvent("library_to_tool", { variant, source });
   }
 
   if (variant === "slim") {
     return (
       <Link
-        href={HREF}
+        href={href}
         onClick={handleClick}
         className="block text-center bg-vermillion text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-vermillion-h transition-colors"
       >
@@ -34,7 +36,7 @@ export default function ToolCTA({ variant = "card", sub, label }: Props) {
         {sub ?? "三合、四化、飛星三派合參，AI 依據 逾百部典籍，為你逐宮詳批命格、大限與流年。"}
       </p>
       <Link
-        href={HREF}
+        href={href}
         onClick={handleClick}
         className="inline-block bg-vermillion text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-vermillion-h transition-colors"
       >
