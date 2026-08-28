@@ -51,7 +51,7 @@ export interface StreamOpts {
 }
 
 // v21: 2026-08-24 couple/preview: full relevant-palace/star/四化 grounding (was 夫妻宮-only).
-const CACHE_PREFIX = "ziwei_rd_v21_";
+const CACHE_PREFIX = "ziwei_rd_v22_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 

@@ -2,7 +2,7 @@
 // 不做解鎖檢查。鉤子句對有前世緣的關係類型作截斷，吊起付費欲望。
 // 宮位/星曜/四化的抓取邏輯與 app/api/reading/couple/route.ts（付費版）一致，
 // 只是段落長度與資料量縮減至預覽規模，維持「留白吊起好奇」的定位不變。
-import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
+import { MODERN_INSTRUCTION, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 export const maxDuration = 30;
 
 import { NextRequest } from "next/server";
@@ -55,7 +55,7 @@ function buildSystem(hasPastLife: boolean): string {
 請只輸出以下幾塊——雖是免費預覽要留白吊起好奇，但每一句話都必須具體扣住下方給出的星曜/宮位/四化證據來寫，不可空泛斷言或憑空發揮：
 
 ## 各自的感情模式
-**[甲方稱呼]**：用3-4行描述這個人在該關係裡的相處模式與情感傾向。至少提到一個下方給出的相關宮位星曜（不只是夫妻宮，其他相關宮位也可），並說明「為什麼」——星曜性質如何導致這個傾向；若該宮位有化祿/化權/化科，可點出這是加分之處；若有化忌，溫和點出需留意的面向。可用一點依戀風格式的心理學語言。
+**[甲方稱呼]**：用3-4行描述這個人在該關係裡的相處模式與情感傾向，先講白話（這個人在感情裡是什麼樣子），再輕輕帶出一個下方給出的相關宮位星曜作依據（不只是夫妻宮，其他相關宮位也可），星曜名稱第一次出現時順手用白話補一句是什麼意思；若該宮位有化祿/化權/化科，可點出這是加分之處；若有化忌，溫和點出需留意的面向。可用一點依戀風格式的心理學語言。
 **[乙方稱呼]**：同樣3-4行，同樣要求。
 
 ## 相處之道
@@ -71,7 +71,7 @@ ${pastLifeBlock}
 最後單獨一行，以「——」開頭寫一句「鉤子」，戛然而止、引人想看下文，例如：
 ——你們之間，似乎有一段更早的淵源……
 
-繁體中文（臺灣用語）。不要出現「付費/解鎖/完整版」等字樣。` + MODERN_INSTRUCTION;
+繁體中文（臺灣用語）。不要出現「付費/解鎖/完整版」等字樣。` + ACCESSIBLE_LANGUAGE_INSTRUCTION + MODERN_INSTRUCTION;
 }
 
 export async function POST(request: NextRequest) {

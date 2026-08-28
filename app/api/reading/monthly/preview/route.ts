@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { getFlowMonths, flowMonthFactsFrom, type FlowMonth } from "@/lib/flowMonths";
 import { callAI } from "@/lib/callAI";
-import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
+import { SAFETY_GUARDRAIL, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
 
 const MONTHS_AHEAD = 12;
@@ -68,16 +68,21 @@ function scoreMonth(f: FlowMonth, starPalaceMap: Record<string, string>): MonthS
   // Theme: a 忌 in a notable palace takes priority (caution beats opportunity
   // for what's worth flagging to the user), else the best 祿/權, else a lone
   // 科 (still worth a nod since it nudges the score), else neutral.
-  // NOTABLE_PALACES mixes naming conventions ("命宮" already has the 宮
-  // suffix; others like "財帛" don't) — normalize before appending 值/迎.
-  const pn = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
+  // This is a deterministic string (no AI call), so unlike the AI-written
+  // fields there's no chance to gloss 星曜/宮位/四化 inline — it's shown raw
+  // to every free user on the score grid. Translate straight to the plain
+  // life-area it affects instead of naming the palace/star/mutagen at all.
+  const AREA_LABEL: Record<string, string> = {
+    命宮: "整體運勢", 財帛: "財務", 官祿: "事業", 夫妻: "感情", 疾厄: "健康與精力",
+  };
+  const areaOf = (palace: string) => AREA_LABEL[palace] ?? "整體運勢";
   const caution = signals.find((s) => s.type === "忌");
   const opportunity = signals.find((s) => s.type === "祿" || s.type === "權");
   const steady = signals.find((s) => s.type === "科");
   let theme = "運勢平穩，按部就班";
-  if (caution) theme = `${pn(caution.palace)}值${caution.star}化忌，宜謹慎`;
-  else if (opportunity) theme = `${pn(opportunity.palace)}迎${opportunity.star}化${opportunity.type}，機會浮現`;
-  else if (steady) theme = `${pn(steady.palace)}迎${steady.star}化科，運勢趨穩`;
+  if (caution) theme = `${areaOf(caution.palace)}方面較需謹慎，行事宜多留意細節`;
+  else if (opportunity) theme = `${areaOf(opportunity.palace)}方面機會浮現，適合主動把握`;
+  else if (steady) theme = `${areaOf(steady.palace)}方面運勢趨穩，穩紮穩打`;
 
   const clamp = (n: number) => Math.min(5, Math.max(1, Math.round(n)));
   return {
@@ -88,7 +93,7 @@ function scoreMonth(f: FlowMonth, starPalaceMap: Record<string, string>): MonthS
 
 const TEASER_SYSTEM = `你是紫微斗數流月推算專家。根據命主本月的流月資料，寫一段簡短的本月運勢短評，約60–80字，作為付費完整逐月解讀的免費試閱。
 語氣真誠專業，據盤論斷，不誇飾。結尾自然帶出還有完整12個月解讀的期待感，但不要生硬推銷。
-只輸出短評本文，不要標題、不要前綴。繁體中文。` + SAFETY_GUARDRAIL;
+只輸出短評本文，不要標題、不要前綴。繁體中文。` + ACCESSIBLE_LANGUAGE_INSTRUCTION + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "monthly-preview" })).allowed) {

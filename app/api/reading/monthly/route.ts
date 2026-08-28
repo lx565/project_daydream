@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { callAI } from "@/lib/callAI";
-import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
+import { SAFETY_GUARDRAIL, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowMonths, type FlowMonth } from "@/lib/flowMonths";
 
@@ -31,19 +31,19 @@ const FALLBACK_ADVICE = "（本次未取得詳細建議，其餘月份不受影�
 const SYSTEM = `你是精通紫微斗數流月推斷的命理師，據盤論斷，用詞專業平實而有溫度。
 
 以下是命主連續數月的流月資料。請針對每一個月，輸出四個欄位：
-- headline：本月最值得留意的一句話重點，需具體點出星曜或宮位（15–20字）
+- headline：本月最值得留意的一句話重點，用白話講清楚是什麼狀況（15–20字），最多帶一個星曜或宮位名稱作點綴，不強求
 - good：一件本月適合做的具體事（10–15字，例如「洽談合作」「主動溝通」，避免空泛詞如「保持樂觀」）
 - caution：一件本月需留意之處（10–15字，具體到情境，例如「文件契約需多確認」）
-- advice：整合本月機遇與風險的1–2句可操作建議（40–60字），需結合流月命宮星曜、四化落點具體展開，不可空泛、不可只是重複headline
+- advice：整合本月機遇與風險的1–2句可操作建議（40–60字），可自然帶到一兩個星曜/宮位/四化作依據，但務必先用白話講清楚這對日常生活或行動有什麼實際影響，不可只是重複headline
 
-所有欄位一律輸出純文字，不得使用任何Markdown語法（不得用**加粗**、#標題、-條列等符號），這些欄位會直接以純文字顯示。繁體中文。
+所有欄位讀者可能完全不懂紫微斗數術語，術語只能作點綴、不能是句子的主體，第一次出現時順手用白話補一句意思。所有欄位一律輸出純文字，不得使用任何Markdown語法（不得用**加粗**、#標題、-條列等符號），這些欄位會直接以純文字顯示。繁體中文。
 
 只輸出合法JSON（無程式碼區塊標記、無多餘文字）：
 {
   "months": [
     {"year": 數字, "month": 數字, "headline": "...", "good": "...", "caution": "...", "advice": "..."}
   ]
-}` + SAFETY_GUARDRAIL;
+}` + ACCESSIBLE_LANGUAGE_INSTRUCTION + SAFETY_GUARDRAIL;
 
 interface RawMonthEntry {
   year?: unknown;

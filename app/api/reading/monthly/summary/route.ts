@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { callAI } from "@/lib/callAI";
-import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
+import { SAFETY_GUARDRAIL, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowMonths } from "@/lib/flowMonths";
 
@@ -18,7 +18,7 @@ const SYSTEM = `你是精通紫微斗數流月推斷的命理師。根據命主�
 
 內容需綜合全年趨勢：哪幾個月是機遇高峰、哪幾個月需特別留意、全年整體的行事節奏建議。不要逐月覆述細節，要提煉出跨月份的整體脈絡，給出具體、可操作的全年建議。
 
-只輸出總覽本文，不要標題、不要前綴。所有內容一律純文字，不得使用任何Markdown語法（不得用**加粗**、#標題等符號）。繁體中文。` + SAFETY_GUARDRAIL;
+只輸出總覽本文，不要標題、不要前綴。所有內容一律純文字，不得使用任何Markdown語法（不得用**加粗**、#標題等符號）。繁體中文。` + ACCESSIBLE_LANGUAGE_INSTRUCTION + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "monthly-summary" })).allowed) {

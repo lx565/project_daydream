@@ -45,3 +45,20 @@ export const MODERN_INSTRUCTION = SAFETY_GUARDRAIL + `
 4. 60-110字，自然地收在一個體己的觀察上，不喊口號、不灌雞湯、不重複上方古典術語
 
 ⚠️ 只能有一個 [現代]...[/現代] 塊，放在所有內容之後，使用半形方括號 [ ]，標籤一字不差。`;
+
+/**
+ * Appended (only) to 雙人合盤 (couple/bazi-couple) and 逐月運勢 (monthly)
+ * SYSTEM prompts — NOT solo readings, which keep their existing depth/tone.
+ * These two products skew toward readers with zero 紫微/八字 background, so
+ * the正文 itself (not just the closing [現代] block) needs to lead with plain
+ * language and gloss any term it uses, rather than assuming familiarity.
+ */
+export const ACCESSIBLE_LANGUAGE_INSTRUCTION = `
+
+【親民易懂 · 降低術語門檻】
+讀者可能完全不懂紫微斗數／八字術語，不能預設任何專業背景。執行原則：
+1. 先講白話結論（這對你／你們意味著什麼、會怎樣），再補一句是哪個星曜、宮位或四化帶來的依據——依據永遠是佐證，不是開場。
+2. 任何專業名詞第一次出現時，用括號或同一句話裡的白話補一句是什麼意思（例如「財帛宮（掌管金錢進出的領域）」「化忌（這顆星的能量卡住、不太順）」），不能讓術語孤零零地出現在讀者面前。
+3. 避免連續堆疊多個術語（不要寫「財帛宮化祿逢三方四正拱照」這種一整串黑話），一句話最多帶一到兩個術語，其餘用白話描述。
+4. 段落標題若含術語，正文第一句要立刻用白話說清這段在講什麼。
+5. 整體語氣像在跟一個第一次接觸紫微斗數的朋友聊天，不是在寫命理報告。`;
