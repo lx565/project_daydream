@@ -13,7 +13,7 @@ export function websiteSchema() {
     name: SITE_NAME,
     alternateName: "命裡 紫微斗數",
     url: SITE,
-    inLanguage: "zh-CN",
+    inLanguage: "zh-TW",
     description: "紫微斗數線上排盤與 AI 詳批，三合·四化·飛星三派合參，依據84部命理典籍。",
   };
 }
@@ -54,7 +54,7 @@ export function articleSchema(opts: {
     "@type": "Article",
     headline: opts.headline,
     description: opts.description,
-    inLanguage: "zh-CN",
+    inLanguage: "zh-TW",
     mainEntityOfPage: `${SITE}${opts.path}`,
     ...(opts.section ? { articleSection: opts.section } : {}),
     author: { "@type": "Organization", name: SITE_NAME },
@@ -78,7 +78,7 @@ export function collectionPageSchema(opts: {
     name: opts.name,
     description: opts.description,
     url: `${SITE}${opts.path}`,
-    inLanguage: "zh-CN",
+    inLanguage: "zh-TW",
   };
 }
 
