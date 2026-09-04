@@ -186,10 +186,10 @@ export default function Home() {
               <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">免費</span>
             </Link>
             <Link
-              href="/yueyun"
+              href="/niandu"
               className="hidden sm:flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors"
             >
-              逐月運勢
+              年度解讀
               <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">免費</span>
             </Link>
             <Link
@@ -213,7 +213,7 @@ export default function Home() {
         🎉 限時免費：
         <Link href="/hepan" className="underline underline-offset-2 hover:opacity-80 transition-opacity">雙人合盤</Link>
         {" "}與{" "}
-        <Link href="/yueyun" className="underline underline-offset-2 hover:opacity-80 transition-opacity">逐月運勢</Link>
+        <Link href="/niandu" className="underline underline-offset-2 hover:opacity-80 transition-opacity">年度解讀</Link>
         {" "}現正完全免費，把握機會體驗完整解讀！
       </div>
 
