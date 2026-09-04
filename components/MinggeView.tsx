@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { MinggeEntry } from "@/lib/minggeData";
 import type { Reference } from "@/lib/rag";
 import type { ZiweiResult } from "@/lib/ziwei";
+import type { FamousPerson } from "@/lib/famousData";
 import SeoMarkdown from "./SeoMarkdown";
 import VoteWidget from "./VoteWidget";
 import ToolCTA from "./ToolCTA";
@@ -23,9 +24,10 @@ interface Props {
   chartData?: ZiweiResult;
   chartGender?: "male" | "female";
   chartLabel?: string;
+  famousExamples?: FamousPerson[];
 }
 
-export default function MinggeView({ entry, markdown, refs, faq, chartData, chartGender, chartLabel }: Props) {
+export default function MinggeView({ entry, markdown, refs, faq, chartData, chartGender, chartLabel, famousExamples = [] }: Props) {
   const hasContent = markdown.trim().length > 0;
 
   return (
@@ -107,6 +109,29 @@ export default function MinggeView({ entry, markdown, refs, faq, chartData, char
         {hasContent && (
           <div className="paper-card rounded-2xl border border-border-warm p-5 space-y-4">
             <SeoMarkdown>{markdown}</SeoMarkdown>
+          </div>
+        )}
+
+        {/* Famous examples */}
+        {famousExamples.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs text-ink-4 font-medium">名人例證 · {entry.name}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {famousExamples.map(p => (
+                <Link
+                  key={p.slug}
+                  href={`/famous/${p.slug}`}
+                  className="paper-card rounded-xl border border-border-warm p-4 space-y-1.5 hover:border-vermillion/40 transition-colors"
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-sm font-bold text-ink">{p.name}</p>
+                    <p className="text-[11px] text-ink-4 shrink-0">{p.era}</p>
+                  </div>
+                  <p className="text-[11px] text-ink-4">{p.domain} · {p.mainStars}坐命{p.soulPalace}宮</p>
+                  <p className="text-xs text-ink-3 leading-relaxed line-clamp-3">{p.brief}</p>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

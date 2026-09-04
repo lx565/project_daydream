@@ -7,6 +7,7 @@ import JsonLd from "@/components/JsonLd";
 import { articleSchema, breadcrumbSchema, faqSchema } from "@/lib/jsonld";
 import type { ZiweiResult } from "@/lib/ziwei";
 import minggeExamples from "@/lib/minggeExamples.json";
+import { FAMOUS_PEOPLE } from "@/lib/famousData";
 
 export const maxDuration = 60;
 export const revalidate = 604800;
@@ -71,6 +72,8 @@ export default async function MinggePage(
     chartLabel = `${rawExample.year}年${rawExample.month}月${rawExample.day}日 ${rawExample.shichen}（${rawExample.gender}）`;
   }
 
+  const famousExamples = FAMOUS_PEOPLE.filter(p => p.formations.includes(entry.name));
+
   const path = `/mingge/${entry.urlSlug}`;
 
   // FAQ: entry-specific pair from brief + condition (no invented copy), plus one
@@ -101,7 +104,7 @@ export default async function MinggePage(
         }),
         faqSchema(faq),
       ]} />
-      <MinggeView entry={entry} markdown={markdown} refs={refs} faq={faq} chartData={chartData} chartGender={chartGender} chartLabel={chartLabel} />
+      <MinggeView entry={entry} markdown={markdown} refs={refs} faq={faq} chartData={chartData} chartGender={chartGender} chartLabel={chartLabel} famousExamples={famousExamples} />
     </>
   );
 }

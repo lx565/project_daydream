@@ -60,7 +60,7 @@ const CHECKERS: Record<string, Checker> = {
 
   "紫府同宮格": (p) => {
     const s = soul(p);
-    if (!s || !["丑","未"].includes(s.earthlyBranch)) return false;
+    if (!s || !["寅","申"].includes(s.earthlyBranch)) return false;
     return hasMajor(s, "紫微") && hasMajor(s, "天府");
   },
 
@@ -98,10 +98,15 @@ const CHECKERS: Record<string, Checker> = {
   "鈴貪格": (p) => p.some(x => hasMajor(x, "貪狼") && hasStar(x, "鈴星")),
 
   "財蔭夾印格": (p) => {
+    // 天相 is fixed 4 palaces from 天府 in the 天府 star-series, with 巨門 (+3)
+    // and 天梁 (+5) as its permanent neighbors — 太陰 (+1) can never flank it.
+    // Corrected to the classical "財(祿存/化祿)蔭(天梁)夾印(天相)" reading.
     const s = soul(p);
     if (!hasMajor(s, "天相") || !s) return false;
-    const sideNames = sides(p, s).flatMap(x => x.stars.map(st => st.name));
-    return sideNames.includes("太陰") && sideNames.includes("天梁");
+    const sidePalaces = sides(p, s);
+    const sideNames = sidePalaces.flatMap(x => x.stars.map(st => st.name));
+    const hasCai = sideNames.includes("祿存") || sidePalaces.some(x => x.stars.some(st => st.mutagen === "祿"));
+    return hasCai && sideNames.includes("天梁");
   },
 
   "祿馬交馳格": (p) => p.some(x => hasStar(x, "祿存") && hasStar(x, "天馬")),
@@ -156,13 +161,21 @@ const CHECKERS: Record<string, Checker> = {
   "風流彩杖格": (p) => p.some(x => hasMajor(x, "貪狼") && hasStar(x, "擎羊")),
 
   "刑囚夾印格": (p) => {
+    // 廉貞 and 天相 are never adjacent across any of the 12 possible 紫微
+    // positions (verified by enumeration) — they only ever co-occur in the
+    // SAME palace (when 紫微 is in 寅/申). Corrected to the classical
+    // "廉貞天相同宮，擎羊同宮或夾宮" reading.
     const s = soul(p);
-    if (!hasMajor(s, "天相") || !s) return false;
+    if (!s || !hasMajor(s, "天相") || !hasMajor(s, "廉貞")) return false;
     const sideNames = sides(p, s).flatMap(x => x.stars.map(st => st.name));
-    return sideNames.includes("廉貞") && sideNames.includes("擎羊");
+    return hasStar(s, "擎羊") || sideNames.includes("擎羊");
   },
 
   "日月反背格": (p) => {
+    // TODO(unverified): 太陽@酉 + 太陰@卯 is provably impossible — enumerating
+    // all 12 紫微 positions shows only 12 fixed (太陽,太陰) branch pairs exist,
+    // and (酉,卯) is not among them. Left as-is pending a sourced correction;
+    // this checker can never return true in its current form.
     const sunP = p.find(x => x.stars.some(s => s.name === "太陽" && s.type === "major"));
     const moonP = p.find(x => x.stars.some(s => s.name === "太陰" && s.type === "major"));
     return sunP?.earthlyBranch === "酉" && moonP?.earthlyBranch === "卯";
