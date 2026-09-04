@@ -185,7 +185,7 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
             {full.status === "error" && (
               <div className="space-y-2">
                 <p className="text-sm text-vermillion">{full.errorMsg}</p>
-                <button onClick={() => { fullStarted.current = false; full.reset(); }} className="text-xs text-gold underline">重試</button>
+                <button onClick={() => full.start({ ziwei, name })} className="text-xs text-gold underline">重試</button>
               </div>
             )}
             {full.status === "streaming" && !full.text && <LoadingSkeleton />}
