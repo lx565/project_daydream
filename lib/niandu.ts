@@ -71,7 +71,7 @@ export async function getNianduYear(ziwei: ZiweiResult, targetAge: number): Prom
       const palace = starPalaceMap[s.star] ?? "";
       return { star: s.star, mutagen: s.mutagen, palace, domain: DOMAIN_LABEL[palace] ?? "整體運勢", tone: toneOf(s.mutagen) };
     })
-    .filter((s) => s.palace); // drop a mutagen star iztro didn't place on a natal major-star palace (edge charts)
+    .filter((s) => s.palace); // drop a mutagen star iztro didn't place in any natal palace (defensive; shouldn't occur for real charts)
 
   return { age: flow.age, year: flow.year, ganzhi: flow.ganzhi, signals };
 }
