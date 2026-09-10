@@ -62,6 +62,34 @@ function RefList({ refs }: { refs: Reference[] }) {
 
 const MD_PROSE = "prose max-w-none text-sm [&_h2]:text-vermillion [&_h2]:font-bold [&_h2]:text-sm [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:tracking-wide [&_h3]:text-gold [&_h3]:font-semibold [&_h3]:text-xs [&_h3]:mt-3 [&_h3]:mb-1.5 [&_p]:text-ink-2 [&_p]:leading-relaxed [&_p]:mb-3 [&_p]:text-sm [&_strong]:text-ink [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:space-y-1.5 [&_li]:text-ink-2 [&_li]:text-sm [&_li]:leading-relaxed [&_li]:relative [&_li]:pl-4 [&_li]:list-none [&_li]:before:content-['·'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:top-0 [&_li]:before:text-vermillion [&_li]:before:font-bold [&_li>p]:inline [&_li>p]:m-0";
 
+// The paid reading streams as one AI call whose prompt (app/api/reading/niandu/route.ts)
+// asks for a "### 領域" heading per critical-moment signal, each followed by a
+// 命理版 paragraph and then a [白話]...[/白話] block — the same point retold in
+// plain language for a reader with zero 紫微/八字 background. This splits that
+// raw markdown into per-point {heading, classical, modern} triples so the two
+// versions can render side by side instead of the modern text leaking as
+// literal bracket tags (the bug this replaces).
+interface NianduSection {
+  heading: string;
+  classical: string;
+  modern: string;
+}
+
+function parseNianduSections(text: string): NianduSection[] {
+  const withoutTopHeading = text.replace(/^##[^\n]*\n/, "");
+  const chunks = withoutTopHeading.split(/\n(?=###\s)/).map((c) => c.trim()).filter(Boolean);
+
+  return chunks.map((chunk) => {
+    const headingMatch = chunk.match(/^###\s*(.+)/);
+    const heading = headingMatch ? headingMatch[1].trim() : "";
+    const body = chunk.replace(/^###[^\n]*\n?/, "");
+    const modernMatch = body.match(/\[白話\]([\s\S]*?)\[\/白話\]/);
+    const modern = modernMatch ? modernMatch[1].trim() : "";
+    const classical = body.replace(/\[白話\][\s\S]*?(\[\/白話\]|$)/, "").trim();
+    return { heading, classical, modern };
+  });
+}
+
 const NIANDU_INCLUDED = [
   "今年每個四化落點的完整展開",
   "對應到感情、事業、財務、健康等具體領域",
@@ -191,7 +219,27 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
             {full.status === "streaming" && !full.text && <LoadingSkeleton />}
             {(full.status === "streaming" || full.status === "done") && full.text && (
               <div className="animate-fade-in space-y-1">
-                <Md className={MD_PROSE}>{full.text}</Md>
+                <div className="grid grid-cols-2 gap-4 mb-3 px-1">
+                  <span className="text-[10px] uppercase tracking-widest text-ink-4">命理版</span>
+                  <span className="text-[10px] uppercase tracking-widest text-vermillion sm:border-l sm:border-border-light sm:pl-4">白話版 · 不懂術語也能看懂</span>
+                </div>
+                {parseNianduSections(full.text).map((s, i) => (
+                  <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
+                    {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        {s.classical && <Md className={MD_PROSE}>{s.classical}</Md>}
+                      </div>
+                      <div className="sm:border-l sm:border-border-light sm:pl-4">
+                        {s.modern ? (
+                          <Md className={MD_PROSE}>{s.modern}</Md>
+                        ) : (
+                          <p className="text-xs text-ink-4 italic">白話版生成中…</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 <RefList refs={full.refs} />
               </div>
             )}

@@ -1,4 +1,4 @@
-import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
+import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 export const maxDuration = 90;
 
 import { NextRequest } from "next/server";
@@ -13,9 +13,22 @@ const SYSTEM = `你是紫微斗數命理師，像一位關心你的朋友，把�
 只輸出以下板塊（Markdown），不要增加其他標題：
 
 ## 今年關鍵提醒
-（根據提供的四化落點資料，逐一展開每個訊號——用 ### 小標題（格式：領域名稱，如「感情」「事業」「財務」），每點先點出對應的四化星曜與落宮，再具體說明這對命主今年的影響與一條可操作建議。化忌類訊號如實提醒不迴避，化祿化權化科類訊號說明可以怎麼把握。語氣溫和關切、據盤論斷，不誇大不嚇人，不使用「水逆」「能量」等空泛用語。每點約120字。）
+（根據提供的四化落點資料，逐一展開每個訊號——用 ### 小標題（格式：領域名稱，如「感情」「事業」「財務」）。每個小標題底下必須包含兩個版本，順序固定：
 
-可引相關古訣為據。措辭專業、溫和、關切。繁體中文。` + MODERN_INSTRUCTION;
+1. 命理版：先點出對應的四化星曜與落宮，再具體說明這對命主今年的影響與一條可操作建議。化忌類訊號如實提醒不迴避，化祿化權化科類訊號說明可以怎麼把握。語氣溫和關切、據盤論斷，不誇大不嚇人，不使用「水逆」「能量」等空泛用語。約120字。
+
+2. 白話版：緊接著命理版之後，用完全不懂紫微斗數／八字的人也能聽懂的話，把同一點重新講一遍——不用任何專業術語（不出現星曜名、宮位名、「化祿／化權／化科／化忌」這類字眼），只講「這對你今年的生活/決定意味著什麼」，語氣像朋友聊天，可以呼應命理版給的建議，但不是逐字翻譯。約80-120字。用以下標記包住，半形方括號，標籤一字不差：
+[白話]
+（白話版內容）
+[/白話]
+
+每一個小標題都必須同時有命理版和白話版，不能省略任一個。）
+
+【加粗規則】只允許用**加粗**標註單個星曜名稱、宮位名或四化符號（1–6字以內的單個術語）。絕對禁止加粗整句話、短語或標題標籤。白話版內文不加粗（因為白話版本來就不含術語）。
+
+【直接開始】直接從第一個 ## 標題開始輸出，不要任何開場白、問候或結尾客套話。
+
+可引相關古訣為據（僅命理版）。措辭專業、溫和、關切。繁體中文。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" })).allowed) return rateLimitResponse();
@@ -50,7 +63,7 @@ ${nianduFactsFrom(ny)}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 1800,
+      maxTokens: 3200,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "niandu" },
