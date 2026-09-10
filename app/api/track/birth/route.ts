@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 // The script routes on `type`; add a `type === "birth"` branch that appends to a
 // "births" tab. Demographics (age/gender/daily counts) are analyzed in the sheet.
 const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbxex1lpJZNi1FEbYb1phB0YegnDLjjXP3SczsQKyk__g-IfrAE-JbHyap0iPEmLGQuscg/exec";
+  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 60, keyPrefix: "track-birth" })).allowed) {

@@ -11,7 +11,7 @@ import { markUnlocked } from "@/lib/unlock";
 // Same Google Sheet the feedback route writes to — claims show up alongside feedback
 // for manual reconciliation against Alipay/WeChat receipts.
 const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbxex1lpJZNi1FEbYb1phB0YegnDLjjXP3SczsQKyk__g-IfrAE-JbHyap0iPEmLGQuscg/exec";
+  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "unlock_claim" })).allowed) {
