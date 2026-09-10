@@ -421,8 +421,8 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
 
   return (
     <div className="max-w-2xl mx-auto space-y-0">
-      <EntryTracker date={dateA} hour={hourA} gender={genderA} name={nameA} method="hepan" dedupeKey="hepan_birth" />
-      <EntryTracker date={dateB} hour={hourB} gender={genderB} name={nameB} method="hepan" dedupeKey="hepan_birth" />
+      <EntryTracker date={dateA} hour={hourA} gender={genderA} name={nameA} method="hepan" dedupeKey="hepan_birth" relationshipType={cfg.key} />
+      <EntryTracker date={dateB} hour={hourB} gender={genderB} name={nameB} method="hepan" dedupeKey="hepan_birth" relationshipType={cfg.key} />
 
       <button onClick={onReset}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors">

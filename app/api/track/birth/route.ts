@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
   let body: {
     date?: string; hour?: number; gender?: string;
     name?: string; method?: string; source?: string; sessionId?: string;
+    relationshipType?: string;
   };
   try {
     body = await request.json();
@@ -44,6 +45,10 @@ export async function POST(request: NextRequest) {
         source: (body.source ?? "").slice(0, 50),
         sessionId: (body.sessionId ?? "").slice(0, 100),
         readingKind: (body.method ?? "ziwei").slice(0, 20),
+        // hepan-only: which relationship type (lover/spouse/friend/sibling/
+        // parentchild — see lib/coupleTypes.ts). Empty string for every other
+        // product, same as the other optional fields above.
+        relationshipType: (body.relationshipType ?? "").slice(0, 20),
       }),
       redirect: "follow",
     });

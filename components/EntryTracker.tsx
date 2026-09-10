@@ -13,6 +13,11 @@ interface EntryTrackerProps {
   /** Namespaces the localStorage dedup list so hepan/monthly/solo don't share
    *  one list (mirrors ChartSaver.tsx's own per-product dedup, just generalized). */
   dedupeKey: string;
+  /** hepan-only: which relationship type (lover/spouse/friend/sibling/parentchild,
+   *  see lib/coupleTypes.ts's RelationshipType) this entry was read as — lets the
+   *  sheet show not just "this customer used hepan" but which kind. Omit for
+   *  non-hepan products. */
+  relationshipType?: string;
 }
 
 // Fires the same /api/track/birth Google Sheets webhook ChartSaver.tsx already
@@ -20,7 +25,7 @@ interface EntryTrackerProps {
 // name/method/source) rather than inventing a new pipeline, so no changes are
 // needed on the Apps Script side. `method` is what makes an entry filterable as
 // hepan/monthly instead of solo in the sheet's readingKind column.
-export default function EntryTracker({ date, hour, gender, name, method, dedupeKey }: EntryTrackerProps) {
+export default function EntryTracker({ date, hour, gender, name, method, dedupeKey, relationshipType }: EntryTrackerProps) {
   useEffect(() => {
     try {
       const key = `${date}-${hour}-${gender}`;
@@ -31,7 +36,7 @@ export default function EntryTracker({ date, hour, gender, name, method, dedupeK
       fetch("/api/track/birth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, hour, gender, name, method, source }),
+        body: JSON.stringify({ date, hour, gender, name, method, source, relationshipType }),
         keepalive: true,
       }).catch(() => {});
       localStorage.setItem(LOGGED_KEY, JSON.stringify([...logged, key].slice(-500)));
