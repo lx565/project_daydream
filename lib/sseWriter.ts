@@ -73,7 +73,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v36"; // 2026-08-28 couple/couple-preview/bazi-couple: accessible-language pass, less jargon
+const CACHE_VERSION = "v37"; // 2026-09-09 niandu: 命理版/白話版 dual-section format — cache key hashes only the first 100 chars of the system prompt, which niandu's edit didn't change, so pre-fix [現代]-block responses were being replayed verbatim for any previously-tested chart
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
