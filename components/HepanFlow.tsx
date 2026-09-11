@@ -195,6 +195,13 @@ export default function HepanFlow() {
   const [inviteMode, setInviteMode] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteId, setInviteId] = useState<string | null>(null);
+  // "刷新" button on the invite-created screen: lets Person A check whether B
+  // has responded without navigating to the invite link themselves (which
+  // would otherwise show B's birth-input form to A, since that page branches
+  // purely on whether personB is present in the KV record).
+  const [checkingInviteStatus, setCheckingInviteStatus] = useState(false);
+  const [inviteStatusMessage, setInviteStatusMessage] = useState<string | null>(null);
   // True only while checking the URL for restorable birth params on first mount —
   // keeps the form from flashing before a Stripe-return reload finishes restoring.
   const [restoring, setRestoring] = useState(true);
@@ -276,11 +283,32 @@ export default function HepanFlow() {
       });
       if (!res.ok) throw new Error("invite_failed");
       const data: { inviteId: string } = await res.json();
+      setInviteId(data.inviteId);
       setInviteUrl(`${window.location.origin}/compare/${data.inviteId}`);
     } catch {
       setErrors({ invite: "產生邀請連結失敗，請重試一次。" });
     } finally {
       setCreatingInvite(false);
+    }
+  }
+
+  async function onRefreshInviteStatus() {
+    if (!inviteId || checkingInviteStatus) return;
+    setCheckingInviteStatus(true);
+    setInviteStatusMessage(null);
+    try {
+      const res = await fetch(`/api/compare/${inviteId}`);
+      if (!res.ok) throw new Error("status_check_failed");
+      const data: { found: boolean; personBPresent: boolean } = await res.json();
+      if (data.personBPresent && inviteUrl) {
+        window.location.href = inviteUrl;
+        return;
+      }
+      setInviteStatusMessage("對方還沒填寫，請稍後再試一次。");
+    } catch {
+      setInviteStatusMessage("查詢失敗，請稍後再試一次。");
+    } finally {
+      setCheckingInviteStatus(false);
     }
   }
 
@@ -323,7 +351,14 @@ export default function HepanFlow() {
               </button>
             </div>
           </div>
-          <button type="button" onClick={() => { setInviteMode(false); setInviteUrl(null); setErrors({}); }}
+          <div className="space-y-2">
+            <button type="button" onClick={onRefreshInviteStatus} disabled={checkingInviteStatus}
+              className="text-xs bg-paper border border-border-warm text-ink-2 px-4 py-2 rounded-lg hover:border-vermillion/50 hover:text-vermillion transition-colors disabled:opacity-60">
+              {checkingInviteStatus ? "查詢中…" : "對方填好了嗎？刷新查看 →"}
+            </button>
+            {inviteStatusMessage && <p className="text-xs text-ink-3">{inviteStatusMessage}</p>}
+          </div>
+          <button type="button" onClick={() => { setInviteMode(false); setInviteUrl(null); setInviteId(null); setInviteStatusMessage(null); setErrors({}); }}
             className="text-xs text-ink-3 hover:text-vermillion transition-colors underline underline-offset-2">
             改成自己填兩人資料 →
           </button>
