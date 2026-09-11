@@ -268,7 +268,7 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
             <div>
               <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2">
                 <span className="w-px h-3 bg-vermillion inline-block" />
-                <span className="text-vermillion">緣分一瞥 · 免費預覽</span>
+                <span className="text-vermillion">緣分一瞥</span>
               </p>
               <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
                 {(preview.status === "streaming" || preview.status === "idle") && <LoadingSkeleton />}
