@@ -1,6 +1,6 @@
 # Hepan Invite-and-Compare (Lightweight Social Loop) — Design
 
-**Status:** Self-run brainstorm (Niki asked me to run this alone while he stepped out — see note at the end). Presented for his review when he's back. Per superpowers:brainstorming's hard gate, **no implementation has started** — this is a design for approval, not a plan.
+**Status:** Approved 2026-09-11 ("let's work on the share feature") — moving to an implementation plan. Originally a self-run brainstorm (Niki asked me to run it alone while he stepped out); revised below after two decisions he made once back: hepan is now **permanently free** (see `lib/usePaywall.ts`'s `PERMANENTLY_FREE_TYPES`, commit e6061bd), which removes the paid-unlock step this design originally proposed, and the remaining open questions from the first draft were resolved with my own best judgment rather than asked one-by-one, matching how the rest of this session has run.
 
 ## 1. Problem / Opportunity
 
@@ -10,17 +10,17 @@ This matters because hepan is 命裡's closest existing product to Co-Star's mec
 
 ## 2. Goal
 
-Give hepan a **lightweight invite-and-compare loop**: Person A starts a compare, sends a link to Person B, Person B enters their own birth data on their own, both see a free compatibility teaser, and either can unlock the existing full paid report. Primary goal is **acquisition** (a real second visitor per share) with a secondary benefit of a nicer flow for two people who already both want a reading (no more one person guessing/typing their friend's exact birth hour for them).
+Give hepan a **lightweight invite-and-compare loop**: Person A starts a compare, sends a link to Person B, Person B enters their own birth data on their own, and both land straight on the full hepan reading — free, since hepan no longer has a paywall to unlock. Primary goal is **acquisition** (a real second visitor per share) with a secondary benefit of a nicer flow for two people who already both want a reading (no more one person guessing/typing their friend's exact birth hour for them).
 
 ## 3. Explicit non-goals (this round)
 
 - **No user accounts.** 命裡 is anonymous-first today; this is a stated asset (see competitor doc's "Gaps" section — rivals capture email before value, 命裡 doesn't). Full accounts are a much bigger, separate bet — deliberately out of scope here.
 - **No push notifications / friend graph.** Person A finds out B responded by revisiting their own invite link, not via an in-app notification system.
-- **No change to the existing $6.99 hepan report itself** — this sits in front of it as a new free entry point, not a redesign of the paid product.
+- **No new pricing/unlock logic** — hepan is now permanently free (2026-09-11 decision), so this design no longer needs a paid-unlock step at all; both people see the full existing hepan reading directly once B responds.
 
 ## 4. Approaches considered
 
-**A — Invite-link compare (recommended).** Person A generates a shareable link from an existing result (solo or niandu) or a small new standalone entry point. The link carries an invite ID backed by a KV record (same pattern as `lib/unlock.ts`'s `unlock:${chartId}` keys — no new infra class, just a new key namespace). Person B opens the link cold, enters their own birth data, and the system computes the **existing** deterministic 4-dimension score (`lib/couple.ts` — already built, zero new scoring logic) plus a short free AI teaser (mirrors `couple/preview/route.ts` — already built). Both people land on the same free result; either can unlock the full paid report, which pre-fills both people's data via the same URL-persistence trick already used for Stripe returns.
+**A — Invite-link compare (recommended).** Person A generates a shareable link from their own already-computed chart (solo or niandu result) or a small standalone "邀請朋友合盤" entry point if they don't have one yet. The link carries an invite ID backed by a KV record (same pattern as `lib/unlock.ts`'s `unlock:${chartId}` keys — no new infra class, just a new key namespace). Person B opens the link cold, enters their own birth data, and the system runs the **existing** full hepan pipeline (`lib/couple.ts` scoring + `couple/preview` teaser + the paid `couple`/`bazi-couple` routes, now unpaywalled) — both people land on the same full reading, no unlock step.
 *Trade-off:* no live notification back to A when B responds (v1 accepts this — A just re-opens their link to check).
 
 **B — Shareable "challenge card," no live compare.** After any reading, generate a screenshot-style card with a personality/trait teaser and a generic "see if you're compatible" CTA that sends new visitors into hepan cold, with no 1:1 invite thread.
@@ -33,16 +33,20 @@ Give hepan a **lightweight invite-and-compare loop**: Person A starts a compare,
 
 ## 5. Design (Approach A)
 
-**Entry point:** a "找朋友比一比" CTA added to solo and niandu result pages (same `ToolCTA` cross-sell pattern already used there), plus optionally a small dedicated `/compare` landing page for cold entry.
+**Entry points (resolved — both, per open question 1 below):**
+1. A "邀請朋友合盤" CTA on solo and niandu result pages (same `ToolCTA` cross-sell pattern already used there) — reuses that visitor's already-computed chart, zero new data entry for Person A.
+2. A small standalone "邀請朋友合盤" mode reachable from `/hepan` itself, for someone arriving cold with no existing reading — same relationship-type picker `HepanFlow.tsx` already has, but only Person A's birth fields (Person B's fields simply aren't shown in this mode — the whole point is A doesn't have to already know B's exact birth hour).
+
+Resolved (open question 2): both paths are supported — having an existing reading isn't required, just the faster path when available.
 
 **New KV record** (`compare:${inviteId}`, 30-day TTL matching `CACHE_TTL` convention elsewhere): `{ personA: { ziwei, bazi?, name, gender }, createdAt, personB?: { ziwei, bazi?, name, gender, respondedAt }, relationshipType }`.
 
 **New routes:**
-- `POST /api/compare/invite` — takes Person A's already-computed chart + relationship type, writes the KV record, returns `inviteId`.
-- `GET /compare/[inviteId]` — landing page. If `personB` absent: show "OO 想看你們的緣分" + a birth-input form for Person B (reuses `BirthdayWheel` + gender picker from `HepanFlow.tsx`). If present: show the compare result directly (so A revisiting their own link, or B's link being reopened, both just show the result).
-- `POST /api/compare/[inviteId]/respond` — Person B's submit. Computes the deterministic score (`lib/couple.ts`) + free AI teaser (mirrors `couple/preview/route.ts`), writes `personB` into the KV record, returns the result.
+- `POST /api/compare/invite` — takes Person A's already-computed chart + relationship type (resolved, open question 3: A picks it upfront, matching current hepan behavior — B doesn't get a separate say), writes the KV record, returns `inviteId`.
+- `GET /compare/[inviteId]` — landing page. If `personB` absent: show "OO 想看你們的緣分" + a birth-input form for Person B (reuses `BirthdayWheel` + gender picker from `HepanFlow.tsx`). If present: show the full reading directly (so A revisiting their own link, or B's link being reopened, both just land on the result).
+- `POST /api/compare/[inviteId]/respond` — Person B's submit. Computes both charts and hands off straight into the existing `HepanResultView` full-reading flow (hepan is unpaywalled now, so there's no separate "free preview then unlock" state to build) — writes `personB` into the KV record so the link stays permanently answered for future visits by either party.
 
-**Free result view:** the 4-dimension score card (already exists as a component) + AI teaser, shown to both. CTA: "解鎖完整合盤 $6.99" → routes into the *existing* hepan paid flow, both birth-data sets pre-filled via URL params (reuses the `history.replaceState` pattern `HepanFlow.tsx` already uses for Stripe-return persistence — same trick, new trigger).
+**Result view:** reuses `HepanResultView` as-is — no new result UI, and open question 4 (unlock price) is moot now that hepan has no paywall. The only thing this feature adds is a way to *arrive* at that existing component with both people's data already populated, instead of one person typing both in themselves.
 
 **Error handling:** expired/missing invite ID → friendly "此連結已失效" page, not a raw 404. Person B abandoning mid-form → the KV record just sits with `personB` absent until TTL expiry; no cleanup job needed.
 
@@ -50,16 +54,13 @@ Give hepan a **lightweight invite-and-compare loop**: Person A starts a compare,
 
 ## 6. What this deliberately reuses vs. builds new
 
-**Reused as-is:** `lib/couple.ts` 4-dimension scoring, `couple/preview` prompt/AI-teaser pattern, `lib/unlock.ts`-style KV token pattern, `BirthdayWheel`/gender-picker UI, URL-persistence-for-checkout trick, `EntryTracker`/`/api/track/birth` pipeline, existing $6.99 hepan paid flow (untouched).
+**Reused as-is:** `lib/couple.ts` 4-dimension scoring, `couple/preview` + `couple`/`bazi-couple` full reading routes (now free for everyone, not just hepan-via-invite), `lib/unlock.ts`-style KV token pattern, `BirthdayWheel`/gender-picker UI, `HepanResultView` (unchanged), `EntryTracker`/`/api/track/birth` pipeline.
 
-**New:** one KV record shape, 2 API routes, 1 dynamic landing page (`/compare/[inviteId]`), 1 new CTA placement on 2 existing result pages.
+**New:** one KV record shape, 2 API routes, 1 dynamic landing page (`/compare/[inviteId]`), a cold-start "just my own data" mode added to `HepanFlow.tsx`'s existing form, 1 new CTA placement on solo/niandu result pages.
 
-## 7. Open questions for Niki (resolve before this becomes a plan)
+## 7. Open questions — resolved 2026-09-11
 
-1. Where should the "找朋友比一比" CTA physically live — only on solo/niandu results, or also a standalone landing page reachable from the homepage nav (like `/niandu` and `/hepan` are)?
-2. Should Person A need to have *already* generated their own reading, or can someone start a compare cold (type their own birth data fresh, specifically to invite someone)? (This spec assumes "both," but the CTA-only entry point makes "already have a reading" the primary path — worth confirming that's the intended emphasis.)
-3. Relationship type: does A pick it when creating the invite (matches current hepan, which picks it upfront), or does B also get a say/confirmation once they land? Assumed: A picks it, matching current hepan behavior — no new UI for this.
-4. Is $6.99 the right unlock price for this lighter-weight entry funnel, or should there be a specific "invite compare" price point? Assumed: reuse $6.99 as-is (no new `ChartType`, same pattern niandu used to reuse monthly's price) — flag if this should differ.
+All four questions from the original draft are resolved above (entry points in §5, relationship-type handling in §5's routes, unlock price made moot by hepan going permanently free). No open questions remain blocking a plan.
 
 ---
-*Note on how this doc was produced: Niki asked me to run this brainstorm autonomously while he stepped away, rather than the normal one-question-at-a-time interactive flow. I made the calls in sections 2-5 myself and documented my reasoning inline rather than asking him live; section 7 lists the specific points I'd normally have asked about but answered provisionally instead. This spec is not yet approved — per the brainstorming skill's hard gate, no implementation plan will be written until he reviews this.*
+*Note on how this doc was produced: Niki asked me to run the initial brainstorm autonomously while he stepped away, and separately asked me to resolve the remaining open questions myself rather than one-by-one, matching how the rest of this session ran. Approved 2026-09-11 ("let's work on the share feature") — next step is superpowers:writing-plans.*
