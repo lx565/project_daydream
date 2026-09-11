@@ -22,6 +22,7 @@ import { calculateBazi, type BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { RELATIONSHIP_TYPES, type RelationshipType } from "@/lib/coupleTypes";
 import HepanResultView from "./HepanResultView";
+import EntryTracker from "./EntryTracker";
 
 interface PersonFields {
   name: string;
@@ -303,6 +304,12 @@ export default function HepanFlow() {
     if (inviteUrl) {
       return (
         <div className="space-y-6 text-center">
+          {/* Single entry-tracking fire for the whole invite flow: "an invite was
+              created" as one clean method="compare" signal. HepanResultView fires
+              its own method="hepan" pair once the invite is completed/viewed —
+              that path is separate and untouched, so this must NOT also fire on
+              the completed-invite render (see CompareResultClient.tsx). */}
+          <EntryTracker date={personA.date} hour={parseInt(personA.hour, 10)} gender={personA.gender as "male" | "female"} name={personA.name || undefined} method="compare" dedupeKey="compare_birth" relationshipType={relType} />
           <div className="border border-border-warm rounded-xl p-5 bg-paper space-y-3">
             <p className="text-sm font-semibold text-ink">邀請連結已產生！</p>
             <p className="text-xs text-ink-3">把這個連結傳給對方，對方填寫自己的生辰後，你們就能立即看到完整合盤。</p>
@@ -316,7 +323,7 @@ export default function HepanFlow() {
               </button>
             </div>
           </div>
-          <button type="button" onClick={() => { setInviteMode(false); setInviteUrl(null); }}
+          <button type="button" onClick={() => { setInviteMode(false); setInviteUrl(null); setErrors({}); }}
             className="text-xs text-ink-3 hover:text-vermillion transition-colors underline underline-offset-2">
             改成自己填兩人資料 →
           </button>
@@ -354,7 +361,7 @@ export default function HepanFlow() {
           {creatingInvite ? "產生邀請連結中…" : "產生邀請連結 →"}
         </button>
 
-        <button type="button" onClick={() => setInviteMode(false)}
+        <button type="button" onClick={() => { setInviteMode(false); setErrors({}); }}
           className="block mx-auto text-xs text-ink-3 hover:text-vermillion transition-colors underline underline-offset-2">
           改成自己填兩人資料 →
         </button>
@@ -364,7 +371,7 @@ export default function HepanFlow() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <button type="button" onClick={() => setInviteMode(true)}
+      <button type="button" onClick={() => { setInviteMode(true); setErrors({}); }}
         className="block text-xs text-vermillion hover:text-vermillion-h transition-colors underline underline-offset-2">
         還不知道對方生辰？改成邀請朋友自己填 →
       </button>
