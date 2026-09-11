@@ -187,11 +187,32 @@ export default function HepanFlow() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [computing, setComputing] = useState(false);
   const [charts, setCharts] = useState<Charts | null>(null);
+  // "邀請朋友合盤" cold-start mode: only Person A's data is collected; submitting
+  // creates a KV-backed invite (lib/compareInvite.ts via /api/compare/invite)
+  // instead of computing both charts directly. inviteUrl holds the generated
+  // shareable link once creation succeeds.
+  const [inviteMode, setInviteMode] = useState(false);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   // True only while checking the URL for restorable birth params on first mount —
   // keeps the form from flashing before a Stripe-return reload finishes restoring.
   const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("invite") === "1") {
+        const adate = params.get("adate") ?? "";
+        const ahour = params.get("ahour") ?? "";
+        const agender = params.get("agender");
+        if (adate && ahour !== "" && (agender === "male" || agender === "female")) {
+          setPersonA({ name: params.get("aname") ?? "", date: adate, hour: ahour, gender: agender });
+          setInviteMode(true);
+          setRestoring(false);
+          return;
+        }
+      }
+    }
     const restored = hepanInputFromUrl();
     if (!restored) { setRestoring(false); return; }
     computeCharts(restored.a, restored.b, restored.relType)
@@ -229,6 +250,39 @@ export default function HepanFlow() {
     }
   }
 
+  async function onSubmitInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (creatingInvite) return;
+    const e2: Record<string, string> = {};
+    if (!personA.date) e2.adate = "請填寫出生日期";
+    if (!personA.gender) e2.agender = "請選擇性別";
+    if (!personA.hour && personA.hour !== "0") e2.ahour = "請選擇出生時辰";
+    setErrors(e2);
+    if (Object.keys(e2).length > 0) return;
+
+    setCreatingInvite(true);
+    try {
+      const res = await fetch("/api/compare/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: personA.date,
+          hour: parseInt(personA.hour, 10),
+          gender: personA.gender,
+          name: personA.name || undefined,
+          relType,
+        }),
+      });
+      if (!res.ok) throw new Error("invite_failed");
+      const data: { inviteId: string } = await res.json();
+      setInviteUrl(`${window.location.origin}/compare/${data.inviteId}`);
+    } catch {
+      setErrors({ invite: "產生邀請連結失敗，請重試一次。" });
+    } finally {
+      setCreatingInvite(false);
+    }
+  }
+
   if (restoring) return null;
 
   if (charts) {
@@ -245,8 +299,75 @@ export default function HepanFlow() {
 
   const labelClass = "block text-xs text-ink-3 tracking-widest uppercase mb-1.5";
 
+  if (inviteMode) {
+    if (inviteUrl) {
+      return (
+        <div className="space-y-6 text-center">
+          <div className="border border-border-warm rounded-xl p-5 bg-paper space-y-3">
+            <p className="text-sm font-semibold text-ink">邀請連結已產生！</p>
+            <p className="text-xs text-ink-3">把這個連結傳給對方，對方填寫自己的生辰後，你們就能立即看到完整合盤。</p>
+            <div className="flex items-center gap-2">
+              <input readOnly value={inviteUrl}
+                className="flex-1 bg-parchment border border-border-warm rounded-lg px-3 py-2 text-xs text-ink-2" />
+              <button type="button"
+                onClick={() => navigator.clipboard?.writeText(inviteUrl)}
+                className="text-xs bg-vermillion text-white px-3 py-2 rounded-lg hover:bg-vermillion-h transition-colors whitespace-nowrap">
+                複製連結
+              </button>
+            </div>
+          </div>
+          <button type="button" onClick={() => { setInviteMode(false); setInviteUrl(null); }}
+            className="text-xs text-ink-3 hover:text-vermillion transition-colors underline underline-offset-2">
+            改成自己填兩人資料 →
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={onSubmitInvite} className="space-y-6">
+        <div className="space-y-2">
+          <label className={labelClass}>關係型別 <span className="text-vermillion">*</span></label>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.values(RELATIONSHIP_TYPES).map((r) => (
+              <button key={r.key} type="button" onClick={() => setRelType(r.key)}
+                className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs transition-all ${
+                  relType === r.key
+                    ? "border-vermillion bg-vermillion-l text-vermillion font-semibold"
+                    : "border-border-warm bg-paper text-ink-3 hover:border-vermillion/40"
+                }`}>
+                <span className="text-lg leading-none">{r.emoji}</span>
+                <span>{r.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-border-warm rounded-xl p-4 bg-paper space-y-4">
+          <PersonForm label="你的資料" person={personA} onChange={(p) => setPersonA((prev) => ({ ...prev, ...p }))} errors={errors} prefix="a" />
+        </div>
+
+        {errors.invite && <p className="text-xs text-vermillion text-center">{errors.invite}</p>}
+
+        <button type="submit" disabled={creatingInvite} style={{ color: "#FDFCF8" }}
+          className="w-full font-bold py-3.5 rounded-xl transition-all tracking-widest text-sm bg-vermillion hover:bg-vermillion-h active:scale-[0.99] shadow-lg ring-2 ring-vermillion/20 ring-offset-1">
+          {creatingInvite ? "產生邀請連結中…" : "產生邀請連結 →"}
+        </button>
+
+        <button type="button" onClick={() => setInviteMode(false)}
+          className="block mx-auto text-xs text-ink-3 hover:text-vermillion transition-colors underline underline-offset-2">
+          改成自己填兩人資料 →
+        </button>
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
+      <button type="button" onClick={() => setInviteMode(true)}
+        className="block text-xs text-vermillion hover:text-vermillion-h transition-colors underline underline-offset-2">
+        還不知道對方生辰？改成邀請朋友自己填 →
+      </button>
       <div className="space-y-2">
         <label className={labelClass}>關係型別 <span className="text-vermillion">*</span></label>
         <div className="grid grid-cols-3 gap-2">
