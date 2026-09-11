@@ -610,140 +610,14 @@ git commit -m "feat(compare): add CompareResult — computes both charts, render
 - Create: `app/compare/[inviteId]/page.tsx`
 
 **Interfaces:**
-- Consumes: `getInvite` from `@/lib/compareInvite` (Task 1); `CompareRespondForm` from `@/components/CompareRespondForm` (Task 4); `CompareResult` from `@/components/CompareResult` (Task 5); `getRelationshipConfig` from `@/lib/coupleTypes`.
+- Consumes: `getInvite`, `type CompareInvite`, `type PersonSnapshot` from `@/lib/compareInvite` (Task 1); `CompareRespondForm`, `type RespondedPerson` from `@/components/CompareRespondForm` (Task 4); `CompareResult` from `@/components/CompareResult` (Task 5); `getRelationshipConfig` from `@/lib/coupleTypes`; `EntryTracker` from `@/components/EntryTracker` (props: `date`, `hour`, `gender`, `name?`, `method`, `dedupeKey`, `relationshipType?` — the last two added in the 2026-09-09/10 hepan relationship-tracking work, already live).
 - Produces: the `/compare/[inviteId]` route.
 
-- [ ] **Step 1: Write the file**
+This task is two files: a Server Component (`page.tsx`, reads KV directly) and a Client Component it renders (`CompareResultClient.tsx`, owns the interactive "waiting for B" ⇄ "B has responded" state switch — Server Components can't hold `useState`, so the interactive part must live below a client boundary).
 
-Create `app/compare/[inviteId]/page.tsx`:
+- [ ] **Step 1: Write the client wrapper**
 
-```tsx
-import type { Metadata } from "next";
-import { getInvite } from "@/lib/compareInvite";
-import { getRelationshipConfig } from "@/lib/coupleTypes";
-import CompareRespondForm, { type RespondedPerson } from "@/components/CompareRespondForm";
-import CompareResultClient from "./CompareResultClient";
-
-export const metadata: Metadata = {
-  title: "雙人合盤邀請 — 命裡",
-  robots: { index: false, follow: false },
-};
-
-interface PageParams { inviteId: string }
-
-export default async function ComparePage({ params }: { params: Promise<PageParams> }) {
-  const { inviteId } = await params;
-  const invite = await getInvite(inviteId);
-
-  if (!invite) {
-    return (
-      <main className="min-h-screen bg-parchment px-4 py-16">
-        <div className="max-w-md mx-auto text-center space-y-3">
-          <p className="text-lg font-bold text-ink">此連結已失效</p>
-          <p className="text-sm text-ink-3">邀請連結可能已過期或不存在，請向對方索取新的邀請連結。</p>
-        </div>
-      </main>
-    );
-  }
-
-  const relConfig = getRelationshipConfig(invite.relType);
-
-  if (invite.personB) {
-    return (
-      <main className="min-h-screen bg-parchment px-4 py-10">
-        <CompareResultClient personA={invite.personA} personB={invite.personB} relType={invite.relType} />
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen bg-parchment px-4 py-16">
-      <CompareRespondForm
-        inviteId={inviteId}
-        personALabel={invite.personA.name || "朋友"}
-        relConfig={relConfig}
-        onResponded={(() => {}) as (p: RespondedPerson) => void}
-      />
-    </main>
-  );
-}
-```
-
-- [ ] **Step 2: Write the client wrapper that swaps the form for the result on submit**
-
-`CompareRespondForm.onResponded` needs to trigger a client-side switch to `CompareResult` without a full page reload (so the newly-computed charts render immediately). Since `page.tsx` above is a Server Component (it reads KV directly), the interactive "form → result" swap needs its own small Client Component wrapper — create `app/compare/[inviteId]/CompareResultClient.tsx`:
-
-```tsx
-"use client";
-
-import { useState } from "react";
-import CompareRespondForm, { type RespondedPerson } from "@/components/CompareRespondForm";
-import CompareResult from "@/components/CompareResult";
-import type { PersonSnapshot, CompareInvite } from "@/lib/compareInvite";
-import { getRelationshipConfig } from "@/lib/coupleTypes";
-
-interface Props {
-  personA: PersonSnapshot;
-  personB?: CompareInvite["personB"];
-  relType: CompareInvite["relType"];
-}
-
-export default function CompareResultClient({ personA, personB: initialPersonB, relType }: Props) {
-  const [personB, setPersonB] = useState<PersonSnapshot | undefined>(initialPersonB);
-
-  if (personB) {
-    return <CompareResult personA={personA} personB={personB} relType={relType} />;
-  }
-
-  return (
-    <CompareRespondForm
-      inviteId=""
-      personALabel={personA.name || "朋友"}
-      relConfig={getRelationshipConfig(relType)}
-      onResponded={(p: RespondedPerson) => setPersonB(p)}
-    />
-  );
-}
-```
-
-**Note — reconcile Step 1 and Step 2:** Step 1's server component should NOT render `CompareRespondForm` directly in the "no personB yet" branch — it should delegate entirely to `CompareResultClient`, which owns both the "waiting for B" and "B has responded" states via its own `useState`, and receives the real `inviteId` so `CompareRespondForm`'s fetch call actually hits the right endpoint. Rewrite `app/compare/[inviteId]/page.tsx` from Step 1 to this corrected version instead:
-
-```tsx
-import type { Metadata } from "next";
-import { getInvite } from "@/lib/compareInvite";
-import CompareResultClient from "./CompareResultClient";
-
-export const metadata: Metadata = {
-  title: "雙人合盤邀請 — 命裡",
-  robots: { index: false, follow: false },
-};
-
-interface PageParams { inviteId: string }
-
-export default async function ComparePage({ params }: { params: Promise<PageParams> }) {
-  const { inviteId } = await params;
-  const invite = await getInvite(inviteId);
-
-  if (!invite) {
-    return (
-      <main className="min-h-screen bg-parchment px-4 py-16">
-        <div className="max-w-md mx-auto text-center space-y-3">
-          <p className="text-lg font-bold text-ink">此連結已失效</p>
-          <p className="text-sm text-ink-3">邀請連結可能已過期或不存在，請向對方索取新的邀請連結。</p>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen bg-parchment px-4 py-10">
-      <CompareResultClient inviteId={inviteId} personA={invite.personA} personB={invite.personB} relType={invite.relType} />
-    </main>
-  );
-}
-```
-
-And `CompareResultClient` needs `inviteId` threaded through to `CompareRespondForm` — update its `Props`/usage from Step 2 to:
+Create `app/compare/[inviteId]/CompareResultClient.tsx`:
 
 ```tsx
 "use client";
@@ -791,7 +665,44 @@ export default function CompareResultClient({ inviteId, personA, personB: initia
 }
 ```
 
-**Interfaces (updated):** `CompareResultClient` also consumes `EntryTracker` from `@/components/EntryTracker` (props: `date`, `hour`, `gender`, `name?`, `method`, `dedupeKey`, `relationshipType?` — the last two added in the 2026-09-09/10 hepan relationship-tracking work, already live).
+- [ ] **Step 2: Write the server page**
+
+Create `app/compare/[inviteId]/page.tsx`:
+
+```tsx
+import type { Metadata } from "next";
+import { getInvite } from "@/lib/compareInvite";
+import CompareResultClient from "./CompareResultClient";
+
+export const metadata: Metadata = {
+  title: "雙人合盤邀請 — 命裡",
+  robots: { index: false, follow: false },
+};
+
+interface PageParams { inviteId: string }
+
+export default async function ComparePage({ params }: { params: Promise<PageParams> }) {
+  const { inviteId } = await params;
+  const invite = await getInvite(inviteId);
+
+  if (!invite) {
+    return (
+      <main className="min-h-screen bg-parchment px-4 py-16">
+        <div className="max-w-md mx-auto text-center space-y-3">
+          <p className="text-lg font-bold text-ink">此連結已失效</p>
+          <p className="text-sm text-ink-3">邀請連結可能已過期或不存在，請向對方索取新的邀請連結。</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-parchment px-4 py-10">
+      <CompareResultClient inviteId={inviteId} personA={invite.personA} personB={invite.personB} relType={invite.relType} />
+    </main>
+  );
+}
+```
 
 - [ ] **Step 3: Verify it type-checks**
 
