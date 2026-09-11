@@ -256,6 +256,15 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
         />
       </div>
 
+      <div className="mb-6">
+        <Link
+          href={`/hepan?invite=1&adate=${encodeURIComponent(date)}&ahour=${hour}&agender=${gender}${name ? `&aname=${encodeURIComponent(name)}` : ""}`}
+          className="block text-center bg-paper border border-border-warm text-ink-2 text-sm font-medium px-6 py-3 rounded-full hover:border-vermillion/50 hover:text-vermillion transition-colors"
+        >
+          邀請朋友合盤，看看你們的緣分 →
+        </Link>
+      </div>
+
       <div>
         <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1">命盤</p>
         <ZiweiChart

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import Md from "./Md";
 import { useSSEStream } from "@/lib/useSSEStream";
 import type { Reference } from "@/lib/rag";
@@ -348,6 +349,14 @@ function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
   );
 }
 
+// Reverse of lib/ziwei.ts's hourToShichen — maps an iztro shichen index (0–12)
+// back to a representative clock hour, for cross-linking into flows (like
+// HepanFlow's invite mode) that take a plain hour instead of a shichen index.
+function shichenIndexToHour(timeIndex: number): number {
+  if (timeIndex === 0 || timeIndex === 12) return 23; // 子時 (both the 0 and 12 iztro indices map here)
+  return timeIndex * 2 - 1;
+}
+
 // ── Main wizard ──────────────────────────────────────────────────────────────
 
 interface WizardFlowProps {
@@ -633,6 +642,15 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 <PaywallLock chartId={sessionId ?? ""} sectionLabel="完整命書" personalizedHint={paywallPersonalizedHint} />
               </div>
             )}
+
+            <div className="mb-6">
+              <Link
+                href={`/hepan?invite=1&adate=${encodeURIComponent(ziwei.birth.solarDate)}&ahour=${shichenIndexToHour(ziwei.birth.timeIndex)}&agender=${gender}${name ? `&aname=${encodeURIComponent(name)}` : ""}`}
+                className="block text-center bg-paper border border-border-warm text-ink-2 text-sm font-medium px-6 py-3 rounded-full hover:border-vermillion/50 hover:text-vermillion transition-colors"
+              >
+                邀請朋友合盤，看看你們的緣分 →
+              </Link>
+            </div>
           </div>
         );
 
