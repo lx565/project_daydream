@@ -19,8 +19,14 @@ import { chartType, CHART_PRICE_USD, type ChartType } from "@/lib/chartType";
 
 const PAYWALL_ENABLED = process.env.NEXT_PUBLIC_PAYWALL_ENABLED === "true";
 
+// Permanent product decision (2026-09-11, Niki: "hepan stay free") — hepan
+// stays free regardless of the master switch or the temporary override below,
+// so it can't accidentally get re-paywalled if DISABLED_TYPES changes for an
+// unrelated product later. This is a standing decision, not a promo.
+const PERMANENTLY_FREE_TYPES = new Set<ChartType>(["hepan"]);
+
 // Comma-separated ChartType values to force-free regardless of the master
-// switch, e.g. "hepan" or "hepan,monthly" — a temporary, reversible way to
+// switch, e.g. "monthly" or "hepan,monthly" — a temporary, reversible way to
 // give one product away for testing/promotion without touching the others.
 // Unset (default) disables nothing; remove the env var to restore normal
 // paywall behavior for that type.
@@ -49,7 +55,7 @@ export interface PaywallState {
 }
 
 export function usePaywall(chartId?: string): PaywallState {
-  const enabled = PAYWALL_ENABLED && !(chartId && DISABLED_TYPES.has(chartType(chartId)));
+  const enabled = PAYWALL_ENABLED && !(chartId && (PERMANENTLY_FREE_TYPES.has(chartType(chartId)) || DISABLED_TYPES.has(chartType(chartId))));
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(enabled);
   const polled = useRef(false);

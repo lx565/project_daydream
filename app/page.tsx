@@ -208,13 +208,14 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── 1.5 限時免費 Promo Banner ── */}
+      {/* ── 1.5 Promo Banner — 雙人合盤 is a standing free product, not a promo;
+          年度解讀's free status is still the temporary DISABLED_TYPES override. */}
       <div className="bg-vermillion text-paper text-center py-2 px-4 text-xs sm:text-sm">
-        🎉 限時免費：
+        🎉
         <Link href="/hepan" className="underline underline-offset-2 hover:opacity-80 transition-opacity">雙人合盤</Link>
-        {" "}與{" "}
+        {" "}永久免費，
         <Link href="/niandu" className="underline underline-offset-2 hover:opacity-80 transition-opacity">年度解讀</Link>
-        {" "}現正完全免費，把握機會體驗完整解讀！
+        {" "}現正限時免費，把握機會體驗完整解讀！
       </div>
 
       {/* ── 2. Hero ── */}
