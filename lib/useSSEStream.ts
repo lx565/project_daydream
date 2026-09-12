@@ -61,7 +61,13 @@ function loadCache(key: string): CacheShape | null {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed.text === "string" && Array.isArray(parsed.refs)) return parsed;
+    // Reject empty-text entries even if they were saved as "done" — a run that
+    // completed with zero output (provider hiccup, e.g. reasoning tokens eating
+    // the whole maxTokens budget) should never be treated as a valid cache hit;
+    // otherwise a single bad generation freezes that chart blank for this
+    // browser forever, with no error and no retry surfaced (see saveCache's
+    // matching guard, which stops this from being written going forward).
+    if (typeof parsed.text === "string" && parsed.text.length > 0 && Array.isArray(parsed.refs)) return parsed;
     return null;
   } catch { return null; }
 }
@@ -223,6 +229,13 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
             break;
           }
         }
+
+        // A stream that finishes with zero text (provider returned nothing —
+        // e.g. reasoning tokens ate the whole maxTokens budget) is a failure,
+        // not a success: surfacing it as "done" renders a permanently blank
+        // section with no error and no retry, and caching it poisons this
+        // chart for this browser indefinitely (see loadCache's matching guard).
+        if (!accText.current) throw new Error("AI 未返回內容，請重試");
 
         if (cacheKey) saveCache(cacheKey, { text: accText.current, refs: accRefs.current });
         setStatus("done");
