@@ -50,8 +50,9 @@ export interface StreamOpts {
   validate?: boolean;
 }
 
-// v21: 2026-08-24 couple/preview: full relevant-palace/star/四化 grounding (was 夫妻宮-only).
-const CACHE_PREFIX = "ziwei_rd_v22_";
+// v22: 2026-09-12 niandu: added the "## 八字流年開運" section — old cached niandu
+// readings (client-side, per browser) predate it and would never re-fetch.
+const CACHE_PREFIX = "ziwei_rd_v23_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 

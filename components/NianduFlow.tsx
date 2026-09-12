@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { BirthdayWheel } from "./WheelPicker";
 import type { ZiweiResult } from "@/lib/ziwei";
+import type { BaziResult } from "@/lib/bazi";
 import NianduResultView from "./NianduResultView";
 
 interface PersonFields {
@@ -22,6 +23,7 @@ interface PersonFields {
 
 export interface NianduCharts {
   ziwei: ZiweiResult;
+  bazi: BaziResult;
   name?: string;
   gender: "male" | "female";
   date: string;
@@ -55,11 +57,13 @@ function personFromUrl(): PersonFields | null {
 
 async function computeCharts(p: PersonFields): Promise<NianduCharts> {
   const { calculateZiwei } = await import("@/lib/ziwei");
+  const { calculateBazi } = await import("@/lib/bazi");
   const [y, m, d] = p.date.split("-").map(Number);
   const h = parseInt(p.hour, 10);
   const gender = p.gender as "male" | "female";
   const ziwei = await calculateZiwei(y, m, d, h, gender);
-  return { ziwei, name: p.name || undefined, gender, date: p.date, hour: h, sessionId: personKey(p) };
+  const bazi = calculateBazi(y, m, d, h, gender);
+  return { ziwei, bazi, name: p.name || undefined, gender, date: p.date, hour: h, sessionId: personKey(p) };
 }
 
 export default function NianduFlow() {

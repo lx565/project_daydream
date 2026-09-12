@@ -75,9 +75,10 @@ interface NianduSection {
   modern: string;
 }
 
+// Operates on ONE "## 今年關鍵提醒" block's body (top heading already stripped
+// by splitTopSections below) — splits it into its "### 領域" sub-points.
 function parseNianduSections(text: string): NianduSection[] {
-  const withoutTopHeading = text.replace(/^##[^\n]*\n/, "");
-  const chunks = withoutTopHeading.split(/\n(?=###\s)/).map((c) => c.trim()).filter(Boolean);
+  const chunks = text.trim().split(/\n(?=###\s)/).map((c) => c.trim()).filter(Boolean);
 
   return chunks.map((chunk) => {
     const headingMatch = chunk.match(/^###\s*(.+)/);
@@ -88,6 +89,30 @@ function parseNianduSections(text: string): NianduSection[] {
     const classical = body.replace(/\[白話\][\s\S]*?(\[\/白話\]|$)/, "").trim();
     return { heading, classical, modern };
   });
+}
+
+// Splits the full reading into its top-level "## 標題" blocks (currently
+// "今年關鍵提醒" and "八字流年開運" — see app/api/reading/niandu/route.ts) so
+// each can get its own rendering treatment instead of being flattened together.
+function splitTopSections(text: string): Record<string, string> {
+  const chunks = text.trim().split(/\n(?=##\s)/).map((c) => c.trim()).filter(Boolean);
+  const out: Record<string, string> = {};
+  for (const chunk of chunks) {
+    const m = chunk.match(/^##\s*(.+)/);
+    if (!m) continue;
+    out[m[1].trim()] = chunk.replace(/^##[^\n]*\n?/, "").trim();
+  }
+  return out;
+}
+
+// A single {classical, modern} pair — used for 八字流年開運, which (unlike
+// 今年關鍵提醒's multiple ### signals) is one big block with just one
+// [白話]...[/白話] companion.
+function extractModernPair(text: string): { classical: string; modern: string } {
+  const modernMatch = text.match(/\[白話\]([\s\S]*?)\[\/白話\]/);
+  const modern = modernMatch ? modernMatch[1].trim() : "";
+  const classical = text.replace(/\[白話\][\s\S]*?(\[\/白話\]|$)/, "").trim();
+  return { classical, modern };
 }
 
 const NIANDU_INCLUDED = [
@@ -111,7 +136,7 @@ const TONE_STYLE: Record<NianduSignal["tone"], string> = {
 };
 
 export default function NianduResultView({ charts, onReset }: { charts: NianduCharts; onReset: () => void }) {
-  const { ziwei, name, gender, date, hour, sessionId } = charts;
+  const { ziwei, bazi, name, gender, date, hour, sessionId } = charts;
   const label = name || (gender === "male" ? "命主（男）" : "命主（女）");
 
   const chartId = `niandu_${sessionId}`;
@@ -148,7 +173,7 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
   useEffect(() => {
     if (!gated && !paywall.loading && !fullStarted.current) {
       fullStarted.current = true;
-      if (full.status === "idle") full.start({ ziwei, name });
+      if (full.status === "idle") full.start({ ziwei, bazi, name });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gated, paywall.loading]);
@@ -213,36 +238,61 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
             {full.status === "error" && (
               <div className="space-y-2">
                 <p className="text-sm text-vermillion">{full.errorMsg}</p>
-                <button onClick={() => full.start({ ziwei, name })} className="text-xs text-gold underline">重試</button>
+                <button onClick={() => full.start({ ziwei, bazi, name })} className="text-xs text-gold underline">重試</button>
               </div>
             )}
             {full.status === "streaming" && !full.text && <LoadingSkeleton />}
-            {(full.status === "streaming" || full.status === "done") && full.text && (
-              <div className="animate-fade-in space-y-1">
-                <div className="grid grid-cols-2 gap-4 mb-3 px-1">
-                  <span className="text-[10px] uppercase tracking-widest text-ink-4">命理版</span>
-                  <span className="text-[10px] uppercase tracking-widest text-vermillion sm:border-l sm:border-border-light sm:pl-4">白話版 · 不懂術語也能看懂</span>
-                </div>
-                {parseNianduSections(full.text).map((s, i) => (
-                  <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
-                    {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        {s.classical && <Md className={MD_PROSE}>{s.classical}</Md>}
-                      </div>
-                      <div className="sm:border-l sm:border-border-light sm:pl-4">
-                        {s.modern ? (
-                          <Md className={MD_PROSE}>{s.modern}</Md>
-                        ) : (
-                          <p className="text-xs text-ink-4 italic">換個方式，說給你聽…</p>
-                        )}
+            {(full.status === "streaming" || full.status === "done") && full.text && (() => {
+              const topSections = splitTopSections(full.text);
+              const criticalMoments = topSections["今年關鍵提醒"] ?? full.text;
+              const baziLuckBlock = topSections["八字流年開運"] ?? "";
+              const baziLuck = baziLuckBlock ? extractModernPair(baziLuckBlock) : null;
+              return (
+                <div className="animate-fade-in space-y-1">
+                  <div className="grid grid-cols-2 gap-4 mb-3 px-1">
+                    <span className="text-[10px] uppercase tracking-widest text-ink-4">命理版</span>
+                    <span className="text-[10px] uppercase tracking-widest text-vermillion sm:border-l sm:border-border-light sm:pl-4">白話版 · 不懂術語也能看懂</span>
+                  </div>
+                  {parseNianduSections(criticalMoments).map((s, i) => (
+                    <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
+                      {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          {s.classical && <Md className={MD_PROSE}>{s.classical}</Md>}
+                        </div>
+                        <div className="sm:border-l sm:border-border-light sm:pl-4">
+                          {s.modern ? (
+                            <Md className={MD_PROSE}>{s.modern}</Md>
+                          ) : (
+                            <p className="text-xs text-ink-4 italic">換個方式，說給你聽…</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                <RefList refs={full.refs} />
-              </div>
-            )}
+                  ))}
+                  {baziLuck && (
+                    <div className="mt-2 pt-4 border-t-2 border-gold/30">
+                      <h3 className="text-vermillion font-bold text-sm mb-3 flex items-center gap-1.5">
+                        <span>🧧</span>八字流年開運指南
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          {baziLuck.classical && <Md className={MD_PROSE}>{baziLuck.classical}</Md>}
+                        </div>
+                        <div className="sm:border-l sm:border-border-light sm:pl-4">
+                          {baziLuck.modern ? (
+                            <Md className={MD_PROSE}>{baziLuck.modern}</Md>
+                          ) : (
+                            <p className="text-xs text-ink-4 italic">換個方式，說給你聽…</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <RefList refs={full.refs} />
+                </div>
+              );
+            })()}
             {full.status === "idle" && <LoadingSkeleton />}
           </div>
         )}
