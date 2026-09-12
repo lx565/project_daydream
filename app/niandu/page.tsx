@@ -81,10 +81,20 @@ export default function NianduPage() {
             <p className="text-sm text-ink-3 leading-relaxed">
               命裡的年度解讀把紫微斗數的流年四化推算套用在今年，
               只講真正值得放在心上的幾件事，不是「本週水逆」那種通用文案。
+              每個重點都以<strong className="text-ink-2">命理版＋白話版雙欄呈現</strong>，沒學過紫微也能一看就懂。
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2 rounded-xl border border-vermillion/30 bg-vermillion-l/10 p-4">
+              <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+                命理版＋白話版 · 雙視角呈現
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-vermillion text-paper tracking-wide">NEW</span>
+              </h3>
+              <p className="text-xs text-ink-3 leading-relaxed">
+                每個關鍵訊號左右並排：左邊是命理原文，右邊是白話重講——同一件事講兩遍，一遍給懂術語的人，一遍給完全不懂的人。
+              </p>
+            </div>
             {[
               { t: "四化訊號總覽", d: "今年化祿、化權、化科、化忌分別落在命盤哪一宮，確定性演算法，結果穩定、完全免費。" },
               { t: "對應具體領域", d: "每個訊號對應到感情、事業、財務、健康、貴人等具體生活領域，不是空泛的吉凶論斷。" },

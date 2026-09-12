@@ -37,7 +37,7 @@ const FAQ = [
   {
     question: "紫微雙人合盤免費嗎？",
     answer:
-      "完全免費，包含緣分指數四維得分、「緣分一瞥」預覽，以及更深入的完整合盤解讀（飛化互入、合盤三方四正、緣分時機、相處之道與可分享緣分卡片）。輸入兩人資訊即可全部檢視，不需付費。",
+      "完全免費，包含緣分指數四維得分、「緣分一瞥」預覽，以及更深入的完整合盤解讀（飛化互入、合盤三方四正、緣分時機、相處之道與可分享緣分卡片）。「綫析」分頁的完整解讀更提供命理版＋白話版雙欄對照，不懂紫微或八字術語也能看懂。輸入兩人資訊即可全部檢視，不需付費。",
   },
   {
     question: "合盤可以測哪些關係？",
@@ -88,10 +88,21 @@ export default function HepanPage() {
             <p className="text-sm text-ink-3 leading-relaxed">
               命裡的紫微雙人合盤從三個層次解讀一段關係：先獨立看甲方在這段關係中的模式，再獨立看乙方，
               最後兩盤合觀，找出彼此的契合點、張力所在與相處之道，並結合雙方當前大運點出緣分的高峰期與考驗階段。
+              「綫析」分頁更提供<strong className="text-ink-2">命理版＋白話版雙欄對照</strong>，看不懂術語也能秒懂重點。
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2 rounded-xl border border-vermillion/30 bg-vermillion-l/10 p-4">
+              <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+                命理版＋白話版 · 雙視角解讀
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-vermillion text-paper tracking-wide">NEW</span>
+              </h3>
+              <p className="text-xs text-ink-3 leading-relaxed">
+                完整合盤解讀左右並排呈現：左邊是紫微／八字的命理原文，右邊是同一段話的白話重寫——像一個很懂你們的老朋友，
+                直接把重點講給你聽，不需要先學會術語才看得懂自己的合盤。
+              </p>
+            </div>
             {[
               { t: "緣分指數四維", d: "根據關係型別量身計算吸引力、默契度、穩定度、成長潛力等四個維度，確定性演算法，結果穩定可分享。" },
               { t: "夫妻宮對照", d: "解析雙方夫妻宮主星與四化、感情星強弱，看你們容易被彼此哪一面吸引、相處模式如何。" },

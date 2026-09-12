@@ -234,7 +234,7 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
                         {s.modern ? (
                           <Md className={MD_PROSE}>{s.modern}</Md>
                         ) : (
-                          <p className="text-xs text-ink-4 italic">白話版生成中…</p>
+                          <p className="text-xs text-ink-4 italic">換個方式，說給你聽…</p>
                         )}
                       </div>
                     </div>
