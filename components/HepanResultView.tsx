@@ -13,7 +13,7 @@ import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { calcCoupleScoreV2 } from "@/lib/couple";
 import { getRelationshipConfig, type RelationshipType } from "@/lib/coupleTypes";
-import { useSSEStream } from "@/lib/useSSEStream";
+import { useSSEStream, type StreamResult } from "@/lib/useSSEStream";
 import { usePaywall } from "@/lib/usePaywall";
 import { parseModernBlocks, stripModern } from "@/lib/modernBlocks";
 import { extractSection, removeSection } from "@/lib/extractSection";
@@ -123,14 +123,25 @@ function ShareCard({ text }: { text: string }) {
   );
 }
 
-// Splits off the "### 分享卡片" block; stripHeading additionally removes a named
-// section (already surfaced in its own tab, e.g. "緣分時機") from the body.
-function FullReading({ text, stripHeading }: { text: string; stripHeading?: string }) {
-  const marker = "### 分享卡片";
-  const idx = text.indexOf(marker);
+const SHARE_CARD_MARKER = "### 分享卡片";
+
+// Strips the "### 分享卡片" block off the end of a full reading; stripHeading
+// additionally removes a named section (already surfaced in its own tab, e.g.
+// "緣分時機") from the body. Shared by FullReading and the twin-column
+// vernacular renderer so both see exactly the same section boundaries.
+function sansShareCard(text: string, stripHeading?: string): string {
+  const idx = text.indexOf(SHARE_CARD_MARKER);
   let body = idx >= 0 ? text.slice(0, idx) : text;
   if (stripHeading) body = removeSection(body, stripHeading);
-  const rawCard = idx >= 0 ? text.slice(idx + marker.length).trim() : "";
+  return body;
+}
+
+// Renders the "### 分享卡片" block (if present) as a copyable card, plus any
+// [現代] block the model tucked inside it (see comment below).
+function ShareCardBlock({ text }: { text: string }) {
+  const idx = text.indexOf(SHARE_CARD_MARKER);
+  if (idx < 0) return null;
+  const rawCard = text.slice(idx + SHARE_CARD_MARKER.length).trim();
 
   // MODERN_INSTRUCTION tells the model to put [現代]...[/現代] last, but the
   // share-card template is itself the prompt's last section, so the model
@@ -141,10 +152,81 @@ function FullReading({ text, stripHeading }: { text: string; stripHeading?: stri
   const modernInCard = parseModernBlocks(rawCard).filter((p) => p.type === "modern");
 
   return (
-    <div className="space-y-4">
-      <ReadingText text={body} />
+    <>
       {card && <ShareCard text={card} />}
       {modernInCard.map((part, i) => <ModernBlock key={i} content={part.content} />)}
+    </>
+  );
+}
+
+function FullReading({ text, stripHeading }: { text: string; stripHeading?: string }) {
+  const body = sansShareCard(text, stripHeading);
+  return (
+    <div className="space-y-4">
+      <ReadingText text={body} />
+      <ShareCardBlock text={text} />
+    </div>
+  );
+}
+
+// Splits an AI reading into ordered {heading, body} sections on "## " headings —
+// used to pair each classical section with its vernacular-companion rewrite,
+// which is instructed to echo the same headings verbatim in the same order.
+interface HeadingSection { heading: string; body: string }
+
+function splitByH2(text: string): HeadingSection[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  const chunks = trimmed.split(/\n(?=##\s)/).map((c) => c.trim()).filter(Boolean);
+  return chunks.map((chunk) => {
+    const m = chunk.match(/^##\s*(.+)/);
+    const heading = m ? m[1].trim() : "";
+    const body = chunk.replace(/^##[^\n]*\n?/, "").trim();
+    return { heading, body };
+  });
+}
+
+// Left column: classical (命理版) reading, section by section. Right column:
+// the matching vernacular-companion rewrite, streamed via a separate AI call
+// (see app/api/reading/vernacular/route.ts) so the already-vetted classical
+// prompts never need to change. Only rendered once the companion call
+// finishes — its own output is short enough that a full-vs-partial parse
+// mismatch isn't worth the flicker of rendering mid-stream.
+function TwinColumnReading({ classicalText, vernacular, stripHeading }: {
+  classicalText: string; vernacular: StreamResult; stripHeading?: string;
+}) {
+  const classicalBody = sansShareCard(classicalText, stripHeading);
+  const classicalSections = splitByH2(classicalBody);
+  const vernacularSections = vernacular.status === "done" ? splitByH2(vernacular.text) : [];
+
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-2 gap-4 mb-3 px-1">
+        <span className="text-[10px] uppercase tracking-widest text-ink-4">命理版</span>
+        <span className="text-[10px] uppercase tracking-widest text-vermillion sm:border-l sm:border-border-light sm:pl-4">白話版 · 老朋友視角</span>
+      </div>
+      {vernacular.status === "error" && (
+        <div className="flex items-center justify-between gap-2 mb-3 px-2 py-1.5 rounded-lg bg-vermillion-l/40">
+          <span className="text-xs text-vermillion">白話版生成失敗：{vernacular.errorMsg}</span>
+          <button onClick={() => vernacular.start({ text: classicalBody })} className="text-xs text-gold underline shrink-0">重試</button>
+        </div>
+      )}
+      {classicalSections.map((s, i) => (
+        <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
+          {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><ReadingText text={s.body} /></div>
+            <div className="sm:border-l sm:border-border-light sm:pl-4">
+              {vernacularSections[i]?.body ? (
+                <Md className={MD_PROSE}>{vernacularSections[i].body}</Md>
+              ) : vernacular.status !== "error" ? (
+                <p className="text-xs text-ink-4 italic">老朋友正在想怎麼跟你說…</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ))}
+      <ShareCardBlock text={classicalText} />
     </div>
   );
 }
@@ -226,6 +308,11 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
   const synthesisB = useSSEStream("/api/reading/synthesis", `${coupleChartId}_synthesisB`, { validate: true });
   const coupleFull = useSSEStream("/api/reading/couple", `${coupleChartId}_full`);
   const baziCoupleFull = useSSEStream("/api/reading/bazi-couple", `${coupleChartId}_bazifull`);
+  // "白話版" companions — separate calls fired once their classical counterpart
+  // finishes (see app/api/reading/vernacular/route.ts for why this is a second
+  // call rather than a doubled prompt).
+  const coupleVernacular = useSSEStream("/api/reading/vernacular", `${coupleChartId}_full_vernacular`);
+  const baziVernacular = useSSEStream("/api/reading/vernacular", `${coupleChartId}_bazifull_vernacular`);
 
   useEffect(() => {
     if (paywall.loading || gated) return;
@@ -235,6 +322,20 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
     if (baziCoupleFull.status === "idle") baziCoupleFull.start(body);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
+
+  useEffect(() => {
+    if (coupleFull.status === "done" && coupleVernacular.status === "idle") {
+      coupleVernacular.start({ text: sansShareCard(coupleFull.text, "緣分時機") });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coupleFull.status]);
+
+  useEffect(() => {
+    if (baziCoupleFull.status === "done" && baziVernacular.status === "idle") {
+      baziVernacular.start({ text: sansShareCard(baziCoupleFull.text, "大運時機") });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baziCoupleFull.status]);
 
   const coupleContext = `合盤追問 — ${labelA}（${baziA.summary}）與 ${labelB}（${baziB.summary}）。請專注於兩人之間的感情互動、相處模式與具體建議。`;
 
@@ -326,11 +427,15 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
               </p>
               <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
                 {(coupleFull.status === "streaming" || coupleFull.status === "idle") && <LoadingSkeleton />}
-                {coupleFull.status === "done" && <div className="animate-fade-in"><FullReading text={coupleFull.text} stripHeading="緣分時機" /></div>}
+                {coupleFull.status === "done" && (
+                  <div className="animate-fade-in">
+                    <TwinColumnReading classicalText={coupleFull.text} vernacular={coupleVernacular} stripHeading="緣分時機" />
+                  </div>
+                )}
                 {coupleFull.status === "error" && (
                   <div className="space-y-2">
                     <p className="text-sm text-vermillion">{coupleFull.errorMsg}</p>
-                    <button onClick={() => coupleFull.start(body)} className="text-xs text-gold underline">重試</button>
+                    <button onClick={() => { coupleVernacular.reset(); coupleFull.start(body); }} className="text-xs text-gold underline">重試</button>
                   </div>
                 )}
               </div>
@@ -342,11 +447,15 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
               </p>
               <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
                 {(baziCoupleFull.status === "streaming" || baziCoupleFull.status === "idle") && <LoadingSkeleton />}
-                {baziCoupleFull.status === "done" && <div className="animate-fade-in"><FullReading text={baziCoupleFull.text} stripHeading="大運時機" /></div>}
+                {baziCoupleFull.status === "done" && (
+                  <div className="animate-fade-in">
+                    <TwinColumnReading classicalText={baziCoupleFull.text} vernacular={baziVernacular} stripHeading="大運時機" />
+                  </div>
+                )}
                 {baziCoupleFull.status === "error" && (
                   <div className="space-y-2">
                     <p className="text-sm text-vermillion">{baziCoupleFull.errorMsg}</p>
-                    <button onClick={() => baziCoupleFull.start(body)} className="text-xs text-gold underline">重試</button>
+                    <button onClick={() => { baziVernacular.reset(); baziCoupleFull.start(body); }} className="text-xs text-gold underline">重試</button>
                   </div>
                 )}
               </div>
