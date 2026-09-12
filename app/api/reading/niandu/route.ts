@@ -81,11 +81,14 @@ ${bazi.summary}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      // 3800, not 3200: added the 八字流年開運 section (one more dual 命理/白話
-      // block) on top of the per-domain 四化 signals — bumped for headroom
-      // against DeepSeek's reasoning_content eating into this same budget (see
-      // couple/route.ts's maxTokens comment for the documented pattern).
-      maxTokens: 3800,
+      // 5200, not 3800: 3800 was observed truncating to ~190 chars (barely one
+      // domain signal, no 八字流年開運 at all) in production right after the
+      // 八字流年開運 section was added — DeepSeek's reasoning_content ate almost
+      // the whole budget before any real output (see couple/route.ts's maxTokens
+      // comment for the documented pattern). This route now asks for up to 5
+      // dual-format blocks (4 domain signals + 八字流年開運), matching the
+      // per-section token ratio couple/bazi-couple already use.
+      maxTokens: 5200,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "niandu" },

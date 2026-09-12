@@ -73,7 +73,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v38"; // 2026-09-12 niandu: added the "## 八字流年開運" top-level section (顏色/方位/開運提醒) — bump so pre-change cached readings (missing this section) aren't replayed
+const CACHE_VERSION = "v39"; // 2026-09-12 niandu: v38's 3800 maxTokens was observed truncating to ~190 chars in production right after shipping (DeepSeek reasoning_content starved real output) — that truncated-but-non-empty response got cached under v38 and would keep replaying verbatim (cache key doesn't encode maxTokens) even after bumping the budget to 5200, so bump again to invalidate it
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
