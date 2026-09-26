@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Reference } from "./rag";
 import { gtagEvent } from "./gtag";
 
@@ -265,6 +265,12 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     [url, cacheKey, runValidation]
   );
   startRef.current = start;
+
+  // Cancel whatever this hook instance has in flight when it unmounts (e.g. a
+  // hepan resubmit remounts HepanResultView from scratch). Without this, the
+  // abandoned fetch keeps streaming — and billing the AI provider — for a
+  // reading nothing is listening to anymore.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
