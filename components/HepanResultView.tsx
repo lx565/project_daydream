@@ -5,7 +5,6 @@ import Link from "next/link";
 import Md from "./Md";
 import ZiweiChart from "./ZiweiChart";
 import PaywallLock from "./PaywallLock";
-import ChatInterface from "./ChatInterface";
 import BugReportButton from "./BugReportButton";
 import EntryTracker from "./EntryTracker";
 import ToolCTA from "./ToolCTA";
@@ -34,7 +33,6 @@ const COUPLE_INCLUDED = [
   "飛化互入 · 彼此牽動的領域",
   "緣分時機 · 高峰與考驗階段",
   "相處之道 · 具體可行建議",
-  "問合盤 · 追問深入分析",
   "可分享緣分卡片 · 一鍵複製分享",
 ];
 
@@ -201,10 +199,6 @@ function TwinColumnReading({ classicalText, vernacular, stripHeading }: {
 
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-2 gap-4 mb-3 px-1">
-        <span className="text-[10px] uppercase tracking-widest text-ink-4">命理版</span>
-        <span className="text-[10px] uppercase tracking-widest text-vermillion sm:border-l sm:border-border-light sm:pl-4">白話版 · 老朋友視角</span>
-      </div>
       {vernacular.status === "error" && (
         <div className="flex items-center justify-between gap-2 mb-3 px-2 py-1.5 rounded-lg bg-vermillion-l/40">
           <span className="text-xs text-vermillion">白話版生成失敗：{vernacular.errorMsg}</span>
@@ -214,15 +208,14 @@ function TwinColumnReading({ classicalText, vernacular, stripHeading }: {
       {classicalSections.map((s, i) => (
         <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
           {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><ReadingText text={s.body} /></div>
-            <div className="sm:border-l sm:border-border-light sm:pl-4">
-              {vernacularSections[i]?.body ? (
-                <Md className={MD_PROSE}>{vernacularSections[i].body}</Md>
-              ) : vernacular.status !== "error" ? (
-                <p className="text-xs text-ink-4 italic">老朋友正在想怎麼跟你說…</p>
-              ) : null}
-            </div>
+          <ReadingText text={s.body} />
+          <div className="mt-3 pt-3 border-t border-dashed border-border-light">
+            <span className="block text-[10px] uppercase tracking-widest text-vermillion mb-1.5">白話版 · 老朋友視角</span>
+            {vernacularSections[i]?.body ? (
+              <Md className={MD_PROSE}>{vernacularSections[i].body}</Md>
+            ) : vernacular.status !== "error" ? (
+              <p className="text-xs text-ink-4 italic">老朋友正在想怎麼跟你說…</p>
+            ) : null}
           </div>
         </div>
       ))}
@@ -262,31 +255,26 @@ function LoadingSkeleton() {
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "solo" | "analysis" | "timing" | "chat"
-  | "deep_palaces" | "deep_decades" | "deep_schools" | "deep_cautions";
+type Tab = "overview" | "solo" | "analysis" | "timing" | "deep_cautions";
 
 const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "overview", label: "總覽", char: "緣" },
   { id: "solo", label: "各自", char: "個" },
   { id: "analysis", label: "綫析", char: "合" },
-  { id: "timing", label: "時機", char: "時" },
-  { id: "chat", label: "問合盤", char: "問" },
-  { id: "deep_palaces", label: "宮位", char: "宮" },
-  { id: "deep_decades", label: "大運", char: "運" },
-  { id: "deep_schools", label: "眾說", char: "說" },
+  { id: "timing", label: "時運", char: "時" },
   { id: "deep_cautions", label: "注意", char: "警" },
 ];
 
 const FREE_TABS = new Set<Tab>(["overview"]);
-// The 4 深度合盤 (paid upsell) tabs — gated by a second, independent paywall
-// on top of hepan's own permanently-free 5-tab result (see usePaywall.ts's
-// PERMANENTLY_FREE_TYPES — that set only covers "hepan", not "hepandeep").
-const DEEP_TABS = new Set<Tab>(["deep_palaces", "deep_decades", "deep_schools", "deep_cautions"]);
+// 深度合盤 (paid upsell) tabs whose WHOLE tab is gated by the second,
+// independent hepandeep paywall (see usePaywall.ts's PERMANENTLY_FREE_TYPES —
+// that set only covers "hepan", not "hepandeep"). "timing" also carries paid
+// content (深度大運分析), but only its bottom half is gated — see that case
+// in renderContent() — so it is deliberately NOT in this set.
+const DEEP_TABS = new Set<Tab>(["deep_cautions"]);
 
 const DEEP_INCLUDED = [
-  "宮位 · 雙方相關宮位逐一並列比較",
   "大運 · 雙方大限週期同步/錯位分析",
-  "眾說 · 三合/四化/飛星/倪師/小眾五派看這段關係",
   "注意 · 兩盤之間的煞星化忌互動與化解",
 ];
 
@@ -346,16 +334,12 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
 
   // 深度合盤 (paid upsell) streams — same body payload as coupleFull/baziCoupleFull,
   // gated by the separate hepandeep paywall above, not the free hepan one.
-  const deepPalaces  = useSSEStream("/api/reading/couple/palaces",  `${hepandeepChartId}_palaces`);
   const deepDecades  = useSSEStream("/api/reading/couple/decades",  `${hepandeepChartId}_decades`);
-  const deepSchools  = useSSEStream("/api/reading/couple/schools",  `${hepandeepChartId}_schools`);
   const deepCautions = useSSEStream("/api/reading/couple/cautions", `${hepandeepChartId}_cautions`);
 
   useEffect(() => {
     if (deepPaywall.loading || deepGated) return;
-    if (deepPalaces.status === "idle") deepPalaces.start(body);
     if (deepDecades.status === "idle") deepDecades.start(body);
-    if (deepSchools.status === "idle") deepSchools.start(body);
     if (deepCautions.status === "idle") deepCautions.start(body);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepPaywall.loading, deepGated]);
@@ -373,8 +357,6 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baziCoupleFull.status]);
-
-  const coupleContext = `合盤追問 — ${labelA}（${baziA.summary}）與 ${labelB}（${baziB.summary}）。請專注於兩人之間的感情互動、相處模式與具體建議。`;
 
   function renderContent() {
     switch (activeTab) {
@@ -545,51 +527,30 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
                 </>
               )}
             </div>
+
+            <p className="text-xs text-ink-4 tracking-widest uppercase mb-2 px-1 flex items-center gap-2 pt-2">
+              <span className="w-px h-3 bg-vermillion inline-block" />
+              <span className="text-vermillion">大運深度分析</span>
+            </p>
+            <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+              {deepGated ? (
+                <PaywallLock chartId={hepandeepChartId} sectionLabel="大運深度分析" included={DEEP_INCLUDED} />
+              ) : (
+                <>
+                  {(deepDecades.status === "streaming" || deepDecades.status === "idle") && <LoadingSkeleton />}
+                  {deepDecades.status === "done" && <div className="animate-fade-in"><ReadingText text={deepDecades.text} /></div>}
+                  {deepDecades.status === "error" && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-vermillion">{deepDecades.errorMsg}</p>
+                      <button onClick={() => deepDecades.start(body)} className="text-xs text-gold underline">重試</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         );
       }
-
-      case "deep_palaces":
-        return (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-            {(deepPalaces.status === "streaming" || deepPalaces.status === "idle") && <LoadingSkeleton />}
-            {deepPalaces.status === "done" && <div className="animate-fade-in"><ReadingText text={deepPalaces.text} /></div>}
-            {deepPalaces.status === "error" && (
-              <div className="space-y-2">
-                <p className="text-sm text-vermillion">{deepPalaces.errorMsg}</p>
-                <button onClick={() => deepPalaces.start(body)} className="text-xs text-gold underline">重試</button>
-              </div>
-            )}
-          </div>
-        );
-
-      case "deep_decades":
-        return (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-            {(deepDecades.status === "streaming" || deepDecades.status === "idle") && <LoadingSkeleton />}
-            {deepDecades.status === "done" && <div className="animate-fade-in"><ReadingText text={deepDecades.text} /></div>}
-            {deepDecades.status === "error" && (
-              <div className="space-y-2">
-                <p className="text-sm text-vermillion">{deepDecades.errorMsg}</p>
-                <button onClick={() => deepDecades.start(body)} className="text-xs text-gold underline">重試</button>
-              </div>
-            )}
-          </div>
-        );
-
-      case "deep_schools":
-        return (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-            {(deepSchools.status === "streaming" || deepSchools.status === "idle") && <LoadingSkeleton />}
-            {deepSchools.status === "done" && <div className="animate-fade-in"><ReadingText text={deepSchools.text} /></div>}
-            {deepSchools.status === "error" && (
-              <div className="space-y-2">
-                <p className="text-sm text-vermillion">{deepSchools.errorMsg}</p>
-                <button onClick={() => deepSchools.start(body)} className="text-xs text-gold underline">重試</button>
-              </div>
-            )}
-          </div>
-        );
 
       case "deep_cautions":
         return (
@@ -602,20 +563,6 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
                 <button onClick={() => deepCautions.start(body)} className="text-xs text-gold underline">重試</button>
               </div>
             )}
-          </div>
-        );
-
-      case "chat":
-        return (
-          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
-            <ChatInterface
-              ziwei={ziweiA}
-              partnerZiwei={ziweiB}
-              initialContext={coupleContext}
-              placeholder="問關於兩人的問題，如：我們的相處難點是什麼？如何化解？"
-              chartId={coupleChartId}
-              maxQuestions={10}
-            />
           </div>
         );
     }
