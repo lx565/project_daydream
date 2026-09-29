@@ -107,7 +107,7 @@ git commit -m "feat(hepan-deep): add hepandeep ChartType, $7.99 price, checkout 
 - Modify: `app/api/reading/couple/route.ts`
 
 **Interfaces:**
-- Produces: `isRealPalace(palaceName: string): boolean`, `REAL_PALACE_NAMES: Set<string>`, `palaceDesc(ziwei: ZiweiResult, palaceName: string): string` exported from `lib/couple.ts` (alongside the already-exported `PALACE_ALIASES`) — consumed by Tasks 3, 4, 5, 6's new routes, and by `app/api/reading/couple/route.ts` itself (moved, not duplicated).
+- Produces: `isRealPalace(palaceName: string): boolean`, `REAL_PALACE_NAMES: Set<string>`, `palaceDesc(ziwei: ZiweiResult, palaceName: string): string` exported from `lib/couple.ts` (alongside the already-exported `PALACE_ALIASES`) — consumed by Tasks 3, 5, and 6's new routes (Task 4's decades route needs none of these — it works from age/decade data, not palace-name lookups), and by `app/api/reading/couple/route.ts` itself (moved, not duplicated).
 
 This is a pure refactor — `couple/route.ts` currently defines these three privately; this task moves them into the shared `lib/couple.ts` module (which already exports `PALACE_ALIASES`) so the 4 new routes can reuse them instead of copy-pasting ~25 lines each.
 
@@ -184,7 +184,7 @@ git commit -m "refactor(couple): export palace helpers from lib/couple.ts for re
 - Create: `app/api/reading/couple/palaces/route.ts`
 
 **Interfaces:**
-- Consumes: `PALACE_ALIASES`, `isRealPalace`, `palaceDesc` from `lib/couple.ts` (Task 2); `getRelationshipConfig` from `lib/coupleTypes.ts` (`RelationshipConfig { key, label, palaces: string[], focusHint, ... }`); `getKnowledge` from `lib/rag.ts` (`getKnowledge(query: RagQuery): Promise<{context: string, refs: Reference[]}>`); `makeSSEResponse`/`streamWithRefs` from `lib/sseWriter.ts`; `checkRateLimit`/`rateLimitResponse`/`clientIp` from `lib/rateLimit.ts`; `MODERN_INSTRUCTION` from `lib/modernInstruction.ts`; `BaziResult` from `lib/bazi.ts`, `ZiweiResult` from `lib/ziwei.ts`.
+- Consumes: `PALACE_ALIASES`, `isRealPalace`, `palaceDesc` from `lib/couple.ts` (Task 2); `getRelationshipConfig` from `lib/coupleTypes.ts` (`RelationshipConfig { key, label, palaces: string[], focusHint, ... }`); `getKnowledge` from `lib/rag.ts` (`getKnowledge(query: RagQuery): Promise<{context: string, refs: Reference[]}>`); `detectMingge` from `lib/detectMingge.ts` (`detectMingge(palaces): MinggeEntry[]` where `MinggeEntry = {name, type, brief, slug}`); `makeSSEResponse`/`streamWithRefs` from `lib/sseWriter.ts`; `checkRateLimit`/`rateLimitResponse`/`clientIp` from `lib/rateLimit.ts`; `MODERN_INSTRUCTION` from `lib/modernInstruction.ts`; `BaziResult` from `lib/bazi.ts`, `ZiweiResult` from `lib/ziwei.ts`.
 - Produces: `POST` handler at `/api/reading/couple/palaces` returning an SSE stream, request body `{ baziA, ziweiA, baziB, ziweiB, nameA?, nameB?, genderA, genderB, relationshipType? }` — the exact same shape `HepanResultView.tsx`'s existing `body` variable already has, consumed via `useSSEStream("/api/reading/couple/palaces", ...)` in Task 7.
 
 - [ ] **Step 1: Write the route**
@@ -201,6 +201,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
 import { PALACE_ALIASES, isRealPalace, palaceDesc } from "@/lib/couple";
+import { detectMingge } from "@/lib/detectMingge";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
 
@@ -277,7 +278,6 @@ export async function POST(request: NextRequest) {
     .map(p => `${labelA}${palaceDesc(ziweiA, p)}　|　${labelB}${palaceDesc(ziweiB, p)}`)
     .join("\n");
 
-  const { detectMingge } = await import("@/lib/detectMingge");
   const minggeA = detectMingge(ziweiA.palaces);
   const minggeB = detectMingge(ziweiB.palaces);
   const minggeBlock = [
