@@ -9,9 +9,10 @@
 // This is the single source of truth for turning a chartId back into its flow
 // type, so purchase / checkout / paywall analytics can segment revenue and
 // funnel by product without prefix-matching transaction_ids by hand.
-export type ChartType = "hepan" | "solo" | "monthly";
+export type ChartType = "hepan" | "solo" | "monthly" | "hepandeep";
 
 const PREFIX_TYPE: Array<readonly [prefix: string, type: ChartType]> = [
+  ["hepandeep_", "hepandeep"],
   ["hepan_", "hepan"],
   ["yueyun_", "monthly"],
   ["niandu_", "monthly"],
@@ -32,4 +33,5 @@ export const CHART_PRICE_USD: Record<ChartType, number> = {
   solo: 6.99,
   hepan: 6.99,
   monthly: 1.99,
+  hepandeep: 7.99,
 };

@@ -16,6 +16,7 @@ const PRICE_ENV_BY_TYPE: Record<ChartType, string> = {
   solo: "STRIPE_PRICE_ID",
   hepan: "STRIPE_PRICE_ID",
   monthly: "STRIPE_PRICE_ID_SHORT_ONCE",
+  hepandeep: "STRIPE_PRICE_ID_HEPAN_DEEP",
 };
 
 export async function POST(request: NextRequest) {
