@@ -17,7 +17,7 @@ Niki 想讓 hepan 做到「和 solo 一樣好、一樣全面」，並確認方�
 2. 內容全部是**合盤專屬**：不是把 solo 的宮位/大運/眾說/注意直接搬進來對每個人各跑一次，而是圍繞「兩人之間」重新設計。
 3. 現有 5 個免費 tab 完全不動——這是獨立的第二層付費閘門，不是把現有內容重新上鎖。
 4. 5 種關係型別（情侶/夫妻/朋友/兄弟姐妹/親子）全部支援，內容依 `lib/coupleTypes.ts` 現有的 `palaces`/`dimensions`/`focusHint` 差異化，不套同一模板。
-5. 定價：待定，暫以 solo 的 $6.99 為下限參考（見下方「待 Niki 決定」）。
+5. 定價：**$7.99**（Niki 確認，2026-09-28）。Stripe one-time Price 已建立：`price_1UKpIKFHqguDDhqBU3HZ8qKz`，待加入 Vercel prod 環境變數 `STRIPE_PRICE_ID_HEPAN_DEEP`。
 
 ## 架構
 
@@ -36,8 +36,8 @@ Niki 想讓 hepan 做到「和 solo 一樣好、一樣全面」，並確認方�
 - 新 `ChartType`: `"hepandeep"`，沿用 `monthly`/`niandu` 的 prefix 手法（見 `lib/chartType.ts`）
 - chartId: `hepandeep_${sessionId}`（`sessionId` 與現有 hepan 的 `${personKey(a)}_${personKey(b)}_${relType}` 同一組值，確保深度合盤與免費合盤指向同一對命盤+關係型別）
 - `usePaywall(hepandeepChartId)` + `PaywallLock`，模式與 solo/現有 hepan 完全一致——`hepandeep` **不**加入 `PERMANENTLY_FREE_TYPES` 或 `DISABLED_TYPES`，走一般付費流程
-- Stripe：`app/api/checkout/route.ts` 的 `PRICE_ENV_BY_TYPE` 新增 `hepandeep: "STRIPE_PRICE_ID_HEPAN_DEEP"`（新 env var，需 Niki 在 Stripe dashboard 建立新 Price 並加到 Vercel prod——我無法代做這一步）
-- `lib/chartType.ts`：`ChartType` 加入 `"hepandeep"`，`PREFIX_TYPE` 加 `["hepandeep_", "hepandeep"]`，`CHART_PRICE_USD` 加對應價格
+- Stripe：`app/api/checkout/route.ts` 的 `PRICE_ENV_BY_TYPE` 新增 `hepandeep: "STRIPE_PRICE_ID_HEPAN_DEEP"`。Price 已建立（`price_1UKpIKFHqguDDhqBU3HZ8qKz`，$7.99）——**部署前**需 Niki 把它加到 Vercel prod 環境變數 `STRIPE_PRICE_ID_HEPAN_DEEP`（我沒有 Vercel 存取權限，這一步仍需 Niki 手動做）
+- `lib/chartType.ts`：`ChartType` 加入 `"hepandeep"`，`PREFIX_TYPE` 加 `["hepandeep_", "hepandeep"]`，`CHART_PRICE_USD.hepandeep = 7.99`
 
 ### AI 呼叫預算（一次深度合盤解鎖）
 
@@ -82,6 +82,6 @@ Niki 想讓 hepan 做到「和 solo 一樣好、一樣全面」，並確認方�
 
 ## 待 Niki 決定（非本 spec 範圍，實作前需要答案）
 
-1. **定價**：深度合盤售價？（solo 全套 $6.99 為參考下限，本 spec 暫不預設具體數字）
-2. **Stripe Price ID**：需要 Niki 在 Stripe dashboard 建立新 one-time Price，並把 ID 加到 Vercel prod 環境變數 `STRIPE_PRICE_ID_HEPAN_DEEP`——這是外部依賴，實作可以先完成程式碼，但正式上線前需要這一步
+1. ~~定價~~ — 已確認 $7.99（見上）
+2. ~~Stripe Price ID~~ — 已建立（見上），**仍需 Niki 把它加到 Vercel prod 環境變數 `STRIPE_PRICE_ID_HEPAN_DEEP`** 才能正式上線；程式碼可以先完成
 3. **CTA 位置**：深度合盤的升級入口放在哪裡？（如現有 5-tab 結果頁底部新增一個升級卡片，或在「問合盤」chat 快用完免費額度時提示，比照 solo 的 chat-limit upsell 模式）——本 spec 暫定「結果頁底部升級卡片」為預設方案，實作時可調整
