@@ -209,8 +209,8 @@ function TwinColumnReading({ classicalText, vernacular, stripHeading }: {
         <div key={`${s.heading}-${i}`} className="mb-5 pb-5 border-b border-border-light last:border-0 last:pb-0 last:mb-0">
           {s.heading && <h3 className="text-gold font-semibold text-xs mb-2">{s.heading}</h3>}
           <ReadingText text={s.body} />
-          <div className="mt-3 pt-3 border-t border-dashed border-border-light">
-            <span className="block text-[10px] uppercase tracking-widest text-vermillion mb-1.5">白話版 · 老朋友視角</span>
+          <div className="mt-3 rounded-xl bg-paper-2 px-3.5 py-3 font-sans">
+            <span className="block text-[10px] uppercase tracking-widest text-vermillion mb-1.5 font-semibold">白話版 · 老朋友視角</span>
             {vernacularSections[i]?.body ? (
               <Md className={MD_PROSE}>{vernacularSections[i].body}</Md>
             ) : vernacular.status !== "error" ? (
