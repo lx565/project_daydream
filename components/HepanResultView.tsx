@@ -262,7 +262,8 @@ function LoadingSkeleton() {
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "solo" | "analysis" | "timing" | "chat";
+type Tab = "overview" | "solo" | "analysis" | "timing" | "chat"
+  | "deep_palaces" | "deep_decades" | "deep_schools" | "deep_cautions";
 
 const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "overview", label: "總覽", char: "緣" },
@@ -270,9 +271,24 @@ const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "analysis", label: "綫析", char: "合" },
   { id: "timing", label: "時機", char: "時" },
   { id: "chat", label: "問合盤", char: "問" },
+  { id: "deep_palaces", label: "宮位", char: "宮" },
+  { id: "deep_decades", label: "大運", char: "運" },
+  { id: "deep_schools", label: "眾說", char: "說" },
+  { id: "deep_cautions", label: "注意", char: "警" },
 ];
 
 const FREE_TABS = new Set<Tab>(["overview"]);
+// The 4 深度合盤 (paid upsell) tabs — gated by a second, independent paywall
+// on top of hepan's own permanently-free 5-tab result (see usePaywall.ts's
+// PERMANENTLY_FREE_TYPES — that set only covers "hepan", not "hepandeep").
+const DEEP_TABS = new Set<Tab>(["deep_palaces", "deep_decades", "deep_schools", "deep_cautions"]);
+
+const DEEP_INCLUDED = [
+  "宮位 · 雙方相關宮位逐一並列比較",
+  "大運 · 雙方大限週期同步/錯位分析",
+  "眾說 · 三合/四化/飛星/倪師/小眾五派看這段關係",
+  "注意 · 兩盤之間的煞星化忌互動與化解",
+];
 
 // ── Main component ───────────────────────────────────────────────────────────
 
@@ -289,6 +305,11 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
   const paywall = usePaywall(coupleChartId);
   const gated = paywall.enabled && !paywall.unlocked;
   const isLocked = (tab: Tab) => gated && !FREE_TABS.has(tab);
+
+  const hepandeepChartId = `hepandeep_${sessionId}`;
+  const deepPaywall = usePaywall(hepandeepChartId);
+  const deepGated = deepPaywall.enabled && !deepPaywall.unlocked;
+  const isLockedDeep = (tab: Tab) => DEEP_TABS.has(tab) && deepGated;
 
   const body = { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType: cfg.key };
   const soloBodyA = { ziwei: ziweiA, bazi: baziA, gender: genderA, name: nameA };
@@ -322,6 +343,22 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
     if (baziCoupleFull.status === "idle") baziCoupleFull.start(body);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall.loading, gated]);
+
+  // 深度合盤 (paid upsell) streams — same body payload as coupleFull/baziCoupleFull,
+  // gated by the separate hepandeep paywall above, not the free hepan one.
+  const deepPalaces  = useSSEStream("/api/reading/couple/palaces",  `${hepandeepChartId}_palaces`);
+  const deepDecades  = useSSEStream("/api/reading/couple/decades",  `${hepandeepChartId}_decades`);
+  const deepSchools  = useSSEStream("/api/reading/couple/schools",  `${hepandeepChartId}_schools`);
+  const deepCautions = useSSEStream("/api/reading/couple/cautions", `${hepandeepChartId}_cautions`);
+
+  useEffect(() => {
+    if (deepPaywall.loading || deepGated) return;
+    if (deepPalaces.status === "idle") deepPalaces.start(body);
+    if (deepDecades.status === "idle") deepDecades.start(body);
+    if (deepSchools.status === "idle") deepSchools.start(body);
+    if (deepCautions.status === "idle") deepCautions.start(body);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepPaywall.loading, deepGated]);
 
   useEffect(() => {
     if (coupleFull.status === "done" && coupleVernacular.status === "idle") {
@@ -512,6 +549,62 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
         );
       }
 
+      case "deep_palaces":
+        return (
+          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+            {(deepPalaces.status === "streaming" || deepPalaces.status === "idle") && <LoadingSkeleton />}
+            {deepPalaces.status === "done" && <div className="animate-fade-in"><ReadingText text={deepPalaces.text} /></div>}
+            {deepPalaces.status === "error" && (
+              <div className="space-y-2">
+                <p className="text-sm text-vermillion">{deepPalaces.errorMsg}</p>
+                <button onClick={() => deepPalaces.start(body)} className="text-xs text-gold underline">重試</button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "deep_decades":
+        return (
+          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+            {(deepDecades.status === "streaming" || deepDecades.status === "idle") && <LoadingSkeleton />}
+            {deepDecades.status === "done" && <div className="animate-fade-in"><ReadingText text={deepDecades.text} /></div>}
+            {deepDecades.status === "error" && (
+              <div className="space-y-2">
+                <p className="text-sm text-vermillion">{deepDecades.errorMsg}</p>
+                <button onClick={() => deepDecades.start(body)} className="text-xs text-gold underline">重試</button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "deep_schools":
+        return (
+          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+            {(deepSchools.status === "streaming" || deepSchools.status === "idle") && <LoadingSkeleton />}
+            {deepSchools.status === "done" && <div className="animate-fade-in"><ReadingText text={deepSchools.text} /></div>}
+            {deepSchools.status === "error" && (
+              <div className="space-y-2">
+                <p className="text-sm text-vermillion">{deepSchools.errorMsg}</p>
+                <button onClick={() => deepSchools.start(body)} className="text-xs text-gold underline">重試</button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "deep_cautions":
+        return (
+          <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
+            {(deepCautions.status === "streaming" || deepCautions.status === "idle") && <LoadingSkeleton />}
+            {deepCautions.status === "done" && <div className="animate-fade-in"><ReadingText text={deepCautions.text} /></div>}
+            {deepCautions.status === "error" && (
+              <div className="space-y-2">
+                <p className="text-sm text-vermillion">{deepCautions.errorMsg}</p>
+                <button onClick={() => deepCautions.start(body)} className="text-xs text-gold underline">重試</button>
+              </div>
+            )}
+          </div>
+        );
+
       case "chat":
         return (
           <div className="paper-card rounded-2xl border border-border-warm p-4 sm:p-5">
@@ -544,7 +637,7 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
             className={`relative flex-1 min-w-0 flex flex-col items-center py-2.5 px-0.5 border-r last:border-r-0 border-border-light transition-all duration-200 ${
               activeTab === tab.id ? "bg-vermillion text-paper" : "text-ink-3 hover:bg-paper hover:text-ink"
             }`}>
-            {isLocked(tab.id) && (
+            {(isLocked(tab.id) || isLockedDeep(tab.id)) && (
               <span className={`absolute top-1 right-1 text-[10px] leading-none ${activeTab === tab.id ? "opacity-90" : "opacity-80"}`}>🔒</span>
             )}
             <span className={`text-xs font-bold leading-none ${activeTab === tab.id ? "text-paper/70" : "text-ink-4"}`}>{tab.char}</span>
@@ -556,6 +649,8 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
       <div className="border border-t-0 border-border-warm rounded-b-xl bg-paper p-4 sm:p-5 min-h-[200px] mb-6">
         {isLocked(activeTab) ? (
           <PaywallLock chartId={coupleChartId} sectionLabel={TABS.find((t) => t.id === activeTab)?.label} included={COUPLE_INCLUDED} />
+        ) : isLockedDeep(activeTab) ? (
+          <PaywallLock chartId={hepandeepChartId} sectionLabel={TABS.find((t) => t.id === activeTab)?.label} included={DEEP_INCLUDED} />
         ) : renderContent()}
       </div>
 
