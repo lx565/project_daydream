@@ -85,7 +85,12 @@ export async function POST(request: NextRequest) {
 
   const decadeA = currentDecadeWindow(ziweiA, birthYearA);
   const decadeB = currentDecadeWindow(ziweiB, birthYearB);
-  if (!decadeA || !decadeB) return Response.json({ error: "compute_failed" }, { status: 500 });
+  if (!decadeA || !decadeB) {
+    return Response.json(
+      { error: "此功能需雙方皆已起運（進入第一個大限）才能比較，其中一方命盤尚未起運" },
+      { status: 400 }
+    );
+  }
 
   const overlap = overlapYears(decadeA, decadeB);
   const overlapDesc = overlap

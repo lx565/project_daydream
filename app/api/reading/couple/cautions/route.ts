@@ -34,7 +34,7 @@ function cautionLine(ziwei: ZiweiResult, palaceName: string, label: string): str
   const resolved = PALACE_ALIASES[palaceName] ?? palaceName;
   const p = ziwei.palaces.find(x => x.name === palaceName || x.name === resolved);
   if (!p) return "";
-  const notable = p.stars.filter(s => CAUTION_STARS.includes(s.name) || s.mutagen === "化忌");
+  const notable = p.stars.filter(s => CAUTION_STARS.includes(s.name) || s.mutagen === "忌");
   if (!notable.length) return "";
   const names = notable.map(s => `${s.name}${s.mutagen ? `化${s.mutagen}` : ""}`).join("、");
   return `${label}${palaceName}宮：${names}`;
