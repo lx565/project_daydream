@@ -6,7 +6,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
-import { calcCoupleScoreV2, PALACE_ALIASES } from "@/lib/couple";
+import { calcCoupleScoreV2, PALACE_ALIASES, isRealPalace, palaceDesc } from "@/lib/couple";
 import { detectMingge } from "@/lib/detectMingge";
 import { getFlowYears } from "@/lib/flowYears";
 import type { BaziResult } from "@/lib/bazi";
@@ -81,33 +81,6 @@ function zodiacRelation(branchA: string, branchB: string): string {
   return "無特殊合衝（後天緣分為主，需彼此經營）";
 }
 
-// Describe a palace with all its stars. Resolves coupleTypes.ts's short/modern
-// palace labels (e.g. "交友", "命") against ZiweiResult.palaces[].name's actual
-// stored form (e.g. "僕役", "命宮") via the shared PALACE_ALIASES table.
-function palaceDesc(ziwei: ZiweiResult, palaceName: string): string {
-  const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;
-  const p = ziwei.palaces.find(x => x.name === palaceName || x.name === resolvedName);
-  if (!p) return `${palaceName}（無資料）`;
-  const stars = p.stars
-    .filter(s => s.type === "major" || s.type === "minor" || ["紅鸞","天喜","天馬","孤辰","寡宿"].includes(s.name))
-    .map(s => `${s.name}${s.mutagen ? `化${s.mutagen}` : ""}`)
-    .join("、");
-  const stem = p.heavenlyStem ? `[${p.heavenlyStem}干]` : "";
-  return `${palaceName}${stem}：${stars || "空宮"}`;
-}
-
-// Real ZiweiResult.palaces[].name values (post-alias-resolution) — used to
-// filter out non-palace entries like coupleTypes.ts's sibling config's "六亲"
-// (a loose relational grouping, not one of the 12 actual palaces).
-const REAL_PALACE_NAMES = new Set([
-  "命宮", "兄弟", "夫妻", "子女", "財帛", "疾厄",
-  "遷移", "僕役", "官祿", "田宅", "福德", "父母",
-]);
-
-function isRealPalace(palaceName: string): boolean {
-  const resolved = PALACE_ALIASES[palaceName] ?? palaceName;
-  return REAL_PALACE_NAMES.has(resolved);
-}
 
 // Find which palace a named star sits in
 function findStarPalace(ziwei: ZiweiResult, starName: string): string {

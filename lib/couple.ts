@@ -25,6 +25,37 @@ const CHALLENGING_STARS = new Set(["七殺", "破軍", "貪狼", "廉貞"]);
 // the same way instead of re-deriving this mapping.
 export const PALACE_ALIASES: Record<string, string> = { "交友": "僕役", "命": "命宮" };
 
+// Real ZiweiResult.palaces[].name values (post-alias-resolution) — used to
+// filter out non-palace entries like coupleTypes.ts's sibling config's "六亲"
+// (a loose relational grouping, not one of the 12 actual palaces). Shared by
+// every couple-native reading route (couple, bazi-couple, and the deep-tier
+// palaces/decades/schools/cautions routes) so relationship-type palace lists
+// never crash a lookup or render a broken "（無資料）" line.
+export const REAL_PALACE_NAMES = new Set([
+  "命宮", "兄弟", "夫妻", "子女", "財帛", "疾厄",
+  "遷移", "僕役", "官祿", "田宅", "福德", "父母",
+]);
+
+export function isRealPalace(palaceName: string): boolean {
+  const resolved = PALACE_ALIASES[palaceName] ?? palaceName;
+  return REAL_PALACE_NAMES.has(resolved);
+}
+
+// Describe a palace with all its stars. Resolves coupleTypes.ts's short/modern
+// palace labels (e.g. "交友", "命") against ZiweiResult.palaces[].name's actual
+// stored form (e.g. "僕役", "命宮") via PALACE_ALIASES.
+export function palaceDesc(ziwei: ZiweiResult, palaceName: string): string {
+  const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;
+  const p = ziwei.palaces.find(x => x.name === palaceName || x.name === resolvedName);
+  if (!p) return `${palaceName}（無資料）`;
+  const stars = p.stars
+    .filter(s => s.type === "major" || s.type === "minor" || ["紅鸞","天喜","天馬","孤辰","寡宿"].includes(s.name))
+    .map(s => `${s.name}${s.mutagen ? `化${s.mutagen}` : ""}`)
+    .join("、");
+  const stem = p.heavenlyStem ? `[${p.heavenlyStem}干]` : "";
+  return `${palaceName}${stem}：${stars || "空宮"}`;
+}
+
 export function palaceStarScore(ziwei: ZiweiResult, palaceName: string): { score: number; stars: string[] } {
   const resolvedName = PALACE_ALIASES[palaceName] ?? palaceName;
   const palace = ziwei.palaces.find((p) => p.name === palaceName || p.name === resolvedName);
