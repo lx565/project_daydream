@@ -56,7 +56,7 @@ Niki 想讓 hepan 做到「和 solo 一樣好、一樣全面」，並確認方�
 
 - `app/api/reading/couple/palaces/route.ts` — 仿 `app/api/reading/palaces/route.ts` 的 SYSTEM/RAG/streamWithRefs 結構，但輸入雙方 `ziwei`，逐宮並列雙方星曜（複用 `lib/couple.ts` 的 `PALACE_ALIASES`），依 `cfg.palaces` 篩選要解讀的宮位
 - `app/api/reading/couple/decades/route.ts` — 仿 `app/api/reading/decades/route.ts`，輸入雙方 `ziwei`/`bazi`，疊圖式描述雙方大運週期的同步/錯位階段
-- `app/api/reading/couple/schools/route.ts` — 仿 `app/api/reading/bazi-schools/route.ts` 的五派結構，但論斷對象是「這段關係」而非單一命盤——這是四條新 route 裡 prompt 設計難度最高的一條，五派各自的「契合度判斷邏輯」需要分別想清楚（三合派看宮位三合、四化派看飛化互入、飛星派看星曜飛入、倪師學派、小眾學派），不能只是把現有單人版套用關係包裝
+- `app/api/reading/couple/schools/route.ts` — 五派結構實際模板是 `app/api/reading/overview/route.ts`（三合/四化/飛星/倪師/小眾，用 `getSharedRetrieval` 分校精準檢索 + `detectMingge` 格局識別），不是 `bazi-schools/route.ts`（那條是八字的祿命派/盲派兩派，結構不同）。論斷對象改成「這段關係」而非單一命盤——這是四條新 route 裡 prompt 設計難度最高的一條，五派各自的「契合度判斷邏輯」需要分別想清楚（三合派看兩人相關宮位是否三合六合、四化派看雙方生年四化飛入對方哪些宮、飛星派看星曜飛入對方命盤的因果牽動、倪師學派、小眾學派），不能只是把現有單人版套用關係包裝
 - `app/api/reading/couple/cautions/route.ts` — 仿 `app/api/reading/cautions/route.ts`，聚焦雙盤之間的煞星/化忌互動與此關係型別的常見衝突模式（`cfg.focusHint` 已有各關係型別的側重提示可承接）
 
 ### 修改檔案
