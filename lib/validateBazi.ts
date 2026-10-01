@@ -1,8 +1,8 @@
 // 八字 reading validator — cross-checks a 八字 reading against the deterministically
 // computed 八字 chart (四柱 / 日主 / 五行 / 大運). The 紫微 validator (lib/validateReading.ts)
-// can't do this: 八字 has no stars/palaces. Reuses the shared Gemini helper. Fail-open.
+// can't do this: 八字 has no stars/palaces. Reuses the shared DeepSeek review helper. Fail-open.
 import type { BaziResult } from "./bazi";
-import { geminiJsonReview, type ValidationResult } from "./validateReading";
+import { deepseekJsonReview, type ValidationResult } from "./validateReading";
 
 /** Authoritative, deterministic 八字 facts the reading must not contradict. */
 export function buildBaziFacts(bazi: BaziResult): string {
@@ -20,7 +20,7 @@ export function buildBaziFacts(bazi: BaziResult): string {
   ].join("\n");
 }
 
-/** Gemini cross-checks a 八字 reading against the authoritative 八字 facts. */
+/** DeepSeek v4-pro cross-checks a 八字 reading against the authoritative 八字 facts. */
 export async function validateBaziReading(reading: string, bazi: BaziResult): Promise<ValidationResult> {
   if (!reading || !bazi?.day?.stem) return { pass: true, issues: [], reviewed: false };
   const facts = buildBaziFacts(bazi);
@@ -44,5 +44,5 @@ ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return geminiJsonReview(prompt);
+  return deepseekJsonReview(prompt);
 }
