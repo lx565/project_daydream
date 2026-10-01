@@ -30,7 +30,7 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
       // Match sseWriter's model policy: flash primary (v4-pro's thinking phase was
       // blowing past callAI's deadline → 500s on flowyears-scores), overridable via
       // DEEPSEEK_MODEL. reasoning_effort cast because "none" isn't in OpenAI's union.
-      model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
+      model: process.env.DEEPSEEK_MODEL ?? "deepseek-flash",
       max_tokens: maxTokens,
       temperature,
       reasoning_effort: reasoningEffort as "low",

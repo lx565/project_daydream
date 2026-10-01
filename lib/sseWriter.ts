@@ -55,11 +55,13 @@ const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic"
 // reflects it automatically; no code edits. Falls back to a sensible default per provider.
 const MODEL_DEFAULTS = {
   gemini:    { standard: "gemini-2.5-flash",          fast: "gemini-2.5-flash" },
-  // TEMP (2026-08-03): standard set to v4-flash, not v4-pro. v4-pro's reasoning
-  // phase was returning 55s+ on every reading (site-wide "AI 服务响应较慢"); v4-flash
+  // TEMP (2026-08-03): standard set to flash, not v4-pro. v4-pro's reasoning
+  // phase was returning 55s+ on every reading (site-wide "AI 服务响应较慢"); flash
   // is ~4x faster and still strong at Chinese. Revert `standard` to "deepseek-v4-pro"
   // (or set env DEEPSEEK_MODEL=deepseek-v4-pro) once DeepSeek v4-pro latency recovers.
-  deepseek:  { standard: "deepseek-v4-flash",         fast: "deepseek-v4-flash" },
+  // (2026-09-10: DeepSeek retired the old "v4-flash" alias and renamed it to
+  // "deepseek-flash" — same underlying model, id only.)
+  deepseek:  { standard: "deepseek-flash",         fast: "deepseek-flash" },
   anthropic: { standard: "claude-sonnet-4-6",         fast: "claude-haiku-4-5-20251001" },
 } as const;
 
@@ -186,7 +188,7 @@ export async function streamWithRefs(
       // v4-pro's reasoning ("thinking") phase eating the whole window on a slow
       // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
       // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
-      // the "fast" tier (deepseek-v4-flash / gemini-2.5-flash / claude-haiku) so
+      // the "fast" tier (deepseek-flash / gemini-2.5-flash / claude-haiku) so
       // the reader gets *a* reading instead of "AI 服务响应较慢". Only safe because
       // no content was sent yet (guarded by !sentAnyContent above) — restarting
       // after partial output would duplicate text.

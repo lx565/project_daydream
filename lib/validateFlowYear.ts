@@ -1,12 +1,12 @@
 // 流年 (per-year) reading validator. The natal 紫微 validator (lib/validateReading.ts)
 // deliberately ignores 運限/流年 dynamics, so per-year readings were grounded but never
 // proofread. This checks a flow-year reading against the deterministic 流年 facts
-// (流年命宮落宮 / 流年四化 / 流耀 / 三方四正). Reuses the shared Gemini helper. Fail-open.
+// (流年命宮落宮 / 流年四化 / 流耀 / 三方四正). Reuses the shared DeepSeek review helper. Fail-open.
 import type { ZiweiResult } from "./ziwei";
 import { getFlowYears, flowYearFactsFrom } from "./flowYears";
-import { geminiJsonReview, type ValidationResult } from "./validateReading";
+import { deepseekJsonReview, type ValidationResult } from "./validateReading";
 
-/** Gemini cross-checks a single-year 流年 reading against its authoritative 流年 facts. */
+/** DeepSeek v4-pro cross-checks a single-year 流年 reading against its authoritative 流年 facts. */
 export async function validateFlowYearReading(
   reading: string,
   ziwei: ZiweiResult,
@@ -37,5 +37,5 @@ ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return geminiJsonReview(prompt);
+  return deepseekJsonReview(prompt);
 }

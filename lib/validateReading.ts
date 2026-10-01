@@ -1,8 +1,11 @@
 // Cross-model validation for AI readings.
 // (A) cheap deterministic structural check + (A2) deterministic 格局-fabrication
-// check + (B) a Gemini 2.5 Flash logic review that cross-checks the
+// check + (B) a DeepSeek v4-pro logic review that cross-checks the
 // (DeepSeek-generated) reading against the authoritative, iztro-computed chart
-// facts. Fail-open: if the reviewer errors, we don't block.
+// facts. Deliberately a different DeepSeek model from whichever one did the
+// synthesis (see DEEPSEEK_MODEL in sseWriter.ts) for genuine cross-model
+// validation value — hardcoded, not read from DEEPSEEK_MODEL. Fail-open: if
+// the reviewer errors, we don't block.
 
 import type { ZiweiResult } from "./ziwei";
 import { detectMingge } from "./detectMingge";
@@ -11,8 +14,10 @@ import { MINGGE_LIST } from "./minggeData";
 export interface ValidationResult {
   pass: boolean;
   issues: string[];
-  reviewed: boolean; // false if the Gemini reviewer was skipped (e.g. API error)
+  reviewed: boolean; // false if the DeepSeek reviewer was skipped (e.g. API error)
 }
+
+const REVIEW_MODEL = "deepseek-v4-pro";
 
 const pName = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
 
@@ -75,31 +80,33 @@ function minggeFabricationCheck(reading: string, ziwei: ZiweiResult): string[] {
   return issues.slice(0, 5);
 }
 
-/** Shared: run a complete prompt through Gemini 2.5 Flash, parse {pass, issues}. Fail-open. */
-export async function geminiJsonReview(prompt: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
-  const key = process.env.GOOGLE_API_KEY;
+/** Shared: run a complete prompt through DeepSeek v4-pro, parse {pass, issues}. Fail-open. */
+export async function deepseekJsonReview(prompt: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
+  const key = process.env.DEEPSEEK_API_KEY;
   if (!key) return { pass: true, issues: [], reviewed: false };
   try {
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const model = new GoogleGenerativeAI(key).getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: { responseMimeType: "application/json", temperature: 0 },
+    const OpenAI = (await import("openai")).default;
+    const client = new OpenAI({ apiKey: key, baseURL: "https://api.deepseek.com" });
+    const res = await client.chat.completions.create({
+      model: REVIEW_MODEL,
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages: [{ role: "user", content: prompt }],
     });
-    const resp = await model.generateContent(prompt);
-    const parsed = JSON.parse(resp.response.text()) as { pass?: boolean; issues?: string[] };
+    const parsed = JSON.parse(res.choices[0]?.message?.content ?? "{}") as { pass?: boolean; issues?: string[] };
     return {
       pass: parsed.pass !== false,
       issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
       reviewed: true,
     };
   } catch (err) {
-    console.warn("[review] gemini review skipped:", (err as Error).message);
+    console.warn("[review] deepseek review skipped:", (err as Error).message);
     return { pass: true, issues: [], reviewed: false }; // fail-open
   }
 }
 
-/** Gemini 2.5 Flash cross-checks the reading against the authoritative 紫微 facts. */
-async function geminiLogicReview(reading: string, facts: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
+/** DeepSeek v4-pro cross-checks the reading against the authoritative 紫微 facts. */
+async function deepseekLogicReview(reading: string, facts: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
   const prompt = `你是紫微斗數解讀的邏輯校驗員。下面【權威命盤事實】由確定性演算法（iztro）計算得出，是不可更改的事實；【待校驗解讀】由另一個AI生成。
 
 請只核查解讀是否與權威事實矛盾，重點：
@@ -120,7 +127,7 @@ ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return geminiJsonReview(prompt);
+  return deepseekJsonReview(prompt);
 }
 
 export async function validateReading(reading: string, ziwei: ZiweiResult): Promise<ValidationResult> {
@@ -128,11 +135,11 @@ export async function validateReading(reading: string, ziwei: ZiweiResult): Prom
   if (structural.length) return { pass: false, issues: structural, reviewed: false };
 
   // Deterministic 格局-fabrication gate (free) — fail fast so the reading is
-  // regenerated without the invented 格局; no need to spend a Gemini call.
+  // regenerated without the invented 格局; no need to spend a review call.
   const fabricated = minggeFabricationCheck(reading, ziwei);
   if (fabricated.length) return { pass: false, issues: fabricated, reviewed: true };
 
   const facts = buildChartFacts(ziwei);
-  const review = await geminiLogicReview(reading, facts);
+  const review = await deepseekLogicReview(reading, facts);
   return { pass: review.pass, issues: review.issues, reviewed: review.reviewed };
 }
