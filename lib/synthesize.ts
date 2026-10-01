@@ -8,7 +8,8 @@ import { createHash } from "crypto";
 // independent of the app-wide AI_PROVIDER that powers live readings. Override
 // with SEO_AI_PROVIDER.
 // NOTE (2026-07-25): DeepSeek retired deepseek-chat/deepseek-reasoner in favor of
-// deepseek-v4-pro/deepseek-v4-flash — both new models emit reasoning_content by
+// deepseek-v4-pro/deepseek-flash (the latter went by a "v4-flash" alias at the
+// time, renamed 2026-09-10 — same underlying model) — both new models emit reasoning_content by
 // default (confirmed via direct API test), so the old "non-thinking model, no
 // output-budget truncation" assumption behind picking the cheap/fast tier here no
 // longer holds. Watch generated SEO content for truncated/cut-off endings; if it
@@ -19,7 +20,7 @@ const PROVIDER = (process.env.SEO_AI_PROVIDER
 
 const MODEL_DEFAULTS = {
   gemini: "gemini-2.5-flash",
-  deepseek: "deepseek-v4-flash",
+  deepseek: "deepseek-flash",
   anthropic: "claude-sonnet-4-6",
 } as const;
 

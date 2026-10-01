@@ -55,7 +55,7 @@ type PalaceDef = (typeof PALACES)[number];
 // Deep teaching content uses DeepSeek's higher-capability tier: strong logic +
 // best 紫微斗数 domain accuracy. Override with SEO_AI_MODEL. Separate from live
 // readings. (2026-07-25: deepseek-reasoner was retired by DeepSeek in favor of
-// deepseek-v4-pro/deepseek-v4-flash — see lib/synthesize.ts for the full note.)
+// deepseek-v4-pro/deepseek-flash — see lib/synthesize.ts for the full note.)
 const SEO_MODEL = process.env.SEO_AI_MODEL ?? "deepseek-v4-pro";
 
 // Shared rules: synthesize ONLY readable modern 繁體中文, silently discarding any
