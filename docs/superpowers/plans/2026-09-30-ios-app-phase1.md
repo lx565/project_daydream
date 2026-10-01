@@ -1283,7 +1283,7 @@ git commit -m "Add 眾說/注意/問命 screens under the More menu"
 cd ~/Projects/fortune-app
 ls content/seo/
 ```
-For Phase 1, expose exactly these six categories (matching the design canvas's library mockup), mapping each to its real `content/seo/` folder name:
+For Phase 1, expose exactly these five categories (matching the design canvas's library mockup), mapping each to its real `content/seo/` folder name:
 
 ```ts
 const CATEGORIES: { slug: string; label: string; folder: string }[] = [
