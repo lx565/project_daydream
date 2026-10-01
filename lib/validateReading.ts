@@ -10,6 +10,7 @@
 import type { ZiweiResult } from "./ziwei";
 import { detectMingge } from "./detectMingge";
 import { MINGGE_LIST } from "./minggeData";
+import { withDeadline } from "./aiRetry";
 
 export interface ValidationResult {
   pass: boolean;
@@ -87,12 +88,21 @@ export async function deepseekJsonReview(prompt: string): Promise<{ pass: boolea
   try {
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({ apiKey: key, baseURL: "https://api.deepseek.com" });
-    const res = await client.chat.completions.create({
+    // Called from three maxDuration=30 routes (validate, validate-bazi,
+    // validate-flowyear) — bounded well under that so a genuinely slow
+    // response still fails open here instead of relying solely on Vercel's
+    // hard platform-level kill. See aiRetry.ts / callAI.ts for the pattern.
+    const res = await withDeadline(client.chat.completions.create({
       model: REVIEW_MODEL,
       temperature: 0,
+      // Suppress v4-pro's thinking phase (observed 55+s, see sseWriter.ts
+      // MODEL_DEFAULTS) — this is a 30s-budget utility call, not a reading.
+      // Cast because "none" isn't in OpenAI SDK's reasoning_effort union;
+      // same pattern as callAI.ts.
+      reasoning_effort: "none" as "low",
       response_format: { type: "json_object" },
       messages: [{ role: "user", content: prompt }],
-    });
+    }), 20_000);
     const parsed = JSON.parse(res.choices[0]?.message?.content ?? "{}") as { pass?: boolean; issues?: string[] };
     return {
       pass: parsed.pass !== false,
