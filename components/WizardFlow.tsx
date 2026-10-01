@@ -204,7 +204,7 @@ function ReadingCard({
   if (stream.status === "error") return (
     <div className="space-y-2">
       <p className="text-sm text-vermillion">{stream.errorMsg}</p>
-      <button onClick={() => { mounted.current = false; onMount?.(); }}
+      <button onClick={() => stream.rerun()}
         className="text-xs text-gold underline">重試</button>
     </div>
   );
