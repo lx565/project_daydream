@@ -75,7 +75,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v43"; // 2026-09-16 niandu: the more-classical tone push (古訣/典籍 quoting) was pulling the model into Simplified Chinese output ("于"/"宫"/"禄" etc.) despite the "繁體中文" instruction at the very end of the prompt — moved an explicit, example-backed Traditional-only rule to the TOP of the system prompt
+const CACHE_VERSION = "v44"; // 2026-10-01 chat: /api/chat's SYSTEM_BASE was instructing 簡體中文 (contradicting the 2026-07-27 Traditional-Chinese audience pivot every other route follows) — fixed to 繁體中文; bumped because the changed line sits past the 100-char cache-key hash prefix, so old Simplified-Chinese cached chat replies wouldn't otherwise invalidate
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
