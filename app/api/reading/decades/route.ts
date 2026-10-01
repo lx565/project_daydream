@@ -44,10 +44,10 @@ function parseAgeRange(range: string): [number, number] {
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "decades" })).allowed) return rateLimitResponse();
 
-  let body: { ziwei: ZiweiResult; birthYear?: number; name?: string; revisionNotes?: string[] };
+  let body: { ziwei: ZiweiResult; birthYear?: number; name?: string; revisionNotes?: string[]; targetBranch?: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
-  const { ziwei, name } = body;
+  const { ziwei, name, targetBranch } = body;
   if (!ziwei || !ziwei.palaces?.length) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   // birthYear: prefer the value embedded in the chart, fall back to the legacy field.
@@ -55,8 +55,13 @@ export async function POST(request: NextRequest) {
   if (!birthYear) return Response.json({ error: "missing_fields" }, { status: 400 });
   const age = new Date().getFullYear() - birthYear;
 
-  // Locate current & next 大限 palaces.
-  const currentPalace = ziwei.palaces.find((p) => {
+  // Locate current & next 大限 palaces. If the caller targeted a specific decade
+  // (mobile app lets the user tap any of the 12 palaces), resolve by earthlyBranch
+  // instead of the age-based lookup; fall back to age-based if the branch doesn't match.
+  const targetedPalace = targetBranch
+    ? ziwei.palaces.find((p) => p.earthlyBranch === targetBranch)
+    : undefined;
+  const currentPalace = targetedPalace ?? ziwei.palaces.find((p) => {
     if (!p.decadalAge) return false;
     const [start, end] = parseAgeRange(p.decadalAge);
     return age >= start && age <= end;
