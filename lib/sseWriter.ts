@@ -75,7 +75,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v44"; // 2026-10-01 chat: /api/chat's SYSTEM_BASE was instructing 簡體中文 (contradicting the 2026-07-27 Traditional-Chinese audience pivot every other route follows) — fixed to 繁體中文; bumped because the changed line sits past the 100-char cache-key hash prefix, so old Simplified-Chinese cached chat replies wouldn't otherwise invalidate
+const CACHE_VERSION = "v45"; // 2026-10-01: 10 reading routes (consensus/topic/bazi/daily/bazi-decade/bazi-deep/cautions/synthesis/overview/palaces) also had the same leftover 簡體中文→繁體中文 bug fixed in v44's chat prompt; bumped again to invalidate their cached Simplified-Chinese output
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {

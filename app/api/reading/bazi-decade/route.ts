@@ -23,7 +23,7 @@ const SYSTEM = `你是精通子平八字大運推演的命理師，為命主解�
 ## 給你的建議
 （3-4條具體、可操作的建議——順勢而為、化解不利、五行補充，每條 - 開頭）
 
-簡體中文。**加粗**關鍵十神與五行名稱（單個片語，禁止用**包裹整句或整段）。不空泛，不嚇人，落點在幫助命主理解並善用這段運勢。` + SAFETY_GUARDRAIL;
+繁體中文。**加粗**關鍵十神與五行名稱（單個片語，禁止用**包裹整句或整段）。不空泛，不嚇人，落點在幫助命主理解並善用這段運勢。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
   // BaziDecades.tsx preloads all ~8-9 decades concurrently on a single unlocked

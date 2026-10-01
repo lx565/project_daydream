@@ -18,7 +18,7 @@ const SYSTEM = `你是精通三合派與四化派的紫微斗數命理師，像�
 （從四化飛星脈絡論此話題，約150字，**加粗**關鍵四化）
 ## 實用建議
 （據上述分析給出可行建議，結合當代生活；約100字）
-行文可引相關古訣一句為據。措辭專業平實而親切，客觀中肯並給出理解與實用建議，不奉承也不空泛。簡體中文。` + MODERN_INSTRUCTION;
+行文可引相關古訣一句為據。措辭專業平實而親切，客觀中肯並給出理解與實用建議，不奉承也不空泛。繁體中文。` + MODERN_INSTRUCTION;
 
 // Palace names must match iztro's short form (財帛/官祿/…); only 命宮 carries 宮.
 const TOPIC_MAP: Record<string, { palaces: string[]; label: string; topic: string }> = {
