@@ -21,6 +21,10 @@ const nextConfig = {
       "./knowledge/embeddings.i8",
       "./knowledge/embeddings.meta.json",
     ],
+    // The library JSON API routes read ./content/seo/<folder>/<slug>.json via
+    // path.join(process.cwd(), ...) at request time — same dynamic-path problem
+    // as the page routes below, so the tracer needs an explicit hint here too.
+    "/api/library/**": ["./content/seo/**"],
     // Star×palace and guide SEO pages call getKnowledge() at ISR render time,
     // and read pre-generated/proofread articles from ./content/seo when present.
     "/star/**": [

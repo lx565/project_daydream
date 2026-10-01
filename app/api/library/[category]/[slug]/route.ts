@@ -25,6 +25,9 @@ export async function GET(
   try {
     const raw = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw);
+    if (typeof parsed.label !== "string" || typeof parsed.markdown !== "string") {
+      return Response.json({ error: "not_found" }, { status: 404 });
+    }
     return Response.json({ label: parsed.label, markdown: parsed.markdown });
   } catch {
     return Response.json({ error: "not_found" }, { status: 404 });
