@@ -65,8 +65,13 @@ export function palaceStarScore(ziwei: ZiweiResult, palaceName: string): { score
   for (const s of major) {
     if (FAVORABLE_STARS.has(s)) score += 8;
     if (CHALLENGING_STARS.has(s)) score -= 6;
-    if (s && palace.stars.find((x) => x.name === s && (x.mutagen === "化禄" || x.mutagen === "化科"))) score += 5;
-    if (s && palace.stars.find((x) => x.name === s && x.mutagen === "化忌")) score -= 8;
+    // iztro returns the bare mutagen character ("祿"/"權"/"科"/"忌"), not
+    // Simplified+化-prefixed ("化禄"/"化科") — see lib/ziwei.ts's StarInfo.mutagen
+    // JSDoc and 2026-10-02 audit P1-18. The old comparison never matched, so
+    // 四化 had zero effect on 四維得分 despite the prompt asking the model to
+    // explain scores driven by it.
+    if (s && palace.stars.find((x) => x.name === s && (x.mutagen === "祿" || x.mutagen === "科"))) score += 5;
+    if (s && palace.stars.find((x) => x.name === s && x.mutagen === "忌")) score -= 8;
   }
   return { score: Math.min(98, Math.max(42, score)), stars: major };
 }
