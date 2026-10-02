@@ -80,7 +80,12 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v48"; // 2026-10-02: daily 干支 fixed (wrong epoch/calendar-month/Jan-1 year flip)
+const CACHE_VERSION = "v49"; // 2026-10-02: decades route — fixed prev/next 大限 lookup
+// (was array-index arithmetic, wrong for ~half of users on reverse-running 陰男/陽女
+// charts) and grounded the prompt with 大限四化/流年/夫妻官祿疾厄/紅鸞天喜 data it was
+// asking the model to reason about but never actually received. Bumped to invalidate
+// cached wrong-decade and hallucinated decades readings.
+// v48: 2026-10-02: daily 干支 fixed (wrong epoch/calendar-month/Jan-1 year flip)
 // (si*12+bi)%60 was wrong for 55/60 干支 combinations (e.g. 乙丑→海中金 was computed as
 // 路旁土), so the entire 祿命派 section built on it was wrong for most charts. Fixed to the
 // correct CRT-solved index (and fixed a second compounding Math.floor(idx/2) indexing bug
