@@ -4,12 +4,17 @@ export interface StarInfo {
   name: string;
   brightness: string; // 旺/廟/得/利/平/不/陷/''
   type: 'major' | 'minor' | 'adjective';
-  mutagen: string; // 化祿/化權/化科/化忌 if present, else ''
+  mutagen: string; // bare 祿/權/科/忌 if present, else '' (NOT 化-prefixed — iztro
+                    // returns the bare character; comparing against "化忌" etc. is a
+                    // recurring bug in this codebase, see 2026-10-02 audit P0-5/P1-18)
 }
 
 export interface Palace {
   index: number;          // 0–11
-  name: string;           // 命宮/兄弟宮/夫妻宮/子女宮/財帛宮/疾厄宮/遷移宮/交友宮/官祿宮/田宅宮/福德宮/父母宮
+  name: string;           // 命宮/兄弟/夫妻/子女/財帛/疾厄/遷移/交友/官祿/田宅/福德/父母
+                          // (only 命宮 carries the 宮 suffix — the other 11 names are
+                          // unsuffixed; see lib/couple.ts's REAL_PALACE_NAMES/
+                          // PALACE_ALIASES for the canonical list and 2026-10-02 audit)
   earthlyBranch: string;  // 子醜寅卯辰巳午未申酉戌亥
   heavenlyStem: string;   // 甲乙丙丁戊己庚辛壬癸
   isBodyPalace: boolean;

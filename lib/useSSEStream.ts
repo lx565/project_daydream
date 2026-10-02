@@ -54,7 +54,11 @@ export interface StreamOpts {
 // readings (client-side, per browser) predate it and would never re-fetch.
 // v24: 2026-10-02 bazi-schools: fixed wrong 納音 index formula — old cached
 // readings have the wrong 納音/祿命派 text and would never re-fetch without this.
-const CACHE_PREFIX = "ziwei_rd_v24_";
+// v25: 2026-10-02 cautions + decades: cautions now matches iztro's bare "忌" (was
+// dropping 化忌 stars); decades fixed prev/next 大限 lookup and grounded the prompt
+// with 大限四化/流年/夫妻官祿疾厄/紅鸞天喜 data. Old cached readings for both tabs
+// would never re-fetch without this.
+const CACHE_PREFIX = "ziwei_rd_v25_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
