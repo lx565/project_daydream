@@ -4,35 +4,27 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
+import { chinaToday } from "@/lib/huangli";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { Solar } = require("lunar-javascript") as {
+  Solar: {
+    fromYmd: (y: number, m: number, d: number) => {
+      getLunar: () => {
+        getYearInGanZhiByLiChun: () => string; // flips at 立春, not Jan 1
+        getMonthInGanZhiExact: () => string;   // true 節氣 boundaries, not calendar month + 2
+        getDayInGanZhi: () => string;
+      };
+    };
+  };
+};
 
-const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
-
-// Reference epoch: 2000-01-01 = 戊辰日 (stem 4, branch 4)
-function dateToGanzhi(date: Date): { year: string; month: string; day: string } {
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-
-  const yearStem   = HEAVENLY_STEMS[(y - 4) % 10];
-  const yearBranch = EARTHLY_BRANCHES[(y - 4) % 12];
-
-  // Month heavenly stem offset based on year stem
-  const yearStemIdx = (y - 4) % 10;
-  const monthStemBase = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0][yearStemIdx]; // 寅月 base
-  const monthStemIdx = (monthStemBase + ((m - 1 + 2) % 12)) % 10;
-  const monthBranchIdx = (m - 1 + 2) % 12;
-  const monthStem   = HEAVENLY_STEMS[monthStemIdx];
-  const monthBranch = EARTHLY_BRANCHES[monthBranchIdx];
-
-  const ref = new Date(2000, 0, 1);
-  const days = Math.floor((date.getTime() - ref.getTime()) / 86400000);
-  const dayStem   = HEAVENLY_STEMS[(4 + days) % 10];
-  const dayBranch = EARTHLY_BRANCHES[(4 + days) % 12];
-
+// `today` must already be in Taipei (UTC+8) wall-clock time — see chinaToday() in lib/huangli.ts.
+function dateToGanzhi(today: Date): { year: string; month: string; day: string } {
+  const lunar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate()).getLunar();
   return {
-    year:  `${yearStem}${yearBranch}年`,
-    month: `${monthStem}${monthBranch}月`,
-    day:   `${dayStem}${dayBranch}日`,
+    year:  `${lunar.getYearInGanZhiByLiChun()}年`,
+    month: `${lunar.getMonthInGanZhiExact()}月`,
+    day:   `${lunar.getDayInGanZhi()}日`,
   };
 }
 
@@ -63,7 +55,7 @@ export async function POST(request: NextRequest) {
   const { summary, soulPalace, mainStar, fiveElementsClass, gender } = body;
   if (!summary) return Response.json({ error: "missing_fields" }, { status: 400 });
 
-  const today = new Date();
+  const today = chinaToday(); // Taipei (UTC+8) wall-clock "today" — server runs in UTC
   const { year, month, day } = dateToGanzhi(today);
   const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
 
