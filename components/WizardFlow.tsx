@@ -429,9 +429,12 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // Single scan across the next 10 flow years — AI picks 2–4 genuinely notable ones
   // and writes real critique only for those (replaces the old, removed, one-call-per-year design).
   const flowYearHighlights = useSSEStream("/api/reading/flowyear", ck("flowyear"));
-  const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"), { validate: true });         // O3 · 總覽 八字綜合 (summary)
-  const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true });  // B1 · 八字 tab (deep, paid)
-  const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true });  // B3 · 各派視角 (祿命+盲派)
+  // 八字-only readings validate against the 八字 checker (validate-bazi), not the
+  // 紫微 one — they were previously always posted to the default /api/reading/validate,
+  // which expects `ziwei` and runs 紫微-specific checks irrelevant to a 八字 reading.
+  const bazi_         = useSSEStream("/api/reading/bazi",          ck("bazi"), { validate: true, validateUrl: "/api/reading/validate-bazi" });         // O3 · 總覽 八字綜合 (summary)
+  const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true, validateUrl: "/api/reading/validate-bazi" });  // B1 · 八字 tab (deep, paid)
+  const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true, validateUrl: "/api/reading/validate-bazi" });  // B3 · 各派視角 (祿命+盲派)
 
   // Background context for 問命 ChatInterface — built live from stream texts
   const backgroundReadings: Record<string, string> = {};

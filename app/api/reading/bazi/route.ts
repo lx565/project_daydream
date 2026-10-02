@@ -58,13 +58,13 @@ ${pillars.join("\n")}
 性別：${gender === "male" ? "男" : "女"}
 命局摘要：${bazi.summary}
 ${jqBlock}
-請按要求給出 2-3 段連貫的八字綜合（不分小標題、約280-320字）。`;
+請按要求給出1段連貫的【八字格局速讀】（不分標題、不列表，約130-160字）。`;
 }
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "bazi" })).allowed) return rateLimitResponse();
 
-  let body: { bazi: BaziResult; gender: string };
+  let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { bazi, gender } = body;
@@ -82,7 +82,10 @@ export async function POST(request: NextRequest) {
     maxPerBook: 7,
   });
 
-  const userMessage = `${context ? `【八字典籍參考】\n${context}\n\n---\n\n` : ""}${buildMessage(bazi, gender)}`;
+  const revision = body.revisionNotes?.length
+    ? `\n\n【重要·上一版校驗發現以下問題，請務必修正後重新輸出】\n${body.revisionNotes.join("\n")}`
+    : "";
+  const userMessage = `${context ? `【八字典籍參考】\n${context}\n\n---\n\n` : ""}${buildMessage(bazi, gender)}${revision}`;
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
@@ -96,6 +99,9 @@ export async function POST(request: NextRequest) {
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,
+      // See cautions/route.ts — without this a validation retry's hash matches
+      // the flagged original and the cache just replays the same flagged text.
+      skipCacheRead: !!body.revisionNotes?.length,
     })
   );
 }
