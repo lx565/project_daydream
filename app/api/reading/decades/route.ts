@@ -148,18 +148,24 @@ export async function POST(request: NextRequest) {
     .map((fy) => `${fy.year}年(${fy.age}歲)${fy.ganzhi}：流年命宮→${fy.flowSoulPalace || "—"}｜四化：${fy.yearlyMutagen.join("、") || "—"}`)
     .join("\n") || "（暫無）";
 
-  // 夫妻宮/官祿宮/疾厄宮 的本命星曜 + 三方四正 — the 事業財運/感情六親/身心健康
+  // 夫妻/官祿/疾厄 的本命星曜 + 三方四正 — the 事業財運/感情六親/身心健康
   // 三節 each reason from one of these, but were never actually given the data.
+  //
+  // iztro's real ZiweiResult.palaces[].name values carry NO 宮 suffix except
+  // 命宮 — the other 11 palaces (including these three) are stored as short
+  // names ("夫妻", "官祿", "疾厄"). Same footgun lib/couple.ts's PALACE_ALIASES
+  // comment documents (命宮 is the one exception, not the rule) — look up by
+  // the real unsuffixed name, append "宮" only for the rendered label.
   function natalPalaceFacts(name: string): string {
     const p = ziwei.palaces.find((pp) => pp.name === name);
-    if (!p) return `${name}：—`;
+    if (!p) return `${name}宮：—`;
     const major = p.stars.filter((s) => s.type === "major").map((s) => s.name).join("、") || "空宮";
     const minor = p.stars.filter((s) => s.type === "minor").map((s) => s.name).join("、") || "無";
     const sf = ziwei.sanFangSiZheng?.[p.name];
     const sfTxt = sf ? `　三方四正：對宮${sf.opposite}、財帛位${sf.wealth}、官祿位${sf.career}` : "";
-    return `${name}：主星${major}　輔星${minor}${sfTxt}`;
+    return `${name}宮：主星${major}　輔星${minor}${sfTxt}`;
   }
-  const keyPalaceFacts = ["夫妻宮", "官祿宮", "疾厄宮"].map(natalPalaceFacts).join("\n");
+  const keyPalaceFacts = ["夫妻", "官祿", "疾厄"].map(natalPalaceFacts).join("\n");
   const romanceStarsDesc = `紅鸞星：${findStarPalace("紅鸞")}　天喜星：${findStarPalace("天喜")}`;
 
   const revision = body.revisionNotes?.length
