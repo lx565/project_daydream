@@ -63,7 +63,11 @@ export interface StreamOpts {
 // dropping 化忌 stars); decades fixed prev/next 大限 lookup and grounded the prompt
 // with 大限四化/流年/夫妻官祿疾厄/紅鸞天喜 data. Old cached readings for both tabs
 // would never re-fetch without this.
-const CACHE_PREFIX = "ziwei_rd_v26_";
+// v27: 2026-10-02 P1 wave 2 — flowRisk/decades/flowyear/monthly/couple RAG keyword
+// fixes; couple-domain cluster (RAG/mutagen-scoring/labels/三合-三刑/飛化互入, 5 fixes);
+// bazi/bazi-decade/bazi-schools RAG+labeling+神煞+teaser-length fixes. Old cached
+// readings for all these tabs would never re-fetch without this.
+const CACHE_PREFIX = "ziwei_rd_v27_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
