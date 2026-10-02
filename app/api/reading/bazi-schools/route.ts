@@ -52,8 +52,16 @@ function nayinOf(stem: string, branch: string): string {
   const si = STEMS.indexOf(stem);
   const bi = BRANCHES.indexOf(branch);
   if (si < 0 || bi < 0) return "未知";
-  const idx = (si * 12 + bi) % 60;
-  return NAYIN[Math.floor(idx / 2)] ?? "未知";
+  // Solve the simultaneous congruence n≡si (mod 10), n≡bi (mod 12) via CRT to get
+  // the 0-59 position in the 六十甲子 cycle. (Old formula (si*12+bi)%60 was simply
+  // wrong — not a solution to that congruence — and was wrong for 55/60 combos.)
+  const idx = (((6 * si - 5 * bi) % 60) + 60) % 60;
+  // NAYIN is already indexed directly by this 0-59 cycle position (each name stored
+  // at two consecutive raw indices, e.g. NAYIN[0]=NAYIN[1]="海中金"), so idx indexes
+  // it directly. Math.floor(idx/2) here was a second, compounding bug: combined with
+  // a correct idx it would still pick the wrong name for most of the 60 combos
+  // (e.g. 丙寅 would still resolve to 海中金 instead of 爐中火).
+  return NAYIN[idx] ?? "未知";
 }
 
 function buildMessage(bazi: BaziResult, gender: string): string {

@@ -80,13 +80,11 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v46"; // 2026-10-02: PRIVACY FIX — makeCacheKey only hashed the first
-// 100 chars of opts.system. Chat's SYSTEM_BASE is 233 chars, so the user's chart
-// summary/name/background readings/RAG context (all appended after char 100) were
-// excluded from the key — two different users asking the same first question got
-// served each other's cached answers verbatim (including `命主：${name}`). Now hashes
-// the FULL system string (see lib/synthesize.ts's cacheKey for the same pattern).
-// Bumped to invalidate every previously-cached entry computed under the old, truncated key.
+const CACHE_VERSION = "v47"; // 2026-10-02: bazi-schools' 納音 (nayin) lookup index formula
+// (si*12+bi)%60 was wrong for 55/60 干支 combinations (e.g. 乙丑→海中金 was computed as
+// 路旁土), so the entire 祿命派 section built on it was wrong for most charts. Fixed to the
+// correct CRT-solved index (and fixed a second compounding Math.floor(idx/2) indexing bug
+// into the already-doubled NAYIN table). Bumped to invalidate cached wrong-nayin readings.
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
