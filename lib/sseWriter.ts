@@ -80,7 +80,23 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v49"; // 2026-10-02: two fixes bumped together —
+const CACHE_VERSION = "v50"; // 2026-10-02: P1 couple-domain cluster, 5 fixes bumped together —
+// (1) bazi-couple's RAG query passed only text+school, so buildQueryTerms() saw an empty
+// term set and getKnowledge() short-circuited to zero results every time — now passes
+// explicit stars + strict:true, so the route actually retrieves 八字命理 knowledge.
+// (2) couple's palace-mutagen scoring compared iztro's bare Traditional mutagen ("祿"/
+// "科"/"忌") against Simplified+化-prefixed strings ("化禄"/"化科"/"化忌"), so 四化 never
+// affected 四維得分 — fixed the comparison and exposed per-dimension contribution descs
+// so the prompt can actually explain the scores it's given.
+// (3) 緣分類型 labels (天生一對型/互補成長型/相輔相成型/需要經營型) and sibling's "六親"
+// palace label were Simplified, missed by an earlier sitewide fix.
+// (4) identical branches were reported as 三合 (couple) / 三合+相刑 (bazi-couple) due to a
+// missing distinctness guard on group-membership checks; also added the missing 子卯相刑 pair.
+// (5) couple's prompt asked for cross-chart 飛化互入 and 當前大運 it never computed — added
+// both, reusing bazi-couple's 大運 lookup for consistency.
+// Bumped once to invalidate cached empty-RAG/zero-四化-effect/Simplified-label/false-三合/
+// hallucinated-飛化互入 hepan readings from both routes.
+// v49: 2026-10-02: two fixes bumped together —
 // (1) cautions route now matches iztro's bare "忌" instead of "化忌" (was dropping 化忌 stars)
 // (2) decades route — fixed prev/next 大限 lookup (was array-index arithmetic, wrong for
 // ~half of users on reverse-running 陰男/陽女 charts) and grounded the prompt with
