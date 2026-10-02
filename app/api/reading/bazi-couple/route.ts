@@ -149,15 +149,23 @@ function branchInteractions(baziA: BaziResult, baziB: BaziResult, labelA: string
   const SAN_HE = [["子", "辰", "申"], ["亥", "卯", "未"], ["寅", "午", "戌"], ["巳", "酉", "丑"]];
   const LIU_HE: [string, string][] = [["子","丑"],["寅","亥"],["卯","戌"],["辰","酉"],["巳","申"],["午","未"]];
   const LIU_CHONG: [string, string][] = [["子","午"],["丑","未"],["寅","申"],["卯","酉"],["辰","戌"],["巳","亥"]];
+  // 三刑: 寅巳申 (持勢之刑) and 丑戌未 (無恩之刑) are 3-branch groups; 子卯
+  // (無禮之刑) is a standalone pair, not part of either triple.
   const SAN_XING: [string, string, string][] = [["寅","巳","申"],["丑","戌","未"]];
+  const ZI_MAO: [string, string] = ["子","卯"];
 
   const results: string[] = [];
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
       const ba = branchesA[i], bb = branchesB[j];
       const pA = `${labelA}${pillarNames[i]}支${ba}`, pB = `${labelB}${pillarNames[j]}支${bb}`;
-      for (const g of SAN_HE) {
-        if (g.includes(ba) && g.includes(bb)) { results.push(`${pA}與${pB}三合`); break; }
+      // ba === bb (same branch across the two charts) trivially satisfies
+      // g.includes(ba) && g.includes(bb) for whichever group contains that one
+      // branch — guard against reporting identical branches as 三合/相刑.
+      if (ba !== bb) {
+        for (const g of SAN_HE) {
+          if (g.includes(ba) && g.includes(bb)) { results.push(`${pA}與${pB}三合`); break; }
+        }
       }
       for (const [x, y] of LIU_HE) {
         if ((x===ba&&y===bb)||(x===bb&&y===ba)) { results.push(`${pA}與${pB}六合`); break; }
@@ -165,8 +173,14 @@ function branchInteractions(baziA: BaziResult, baziB: BaziResult, labelA: string
       for (const [x, y] of LIU_CHONG) {
         if ((x===ba&&y===bb)||(x===bb&&y===ba)) { results.push(`${pA}與${pB}六沖`); break; }
       }
-      for (const g of SAN_XING) {
-        if (g.includes(ba) && g.includes(bb)) { results.push(`${pA}與${pB}相刑`); break; }
+      if (ba !== bb) {
+        let xing = false;
+        for (const g of SAN_XING) {
+          if (g.includes(ba) && g.includes(bb)) { results.push(`${pA}與${pB}相刑`); xing = true; break; }
+        }
+        if (!xing && ((ba===ZI_MAO[0]&&bb===ZI_MAO[1])||(ba===ZI_MAO[1]&&bb===ZI_MAO[0]))) {
+          results.push(`${pA}與${pB}相刑`);
+        }
       }
     }
   }

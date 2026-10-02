@@ -72,12 +72,23 @@ function zodiacRelation(branchA: string, branchB: string): string {
   const SAN_HE = [["子","辰","申"],["亥","卯","未"],["寅","午","戌"],["巳","酉","丑"]];
   const LIU_HE: [string,string][] = [["子","丑"],["寅","亥"],["卯","戌"],["辰","酉"],["巳","申"],["午","未"]];
   const CHONG: [string,string][] = [["子","午"],["丑","未"],["寅","申"],["卯","酉"],["辰","戌"],["巳","亥"]];
+  // 三刑: 寅巳申 (持勢之刑) and 丑戌未 (無恩之刑) are 3-branch groups; 子卯
+  // (無禮之刑) is a standalone pair, not part of either triple.
   const XING: [string,string,string][] = [["寅","巳","申"],["丑","戌","未"]];
+  const ZI_MAO: [string,string] = ["子","卯"];
 
-  for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同氣相求）";
+  // branchA === branchB (same zodiac sign) trivially satisfies g.includes(A) &&
+  // g.includes(B) for whichever group contains that one branch — guard against
+  // reporting identical branches as 三合/三刑.
+  if (branchA !== branchB) {
+    for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同氣相求）";
+  }
   for (const [a,b] of LIU_HE) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "六合（相合融洽）";
   for (const [a,b] of CHONG) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "相衝（摩擦較多，需磨合）";
-  for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨礪，有緣有劫）";
+  if (branchA !== branchB) {
+    for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨礪，有緣有劫）";
+    if ((branchA===ZI_MAO[0]&&branchB===ZI_MAO[1])||(branchA===ZI_MAO[1]&&branchB===ZI_MAO[0])) return "相刑（無禮之刑，需多體諒）";
+  }
   return "無特殊合衝（後天緣分為主，需彼此經營）";
 }
 
