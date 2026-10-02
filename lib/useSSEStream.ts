@@ -52,7 +52,9 @@ export interface StreamOpts {
 
 // v22: 2026-09-12 niandu: added the "## 八字流年開運" section — old cached niandu
 // readings (client-side, per browser) predate it and would never re-fetch.
-const CACHE_PREFIX = "ziwei_rd_v23_";
+// v24: 2026-10-02 bazi-schools: fixed wrong 納音 index formula — old cached
+// readings have the wrong 納音/祿命派 text and would never re-fetch without this.
+const CACHE_PREFIX = "ziwei_rd_v24_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
