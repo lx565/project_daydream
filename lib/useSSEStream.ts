@@ -58,7 +58,7 @@ export interface StreamOpts {
 // dropping 化忌 stars); decades fixed prev/next 大限 lookup and grounded the prompt
 // with 大限四化/流年/夫妻官祿疾厄/紅鸞天喜 data. Old cached readings for both tabs
 // would never re-fetch without this.
-const CACHE_PREFIX = "ziwei_rd_v25_";
+const CACHE_PREFIX = "ziwei_rd_v26_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 

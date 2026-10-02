@@ -103,12 +103,11 @@ function buildSummary(
     wood: '木', fire: '火', earth: '土', metal: '金', water: '水',
   };
   const dominant = elNames[entries[0][0]];
-  const weakest = elNames[entries[entries.length - 1][0]];
-  let yongshen = weakest;
-  if (weakest === dayMasterEl && entries.length > 1) {
-    yongshen = elNames[entries[entries.length - 2][0]];
-  }
-  return `日主${dayMaster}${dayMasterEl}，五行偏${dominant}，喜用神為${yongshen}`;
+  // Note: 喜用神 deliberately omitted here — correctly deriving it requires
+  // 月令/藏干/旺衰 analysis, not just a count of the 8 visible characters.
+  // Routes that need 喜用神 must have the model derive it from dayMaster +
+  // elements + jieQiInfo themselves (see bazi/bazi-deep/niandu prompts).
+  return `日主${dayMaster}${dayMasterEl}，五行偏${dominant}`;
 }
 
 const SEASON: Record<string, string> = {
