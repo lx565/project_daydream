@@ -3,12 +3,14 @@ import type { ZiweiResult } from './ziwei';
 
 const XIONG_STARS = new Set(['擎羊', '陀羅', '火星', '鈴星', '地空', '地劫']);
 
+// Keys must match iztro's actual palace names — only 命宮 carries the 宮
+// suffix, the rest are unsuffixed (see lib/ziwei.ts's Palace.name JSDoc).
 const CAUTION_PALACE_SCORES: Record<string, number> = {
   '命宮': 3,
-  '疾厄宮': 2,
-  '官祿宮': 2,
-  '財帛宮': 2,
-  '夫妻宮': 1,
+  '疾厄': 2,
+  '官祿': 2,
+  '財帛': 2,
+  '夫妻': 1,
 };
 
 export interface RiskYear extends FlowYear {
