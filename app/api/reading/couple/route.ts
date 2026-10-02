@@ -102,6 +102,42 @@ function findStarPalace(ziwei: ZiweiResult, starName: string): string {
   return "（未見）";
 }
 
+// This person's own 生年四化 stars (the stars that received 祿/權/科/忌 in
+// their own natal chart) — up to 4 entries.
+function natalMutagenStars(ziwei: ZiweiResult): { star: string; mutagen: string }[] {
+  const out: { star: string; mutagen: string }[] = [];
+  for (const p of ziwei.palaces) {
+    for (const s of p.stars) {
+      if (s.mutagen) out.push({ star: s.name, mutagen: s.mutagen });
+    }
+  }
+  return out;
+}
+
+// 飛化互入: for each of fromZiwei's 生年四化 stars, find which palace that
+// same star occupies in toZiwei's own natal chart — this is what actually
+// grounds the "飛化互入 · 彼此怎麼互相影響" section, which previously asked
+// the model to invent cross-chart flying-star data it was never given
+// (2026-10-02 audit P1-21).
+function crossChartMutagenFlow(fromZiwei: ZiweiResult, toZiwei: ZiweiResult, fromLabel: string, toLabel: string): string {
+  const stars = natalMutagenStars(fromZiwei);
+  if (stars.length === 0) return `${fromLabel}：生年四化資料不足`;
+  return stars
+    .map(({ star, mutagen }) => `${fromLabel}${star}化${mutagen} → 入${toLabel}${findStarPalace(toZiwei, star)}`)
+    .join("\n");
+}
+
+// Current decade (大運) for one person — same lookup bazi-couple/route.ts
+// uses for its 大運時機 section, reused here for consistency so the 緣分時機
+// section's "結合雙方當前大運" ask actually has data to work from.
+function currentDecadeDesc(bazi: BaziResult): string {
+  if (!bazi.decades || bazi.decades.length === 0) return "（大運未知）";
+  const now = new Date().getFullYear();
+  const current = bazi.decades.find(d => d.startYear <= now && d.endYear >= now);
+  if (!current) return "（大運未知）";
+  return `當前大運 ${current.ganZhi}（${current.startYear}–${current.endYear}）`;
+}
+
 // Describe the four bazi pillars compactly
 function baziPillars(bazi: BaziResult): string {
   return `年${bazi.year.stem}${bazi.year.branch} 月${bazi.month.stem}${bazi.month.branch} 日${bazi.day.stem}${bazi.day.branch} 時${bazi.hour.stem}${bazi.hour.branch}`;
@@ -267,6 +303,7 @@ ${score.dims.map(d => `${d.name} ${d.score}（${d.desc}）`).join("\n")}
 日主：${baziA.dayMaster}（${baziA.dayMasterElement}）
 五行：木${elA.wood} 火${elA.fire} 土${elA.earth} 金${elA.metal} 水${elA.water}
 命格：${baziA.summary}
+${currentDecadeDesc(baziA)}
 
 【甲方紫微宮位】
 ${palaceBlockA}
@@ -278,9 +315,14 @@ ${palaceBlockA}
 日主：${baziB.dayMaster}（${baziB.dayMasterElement}）
 五行：木${elB.wood} 火${elB.fire} 土${elB.earth} 金${elB.metal} 水${elB.water}
 命格：${baziB.summary}
+${currentDecadeDesc(baziB)}
 
 【乙方紫微宮位】
 ${palaceBlockB}
+
+【飛化互入（一方生年四化星落入對方命盤的宮位，供撰寫飛化互入段落使用）】
+${crossChartMutagenFlow(ziweiA, ziweiB, labelA, labelB)}
+${crossChartMutagenFlow(ziweiB, ziweiA, labelB, labelA)}
 
 【宮位對照（雙方相同宮位並列，供撰寫宮位對照段落使用）】
 ${palaceComparison}
