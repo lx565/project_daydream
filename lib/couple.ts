@@ -128,10 +128,10 @@ export interface CoupleScoreV2 {
 
 function yuanfenLabel(total: number, type: RelationshipType): string {
   const lover = type === "lover" || type === "spouse";
-  if (total >= 85) return lover ? "命中注定型" : "天生一对型";
+  if (total >= 85) return lover ? "命中注定型" : "天生一對型";
   if (total >= 75) return lover ? "深度契合型" : "默契知己型";
-  if (total >= 62) return lover ? "互补成长型" : "相辅相成型";
-  return "需要经营型";
+  if (total >= 62) return lover ? "互補成長型" : "相輔相成型";
+  return "需要經營型";
 }
 
 // Per-type 4-dimension weight tables. Each row is one dimension (in the same

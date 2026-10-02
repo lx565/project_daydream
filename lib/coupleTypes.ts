@@ -59,7 +59,7 @@ export const RELATIONSHIP_TYPES: Record<RelationshipType, RelationshipConfig> = 
     label: "兄弟姐妹",
     emoji: "👫",
     dimensions: ["手足情深", "互幫互助", "緣分深淺", "相處模式"],
-    palaces: ["兄弟", "命", "六亲"],
+    palaces: ["兄弟", "命", "六親"],
     hasPastLife: false,
     ragTopic: "兄弟",
     shareLabel: "手足緣",
