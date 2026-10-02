@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
   const result = await validateReading(reading, ziwei);
   // The flagged first-pass text would otherwise keep being served from KV to every
   // other visitor with this chart for the rest of the 30-day TTL — see sseWriter.ts.
-  if (!result.pass && body.cacheKey) invalidateReadingCache(body.cacheKey).catch(() => {});
+  // invalidateReadingCache verifies the cached entry actually matches `reading`
+  // before deleting — cacheKey is client-supplied and unauthenticated, so without
+  // that check a caller could delete any other chart's cache entry by name.
+  if (!result.pass && body.cacheKey) invalidateReadingCache(body.cacheKey, reading).catch(() => {});
   return Response.json(result);
 }

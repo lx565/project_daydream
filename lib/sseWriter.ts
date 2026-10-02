@@ -158,9 +158,17 @@ async function kvDel(key: string): Promise<void> {
  *  routes when a reading fails cross-model validation — without this, the flagged
  *  first-pass text stays served from cache to every other visitor with the same
  *  chart for the rest of the 30-day TTL, even though this visitor's own retry (with
- *  revisionNotes) regenerates fine under a different cache key. */
-export async function invalidateReadingCache(cacheKey: string): Promise<void> {
-  await kvDel(cacheKey);
+ *  revisionNotes) regenerates fine under a different cache key.
+ *
+ *  `cacheKey` is client-supplied and unauthenticated — a caller could name any
+ *  chart's cache key, not just the one for the `reading` they're actually
+ *  submitting. `expectedText` must be the exact reading text the client got from
+ *  the SSE stream for THIS request; we only delete if the entry currently cached
+ *  under `cacheKey` is byte-identical to it, so a request can only invalidate the
+ *  cache entry it actually produced — never an arbitrary other chart's. */
+export async function invalidateReadingCache(cacheKey: string, expectedText: string): Promise<void> {
+  const cached = await kvGet(cacheKey);
+  if (cached && cached.text === expectedText) await kvDel(cacheKey);
 }
 
 // ── SSE helpers ───────────────────────────────────────────────────────────────

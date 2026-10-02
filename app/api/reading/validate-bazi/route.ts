@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
   const result = await validateBaziReading(reading, bazi);
   // See validate/route.ts — otherwise the flagged first-pass text keeps being
   // served from KV to every other visitor with this chart for the rest of the TTL.
-  if (!result.pass && body.cacheKey) invalidateReadingCache(body.cacheKey).catch(() => {});
+  // invalidateReadingCache verifies the cached entry actually matches `reading`
+  // before deleting — cacheKey is client-supplied and unauthenticated, so without
+  // that check a caller could delete any other chart's cache entry by name.
+  if (!result.pass && body.cacheKey) invalidateReadingCache(body.cacheKey, reading).catch(() => {});
   return Response.json(result);
 }
