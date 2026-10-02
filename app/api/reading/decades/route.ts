@@ -66,9 +66,19 @@ export async function POST(request: NextRequest) {
     const [start, end] = parseAgeRange(p.decadalAge);
     return age >= start && age <= end;
   });
-  const currentIdx = currentPalace ? ziwei.palaces.findIndex((p) => p.name === currentPalace.name) : -1;
-  const nextPalace = currentIdx >= 0 ? ziwei.palaces[(currentIdx + 1) % 12] : undefined;
-  const prevPalace = currentIdx >= 0 ? ziwei.palaces[(currentIdx - 1 + 12) % 12] : undefined;
+
+  let startAge = age, endAge = age;
+  if (currentPalace) {
+    [startAge, endAge] = parseAgeRange(currentPalace.decadalAge);
+  }
+
+  // Prev/next 大限 by age-range lookup, NOT array-index arithmetic (palaces[idx±1]).
+  // iztro's horoscope() walks the 12 palaces in REVERSE physical order for
+  // 陰男/陽女 charts, so idx+1 in the palace array is the chronologically
+  // PREVIOUS decade — not next — for roughly half of all users. decadalAge
+  // strings are authoritative regardless of array order; match on those instead.
+  const nextPalace = ziwei.palaces.find((p) => p.decadalAge && parseAgeRange(p.decadalAge)[0] === endAge + 1);
+  const prevPalace = ziwei.palaces.find((p) => p.decadalAge && parseAgeRange(p.decadalAge)[1] === startAge - 1);
 
   function palaceSummary(palace: typeof currentPalace, label: string): string {
     if (!palace) return "";
@@ -81,15 +91,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Decade palace description — now includes 輔星 + 三方四正.
-  let decadeDesc = "大限資料計算中";
-  let startAge = age, endAge = age;
-  if (currentPalace) {
-    [startAge, endAge] = parseAgeRange(currentPalace.decadalAge);
-  }
   const prevDesc = palaceSummary(prevPalace, "上一大限");
   const currDesc = palaceSummary(currentPalace, "當前大限");
   const nextDesc = palaceSummary(nextPalace, "下一大限");
-  decadeDesc = [prevDesc, currDesc].filter(Boolean).join("\n\n");
+  const decadeDesc = [prevDesc, currDesc].filter(Boolean).join("\n\n");
 
   // Real per-year 流年 data from iztro — still feeds RAG enrichment (the per-year
   // 詳批 itself now lives in the FlowYearDetail table, lazily generated on click).
@@ -105,6 +110,64 @@ export async function POST(request: NextRequest) {
   const ragStars = [...flowStarSet].filter(Boolean).slice(0, 30);
   const { context, refs } = await getKnowledge({ stars: ragStars, topic: "流年大限", topK: 8 });
 
+  // The system prompt asks the model to reason about 大限干四化落宮, which years
+  // within the decade are favorable, 夫妻/官祿/疾厄 positions, and 紅鸞天喜 — but
+  // none of that was ever in userMessage, so the model was hallucinating it.
+  // Ground all four here.
+  function findStarPalace(starName: string): string {
+    const p = ziwei.palaces.find((pp) => pp.stars.some((s) => s.name === starName));
+    return p ? p.name : "未見";
+  }
+
+  // 大限四化：iztro's per-star `.mutagen` on ZiweiResult.palaces only reflects
+  // 生年四化 (birth-year) — the decade's own 祿/權/科/忌 require re-querying
+  // horoscope() at a date inside the decade (same re-instantiation pattern as
+  // getFlowYears()), since ZiweiResult doesn't carry the live astrolabe object.
+  const MUTAGEN_LABELS = ["化祿", "化權", "化科", "化忌"];
+  let decadalMutagenDesc = "—";
+  if (currentPalace) {
+    try {
+      const { astro } = await import("iztro");
+      const astrolabe = astro.bySolar(ziwei.birth.solarDate, ziwei.birth.timeIndex, ziwei.birth.gender, true, "zh-TW");
+      const midAge = Math.floor((startAge + endAge) / 2);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const decadal = (astrolabe as any).horoscope(`${birthYear + midAge}-06-01`).decadal;
+      decadalMutagenDesc = (decadal?.mutagen ?? [])
+        .map((star: string, i: number) => star ? `${star}${MUTAGEN_LABELS[i] ?? ""}→入${findStarPalace(star)}` : "")
+        .filter(Boolean)
+        .join("、") || "—";
+    } catch (err) {
+      console.error("[decades] decadal mutagen lookup error:", err);
+    }
+  }
+
+  // Compact 流年 table for the whole decade — flowYears above was already computed
+  // for RAG keyword enrichment only; surface a subset of it as real facts too,
+  // since the prompt explicitly asks which years within the decade are favorable.
+  const flowYearLines = flowYears
+    .map((fy) => `${fy.year}年(${fy.age}歲)${fy.ganzhi}：流年命宮→${fy.flowSoulPalace || "—"}｜四化：${fy.yearlyMutagen.join("、") || "—"}`)
+    .join("\n") || "（暫無）";
+
+  // 夫妻/官祿/疾厄 的本命星曜 + 三方四正 — the 事業財運/感情六親/身心健康
+  // 三節 each reason from one of these, but were never actually given the data.
+  //
+  // iztro's real ZiweiResult.palaces[].name values carry NO 宮 suffix except
+  // 命宮 — the other 11 palaces (including these three) are stored as short
+  // names ("夫妻", "官祿", "疾厄"). Same footgun lib/couple.ts's PALACE_ALIASES
+  // comment documents (命宮 is the one exception, not the rule) — look up by
+  // the real unsuffixed name, append "宮" only for the rendered label.
+  function natalPalaceFacts(name: string): string {
+    const p = ziwei.palaces.find((pp) => pp.name === name);
+    if (!p) return `${name}宮：—`;
+    const major = p.stars.filter((s) => s.type === "major").map((s) => s.name).join("、") || "空宮";
+    const minor = p.stars.filter((s) => s.type === "minor").map((s) => s.name).join("、") || "無";
+    const sf = ziwei.sanFangSiZheng?.[p.name];
+    const sfTxt = sf ? `　三方四正：對宮${sf.opposite}、財帛位${sf.wealth}、官祿位${sf.career}` : "";
+    return `${name}宮：主星${major}　輔星${minor}${sfTxt}`;
+  }
+  const keyPalaceFacts = ["夫妻", "官祿", "疾厄"].map(natalPalaceFacts).join("\n");
+  const romanceStarsDesc = `紅鸞星：${findStarPalace("紅鸞")}　天喜星：${findStarPalace("天喜")}`;
+
   const revision = body.revisionNotes?.length
     ? `\n\n【重要·上一版校驗發現以下問題，請務必修正後重新輸出】\n${body.revisionNotes.join("\n")}`
     : "";
@@ -114,6 +177,16 @@ export async function POST(request: NextRequest) {
 【宮位資料】
 ${decadeDesc}
 ${nextDesc}
+
+【大限四化（${currentPalace?.heavenlyStem ?? ""}幹）】
+${decadalMutagenDesc}
+
+【本大限十年流年概覽】
+${flowYearLines}
+
+【本命關鍵宮位】
+${keyPalaceFacts}
+${romanceStarsDesc}
 
 命格基礎：${ziwei.summary}
 
