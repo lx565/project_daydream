@@ -80,7 +80,13 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v49"; // 2026-10-02: two fixes bumped together —
+const CACHE_VERSION = "v50"; // 2026-10-02: lib/bazi.ts's summary no longer claims a
+// 喜用神 (favorable element) — that claim was just the lowest-count element across the
+// 8 visible characters, ignoring 月令/藏干/旺衰, and contradicted several routes that
+// separately ask the model to derive 用神 properly. Bumped to invalidate cached readings
+// built on the old summary wording (bazi, bazi-deep, bazi-schools, bazi-decade, bazi-couple,
+// couple, couple/preview, synthesis, niandu).
+// v49: 2026-10-02: two fixes bumped together —
 // (1) cautions route now matches iztro's bare "忌" instead of "化忌" (was dropping 化忌 stars)
 // (2) decades route — fixed prev/next 大限 lookup (was array-index arithmetic, wrong for
 // ~half of users on reverse-running 陰男/陽女 charts) and grounded the prompt with
