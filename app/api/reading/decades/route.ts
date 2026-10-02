@@ -66,9 +66,19 @@ export async function POST(request: NextRequest) {
     const [start, end] = parseAgeRange(p.decadalAge);
     return age >= start && age <= end;
   });
-  const currentIdx = currentPalace ? ziwei.palaces.findIndex((p) => p.name === currentPalace.name) : -1;
-  const nextPalace = currentIdx >= 0 ? ziwei.palaces[(currentIdx + 1) % 12] : undefined;
-  const prevPalace = currentIdx >= 0 ? ziwei.palaces[(currentIdx - 1 + 12) % 12] : undefined;
+
+  let startAge = age, endAge = age;
+  if (currentPalace) {
+    [startAge, endAge] = parseAgeRange(currentPalace.decadalAge);
+  }
+
+  // Prev/next 大限 by age-range lookup, NOT array-index arithmetic (palaces[idx±1]).
+  // iztro's horoscope() walks the 12 palaces in REVERSE physical order for
+  // 陰男/陽女 charts, so idx+1 in the palace array is the chronologically
+  // PREVIOUS decade — not next — for roughly half of all users. decadalAge
+  // strings are authoritative regardless of array order; match on those instead.
+  const nextPalace = ziwei.palaces.find((p) => p.decadalAge && parseAgeRange(p.decadalAge)[0] === endAge + 1);
+  const prevPalace = ziwei.palaces.find((p) => p.decadalAge && parseAgeRange(p.decadalAge)[1] === startAge - 1);
 
   function palaceSummary(palace: typeof currentPalace, label: string): string {
     if (!palace) return "";
@@ -81,15 +91,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Decade palace description — now includes 輔星 + 三方四正.
-  let decadeDesc = "大限資料計算中";
-  let startAge = age, endAge = age;
-  if (currentPalace) {
-    [startAge, endAge] = parseAgeRange(currentPalace.decadalAge);
-  }
   const prevDesc = palaceSummary(prevPalace, "上一大限");
   const currDesc = palaceSummary(currentPalace, "當前大限");
   const nextDesc = palaceSummary(nextPalace, "下一大限");
-  decadeDesc = [prevDesc, currDesc].filter(Boolean).join("\n\n");
+  const decadeDesc = [prevDesc, currDesc].filter(Boolean).join("\n\n");
 
   // Real per-year 流年 data from iztro — still feeds RAG enrichment (the per-year
   // 詳批 itself now lives in the FlowYearDetail table, lazily generated on click).
