@@ -80,12 +80,26 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v51"; // 2026-10-02: P1-12 (lib/rag.ts's TOPIC_KEYWORDS was missing
-// 流年大限/流年/夫妻/交友/兄弟/父母 — those topics silently got zero lexical boost, so the
-// RAG chunks retrieved for decades/flowyear/monthly/couple routes change) and P1-17
-// (lib/flowRisk.ts's CAUTION_PALACE_SCORES used suffixed '疾厄宮' etc. instead of iztro's
-// real unsuffixed '疾厄' etc., so only 命宮 ever got its intended extra weight — fixing this
-// changes which flow years rank as "risk years" and are described in the cautions prompt).
+const CACHE_VERSION = "v51"; // 2026-10-02: two P1 clusters bumped together —
+// (A) P1-12 (lib/rag.ts's TOPIC_KEYWORDS was missing 流年大限/流年/夫妻/交友/兄弟/父母 —
+// those topics silently got zero lexical boost, so the RAG chunks retrieved for
+// decades/flowyear/monthly/couple routes change) and P1-17 (lib/flowRisk.ts's
+// CAUTION_PALACE_SCORES used suffixed '疾厄宮' etc. instead of iztro's real unsuffixed
+// '疾厄' etc., so only 命宮 ever got its intended extra weight — fixing this changes which
+// flow years rank as "risk years" and are described in the cautions prompt).
+// (B) P1 couple-domain cluster, 5 fixes — (1) bazi-couple's RAG query passed only
+// text+school, so buildQueryTerms() saw an empty term set and getKnowledge()
+// short-circuited to zero results every time — now passes explicit stars + strict:true.
+// (2) couple's palace-mutagen scoring compared iztro's bare Traditional mutagen ("祿"/
+// "科"/"忌") against Simplified+化-prefixed strings ("化禄"/"化科"/"化忌"), so 四化 never
+// affected 四維得分 — fixed the comparison and exposed per-dimension contribution descs.
+// (3) 緣分類型 labels and sibling's "六親" palace label were Simplified, missed by an
+// earlier sitewide fix. (4) identical branches were reported as 三合 (couple) / 三合+相刑
+// (bazi-couple) due to a missing distinctness guard; also added the missing 子卯相刑 pair.
+// (5) couple's prompt asked for cross-chart 飛化互入 and 當前大運 it never computed — added
+// both, reusing bazi-couple's 大運 lookup for consistency.
+// Bumped once to invalidate cached stale-RAG/wrong-risk-year/empty-RAG/zero-四化-effect/
+// Simplified-label/false-三合/hallucinated-飛化互入 readings from all affected routes.
 // v50: 2026-10-02: lib/bazi.ts's summary no longer claims a
 // 喜用神 (favorable element) — that claim was just the lowest-count element across the
 // 8 visible characters, ignoring 月令/藏干/旺衰, and contradicted several routes that

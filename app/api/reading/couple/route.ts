@@ -72,12 +72,23 @@ function zodiacRelation(branchA: string, branchB: string): string {
   const SAN_HE = [["子","辰","申"],["亥","卯","未"],["寅","午","戌"],["巳","酉","丑"]];
   const LIU_HE: [string,string][] = [["子","丑"],["寅","亥"],["卯","戌"],["辰","酉"],["巳","申"],["午","未"]];
   const CHONG: [string,string][] = [["子","午"],["丑","未"],["寅","申"],["卯","酉"],["辰","戌"],["巳","亥"]];
+  // 三刑: 寅巳申 (持勢之刑) and 丑戌未 (無恩之刑) are 3-branch groups; 子卯
+  // (無禮之刑) is a standalone pair, not part of either triple.
   const XING: [string,string,string][] = [["寅","巳","申"],["丑","戌","未"]];
+  const ZI_MAO: [string,string] = ["子","卯"];
 
-  for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同氣相求）";
+  // branchA === branchB (same zodiac sign) trivially satisfies g.includes(A) &&
+  // g.includes(B) for whichever group contains that one branch — guard against
+  // reporting identical branches as 三合/三刑.
+  if (branchA !== branchB) {
+    for (const g of SAN_HE) if (g.includes(branchA) && g.includes(branchB)) return "三合（天然契合，同氣相求）";
+  }
   for (const [a,b] of LIU_HE) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "六合（相合融洽）";
   for (const [a,b] of CHONG) if ((a===branchA&&b===branchB)||(a===branchB&&b===branchA)) return "相衝（摩擦較多，需磨合）";
-  for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨礪，有緣有劫）";
+  if (branchA !== branchB) {
+    for (const g of XING) if (g.includes(branchA) && g.includes(branchB)) return "三刑（相互磨礪，有緣有劫）";
+    if ((branchA===ZI_MAO[0]&&branchB===ZI_MAO[1])||(branchA===ZI_MAO[1]&&branchB===ZI_MAO[0])) return "相刑（無禮之刑，需多體諒）";
+  }
   return "無特殊合衝（後天緣分為主，需彼此經營）";
 }
 
@@ -89,6 +100,42 @@ function findStarPalace(ziwei: ZiweiResult, starName: string): string {
     if (s) return `${p.name}${s.mutagen ? `化${s.mutagen}` : ""}`;
   }
   return "（未見）";
+}
+
+// This person's own 生年四化 stars (the stars that received 祿/權/科/忌 in
+// their own natal chart) — up to 4 entries.
+function natalMutagenStars(ziwei: ZiweiResult): { star: string; mutagen: string }[] {
+  const out: { star: string; mutagen: string }[] = [];
+  for (const p of ziwei.palaces) {
+    for (const s of p.stars) {
+      if (s.mutagen) out.push({ star: s.name, mutagen: s.mutagen });
+    }
+  }
+  return out;
+}
+
+// 飛化互入: for each of fromZiwei's 生年四化 stars, find which palace that
+// same star occupies in toZiwei's own natal chart — this is what actually
+// grounds the "飛化互入 · 彼此怎麼互相影響" section, which previously asked
+// the model to invent cross-chart flying-star data it was never given
+// (2026-10-02 audit P1-21).
+function crossChartMutagenFlow(fromZiwei: ZiweiResult, toZiwei: ZiweiResult, fromLabel: string, toLabel: string): string {
+  const stars = natalMutagenStars(fromZiwei);
+  if (stars.length === 0) return `${fromLabel}：生年四化資料不足`;
+  return stars
+    .map(({ star, mutagen }) => `${fromLabel}${star}化${mutagen} → 入${toLabel}${findStarPalace(toZiwei, star)}`)
+    .join("\n");
+}
+
+// Current decade (大運) for one person — same lookup bazi-couple/route.ts
+// uses for its 大運時機 section, reused here for consistency so the 緣分時機
+// section's "結合雙方當前大運" ask actually has data to work from.
+function currentDecadeDesc(bazi: BaziResult): string {
+  if (!bazi.decades || bazi.decades.length === 0) return "（大運未知）";
+  const now = new Date().getFullYear();
+  const current = bazi.decades.find(d => d.startYear <= now && d.endYear >= now);
+  if (!current) return "（大運未知）";
+  return `當前大運 ${current.ganZhi}（${current.startYear}–${current.endYear}）`;
 }
 
 // Describe the four bazi pillars compactly
@@ -247,7 +294,7 @@ export async function POST(request: NextRequest) {
   const userMessage = `
 【關係類型】${cfg.label}　側重：${cfg.focusHint}
 【四維得分（確定性，請據此解釋）】緣分類型：${score.label}（${score.total}分）
-${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
+${score.dims.map(d => `${d.name} ${d.score}（${d.desc}）`).join("\n")}
 
 【甲方基本資訊】
 姓名/稱呼：${labelA}　性別：${genderA==="male"?"男":"女"}
@@ -256,6 +303,7 @@ ${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
 日主：${baziA.dayMaster}（${baziA.dayMasterElement}）
 五行：木${elA.wood} 火${elA.fire} 土${elA.earth} 金${elA.metal} 水${elA.water}
 命格：${baziA.summary}
+${currentDecadeDesc(baziA)}
 
 【甲方紫微宮位】
 ${palaceBlockA}
@@ -267,9 +315,14 @@ ${palaceBlockA}
 日主：${baziB.dayMaster}（${baziB.dayMasterElement}）
 五行：木${elB.wood} 火${elB.fire} 土${elB.earth} 金${elB.metal} 水${elB.water}
 命格：${baziB.summary}
+${currentDecadeDesc(baziB)}
 
 【乙方紫微宮位】
 ${palaceBlockB}
+
+【飛化互入（一方生年四化星落入對方命盤的宮位，供撰寫飛化互入段落使用）】
+${crossChartMutagenFlow(ziweiA, ziweiB, labelA, labelB)}
+${crossChartMutagenFlow(ziweiB, ziweiA, labelB, labelA)}
 
 【宮位對照（雙方相同宮位並列，供撰寫宮位對照段落使用）】
 ${palaceComparison}

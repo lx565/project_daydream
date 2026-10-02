@@ -65,8 +65,13 @@ export function palaceStarScore(ziwei: ZiweiResult, palaceName: string): { score
   for (const s of major) {
     if (FAVORABLE_STARS.has(s)) score += 8;
     if (CHALLENGING_STARS.has(s)) score -= 6;
-    if (s && palace.stars.find((x) => x.name === s && (x.mutagen === "化禄" || x.mutagen === "化科"))) score += 5;
-    if (s && palace.stars.find((x) => x.name === s && x.mutagen === "化忌")) score -= 8;
+    // iztro returns the bare mutagen character ("祿"/"權"/"科"/"忌"), not
+    // Simplified+化-prefixed ("化禄"/"化科") — see lib/ziwei.ts's StarInfo.mutagen
+    // JSDoc and 2026-10-02 audit P1-18. The old comparison never matched, so
+    // 四化 had zero effect on 四維得分 despite the prompt asking the model to
+    // explain scores driven by it.
+    if (s && palace.stars.find((x) => x.name === s && (x.mutagen === "祿" || x.mutagen === "科"))) score += 5;
+    if (s && palace.stars.find((x) => x.name === s && x.mutagen === "忌")) score -= 8;
   }
   return { score: Math.min(98, Math.max(42, score)), stars: major };
 }
@@ -116,17 +121,17 @@ export interface CoupleScoreV2 {
   total: number;
   label: string;
   color: string;
-  dims: { name: string; score: number }[];
+  dims: { name: string; score: number; desc: string }[];
   weddingStarsA: string[];
   weddingStarsB: string[];
 }
 
 function yuanfenLabel(total: number, type: RelationshipType): string {
   const lover = type === "lover" || type === "spouse";
-  if (total >= 85) return lover ? "命中注定型" : "天生一对型";
+  if (total >= 85) return lover ? "命中注定型" : "天生一對型";
   if (total >= 75) return lover ? "深度契合型" : "默契知己型";
-  if (total >= 62) return lover ? "互补成长型" : "相辅相成型";
-  return "需要经营型";
+  if (total >= 62) return lover ? "互補成長型" : "相輔相成型";
+  return "需要經營型";
 }
 
 // Per-type 4-dimension weight tables. Each row is one dimension (in the same
@@ -194,12 +199,25 @@ export function calcCoupleScoreV2(
   const signals = { dm: dm.score, el: el.score, yb: yb.score, db: db.score, ds: ds.score, pp, cp };
   const clamp = (n: number) => Math.min(96, Math.max(66, Math.round(n)));
 
+  // Human-readable grounding per signal — lets the prompt explain each
+  // dimension's score from its actual dominant contributors instead of
+  // inventing a reason for a number it was never told how to derive.
+  const ppDesc = `${primaryPalaceName}宮主星：甲方${ppA.stars.join("、") || "空宮"}、乙方${ppB.stars.join("、") || "空宮"}`;
+  const cpDesc = `子女宮主星：甲方${cpA.stars.join("、") || "空宮"}、乙方${cpB.stars.join("、") || "空宮"}`;
+  const signalDescs: Record<keyof typeof signals, string> = {
+    dm: dm.desc, el: el.desc, yb: yb.desc, db: db.desc, ds: ds.desc, pp: ppDesc, cp: cpDesc,
+  };
+
   const weights = DIMENSION_WEIGHTS[type];
   const dims = cfg.dimensions.map((name, i) => {
     const w = weights[i];
     const raw = w.dm * signals.dm + w.el * signals.el + w.yb * signals.yb
       + w.db * signals.db + w.ds * signals.ds + w.pp * signals.pp + w.cp * signals.cp;
-    return { name, score: clamp(raw) };
+    const contributors = (Object.keys(w) as (keyof typeof signals)[])
+      .filter((k) => w[k] > 0)
+      .sort((a, b) => w[b] - w[a])
+      .map((k) => signalDescs[k]);
+    return { name, score: clamp(raw), desc: contributors.join("；") };
   });
 
   const total = Math.round(dims.reduce((s, d) => s + d.score, 0) / 4);
