@@ -47,6 +47,13 @@ export interface SSEWriterOptions {
    *  output is inherently personal/contextual per-request (e.g. chat), where
    *  caching risks serving one user's answer to another. Default false. */
   noCache?: boolean;
+  /** When true, skip reading from KV cache (a fresh generation still writes on
+   *  success). A validation retry's revised message content almost always hashes
+   *  to a different cache key anyway, but this guarantees it — a retry must never
+   *  replay a stale cached response even in an edge-case hash collision. Routes
+   *  that accept `revisionNotes` should pass `skipCacheRead: !!body.revisionNotes?.length`.
+   *  Default false. */
+  skipCacheRead?: boolean;
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -80,7 +87,22 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v50"; // 2026-10-02: lib/bazi.ts's summary no longer claims a
+const CACHE_VERSION = "v51"; // 2026-10-02: P1 bazi/cautions prompt audit batch —
+// (1) bazi-decade: dropped the hallucination-inviting generic topic:"格局" RAG query
+// (pulled in 紫微 keywords for a 八字 question) for school:"八字命理",strict:true with
+// explicit stars; also labels decades 已過/當前/未來 correctly instead of always
+// "當前大運", passes currentYear/currentAge, and replaced the ungrounded 流年-projection
+// ask with a 大運-internal structural-phase ask the model can actually answer.
+// (2) bazi-schools: same strict 八字命理 RAG fix (was strict:false, letting NEUTRAL_SCHOOLS
+// leak in unfiltered); 神煞 (天乙貴人/羊刃/華蓋/驛馬/天德/月德) now computed deterministically
+// and handed to the model instead of being invented; removed the leaked internal "B1"
+// route-jargon from the system prompt.
+// (3) bazi: user-message length/structure spec (2-3 段 ~280-320字) now matches the
+// system prompt's actual spec (1 段 ~130-160字) instead of contradicting it.
+// (4) cautions/bazi/bazi-schools now accept revisionNotes on a validation retry (same
+// pattern as overview) instead of ignoring them and silently replaying the same
+// flagged cached text under an unchanged cache key.
+// v50: 2026-10-02: lib/bazi.ts's summary no longer claims a
 // 喜用神 (favorable element) — that claim was just the lowest-count element across the
 // 8 visible characters, ignoring 月令/藏干/旺衰, and contradicted several routes that
 // separately ask the model to derive 用神 properly. Bumped to invalidate cached readings
@@ -124,6 +146,23 @@ async function kvSet(key: string, value: { text: string; refs: Reference[] }): P
   } catch {}
 }
 
+async function kvDel(key: string): Promise<void> {
+  if (!process.env.KV_REST_API_URL) return;
+  try {
+    const { kv } = await import("@vercel/kv");
+    await kv.del(key);
+  } catch {}
+}
+
+/** Delete a specific cached reading from KV. Called by the validate/validate-bazi
+ *  routes when a reading fails cross-model validation — without this, the flagged
+ *  first-pass text stays served from cache to every other visitor with the same
+ *  chart for the rest of the 30-day TTL, even though this visitor's own retry (with
+ *  revisionNotes) regenerates fine under a different cache key. */
+export async function invalidateReadingCache(cacheKey: string): Promise<void> {
+  await kvDel(cacheKey);
+}
+
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
 export function makeSSEResponse(
@@ -160,7 +199,11 @@ export async function streamWithRefs(
   try {
     // ── Check server-side cache ─────────────────────────────────────────────
     const cacheKey = opts.noCache ? null : makeCacheKey(opts);
-    const cached = cacheKey ? await kvGet(cacheKey) : null;
+    // Sent unconditionally (cache hit or miss) so the client can hand this key
+    // back to the validate/validate-bazi routes for KV invalidation if this
+    // reading later fails cross-model validation — see invalidateReadingCache.
+    if (cacheKey) await safeWrite({ _cacheKey: cacheKey });
+    const cached = (cacheKey && !opts.skipCacheRead) ? await kvGet(cacheKey) : null;
     if (cached) {
       // Replay cached response instantly — no provider call happened, so refund
       // the rate-limit unit the route charged up front.
