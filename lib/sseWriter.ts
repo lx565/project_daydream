@@ -80,7 +80,13 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v50"; // 2026-10-02: lib/bazi.ts's summary no longer claims a
+const CACHE_VERSION = "v51"; // 2026-10-02: P1-12 (lib/rag.ts's TOPIC_KEYWORDS was missing
+// 流年大限/流年/夫妻/交友/兄弟/父母 — those topics silently got zero lexical boost, so the
+// RAG chunks retrieved for decades/flowyear/monthly/couple routes change) and P1-17
+// (lib/flowRisk.ts's CAUTION_PALACE_SCORES used suffixed '疾厄宮' etc. instead of iztro's
+// real unsuffixed '疾厄' etc., so only 命宮 ever got its intended extra weight — fixing this
+// changes which flow years rank as "risk years" and are described in the cautions prompt).
+// v50: 2026-10-02: lib/bazi.ts's summary no longer claims a
 // 喜用神 (favorable element) — that claim was just the lowest-count element across the
 // 8 visible characters, ignoring 月令/藏干/旺衰, and contradicted several routes that
 // separately ask the model to derive 用神 properly. Bumped to invalidate cached readings
