@@ -80,7 +80,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v48"; // 2026-10-02: daily 干支 fixed (wrong epoch/calendar-month/Jan-1 year flip)
+const CACHE_VERSION = "v49"; // 2026-10-02: cautions route now matches iztro's bare "忌" instead of "化忌" (was dropping 化忌 stars)
 // (si*12+bi)%60 was wrong for 55/60 干支 combinations (e.g. 乙丑→海中金 was computed as
 // 路旁土), so the entire 祿命派 section built on it was wrong for most charts. Fixed to the
 // correct CRT-solved index (and fixed a second compounding Math.floor(idx/2) indexing bug
