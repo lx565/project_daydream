@@ -8,7 +8,7 @@ import type { BaziResult } from "@/lib/bazi";
 
 // B3 · 八字 tab — 各派視角 (祿命派 + 盲派)
 // Beside-mode: B1 already covers 旺衰+格局; this adds two non-overlapping lenses.
-const SYSTEM = `你是一位博採眾派的命理師，熟悉祿命法與盲派各自的斷命邏輯。請對同一命局從兩個獨立視角簡述，每派各有側重，不重複 B1 已做的旺衰/格局/十神分析。
+const SYSTEM = `你是一位博採眾派的命理師，熟悉祿命法與盲派各自的斷命邏輯。請對同一命局從兩個獨立視角簡述，每派各有側重，不重複「八字」分頁深度解讀已做的旺衰/格局/十神分析。
 
 ${MODERN_INSTRUCTION}
 
@@ -18,7 +18,7 @@ ${MODERN_INSTRUCTION}
 
 祿命法以納音五行為綱，重視神煞（天乙貴人、羊刃、華蓋、驛馬、天德、月德等）的實際影響。請：
 - 點出此命的納音五行（年/日納音）及其特質含義
-- 列舉2-3個最具影響力的神煞及其在命局中的實際體現
+- 僅依據下方【神煞】清單（已由演算法核實是否成立）展開其中1-3個最具影響力者的實際體現；清單中未列出者一律視為不成立，不得自行杜撰其他神煞；若清單顯示本命局神煞不顯，請如實說明
 - 用祿命法視角說明命局的"格"與"局"（如納音相生/相剋、貴人助力格局）
 字數：350-450字。加粗關鍵神煞名稱。
 
@@ -48,6 +48,87 @@ const NAYIN = [
 ];
 const BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 
+// ── 神煞 (deterministic lookups) ──────────────────────────────────────────────
+// Same tables already published in lib/shenshaData.ts's `derivation` fields (used
+// for the /sources SEO pages) — reused here as the ground truth so the model is
+// only ever asked to elaborate on 神煞 that are actually present, never invent them.
+const TIANYI_GUIREN: Record<string, string[]> = {
+  甲: ["丑", "未"], 戊: ["丑", "未"],
+  乙: ["子", "申"], 己: ["子", "申"],
+  庚: ["寅", "午"], 辛: ["寅", "午"],
+  壬: ["卯", "巳"], 癸: ["卯", "巳"],
+  丙: ["酉", "亥"], 丁: ["酉", "亥"],
+};
+const YANGREN: Record<string, string> = {
+  甲: "卯", 乙: "辰", 丙: "午", 戊: "午", 丁: "未", 己: "未",
+  庚: "酉", 辛: "戌", 壬: "子", 癸: "亥",
+};
+// 三合局分組：每組對應各自的華蓋（末位四庫）與驛馬（前一位對沖）地支
+const SANHE_GROUPS: { branches: string[]; huagai: string; yima: string }[] = [
+  { branches: ["申", "子", "辰"], huagai: "辰", yima: "寅" },
+  { branches: ["寅", "午", "戌"], huagai: "戌", yima: "申" },
+  { branches: ["巳", "酉", "丑"], huagai: "丑", yima: "亥" },
+  { branches: ["亥", "卯", "未"], huagai: "未", yima: "巳" },
+];
+const YUEDE: Record<string, string> = {
+  寅: "丙", 午: "丙", 戌: "丙",
+  申: "壬", 子: "壬", 辰: "壬",
+  亥: "甲", 卯: "甲", 未: "甲",
+  巳: "庚", 酉: "庚", 丑: "庚",
+};
+const TIANDE: Record<string, { value: string; isStem: boolean }> = {
+  寅: { value: "丁", isStem: true },
+  卯: { value: "申", isStem: false },
+  辰: { value: "壬", isStem: true },
+  巳: { value: "辛", isStem: true },
+  午: { value: "亥", isStem: false },
+  未: { value: "甲", isStem: true },
+  申: { value: "癸", isStem: true },
+  酉: { value: "寅", isStem: false },
+  戌: { value: "丙", isStem: true },
+  亥: { value: "乙", isStem: true },
+  子: { value: "巳", isStem: false },
+  丑: { value: "庚", isStem: true },
+};
+
+/** Which of the 6 神煞 named in the system prompt actually apply to this chart
+ *  (日干/月支-based lookups, cross-checked against all 4 pillars). */
+function computeShensha(bazi: BaziResult): string[] {
+  const stems = [bazi.year.stem, bazi.month.stem, bazi.day.stem, bazi.hour.stem];
+  const branches = [bazi.year.branch, bazi.month.branch, bazi.day.branch, bazi.hour.branch];
+  const dayStem = bazi.day.stem;
+  const monthBranch = bazi.month.branch;
+  const results: string[] = [];
+
+  const tianyiTargets = TIANYI_GUIREN[dayStem] ?? [];
+  const tianyiHit = tianyiTargets.filter((b) => branches.includes(b));
+  if (tianyiHit.length) results.push(`天乙貴人（日干${dayStem}查${tianyiTargets.join("/")}，命局見${tianyiHit.join("、")}）`);
+
+  const yangrenTarget = YANGREN[dayStem];
+  if (yangrenTarget && branches.includes(yangrenTarget)) {
+    results.push(`羊刃（日干${dayStem}查${yangrenTarget}，命局見之）`);
+  }
+
+  const group = SANHE_GROUPS.find((g) => g.branches.includes(bazi.year.branch) || g.branches.includes(bazi.day.branch));
+  if (group) {
+    if (branches.includes(group.huagai)) results.push(`華蓋（見${group.huagai}）`);
+    if (branches.includes(group.yima)) results.push(`驛馬（見${group.yima}）`);
+  }
+
+  const yuedeTarget = YUEDE[monthBranch];
+  if (yuedeTarget && stems.includes(yuedeTarget)) {
+    results.push(`月德貴人（月支${monthBranch}查天干${yuedeTarget}，命局見之）`);
+  }
+
+  const tiande = TIANDE[monthBranch];
+  if (tiande) {
+    const present = tiande.isStem ? stems.includes(tiande.value) : branches.includes(tiande.value);
+    if (present) results.push(`天德貴人（月支${monthBranch}查${tiande.isStem ? "天干" : "地支"}${tiande.value}，命局見之）`);
+  }
+
+  return results;
+}
+
 function nayinOf(stem: string, branch: string): string {
   const si = STEMS.indexOf(stem);
   const bi = BRANCHES.indexOf(branch);
@@ -64,7 +145,7 @@ function nayinOf(stem: string, branch: string): string {
   return NAYIN[idx] ?? "未知";
 }
 
-function buildMessage(bazi: BaziResult, gender: string): string {
+function buildMessage(bazi: BaziResult, gender: string, revisionNotes?: string[]): string {
   const dm = bazi.dayMaster;
   const yearNayin = nayinOf(bazi.year.stem, bazi.year.branch);
   const dayNayin  = nayinOf(bazi.day.stem,  bazi.day.branch);
@@ -75,6 +156,10 @@ function buildMessage(bazi: BaziResult, gender: string): string {
     `時柱：${bazi.hour.stem}${bazi.hour.branch}`,
   ];
   const el = bazi.elements;
+  const shensha = computeShensha(bazi);
+  const revision = revisionNotes?.length
+    ? `\n\n【重要·上一版校驗發現以下問題，請務必修正後重新輸出】\n${revisionNotes.join("\n")}`
+    : "";
   return `【八字命局】
 四柱（含納音）：
 ${pillars.join("\n")}
@@ -83,29 +168,35 @@ ${pillars.join("\n")}
 性別：${gender === "male" ? "男" : "女"}
 命局摘要：${bazi.summary}
 
-請分別從祿命派和盲派視角解讀，按格式輸出兩節。`;
+神煞（已由演算法核實，僅列實際成立者，祿命派視角須只依此清單展開）：
+${shensha.length ? shensha.join("\n") : "本命局未見天乙貴人、羊刃、華蓋、驛馬、天德、月德等常見神煞"}
+
+請分別從祿命派和盲派視角解讀，按格式輸出兩節。${revision}`;
 }
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-schools" })).allowed) return rateLimitResponse();
 
-  let body: { bazi: BaziResult; gender: string };
+  let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { bazi, gender } = body;
   if (!bazi || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
-  // RAG: pull 祿命法 sources (納音/神煞) and 盲派 sources (直斷/意象)
+  // RAG: pull 祿命法 sources (納音/神煞) and 盲派 sources (直斷/意象). strict:true so
+  // this never pulls in 三合/四化/飛星派 (紫微) chunks against a 八字 question — the
+  // old strict:false only soft-downweighted the wrong schools, and several of them
+  // (古籍經典/其他名家/倪師學派) are NEUTRAL_SCHOOLS so weren't downweighted at all.
   const { context, refs } = await getKnowledge({
     stars: ["納音", "神煞", "貴人", "祿命", "羊刃", "華蓋", "驛馬"],
     text: `祿命法 納音五行 神煞 天乙貴人 羊刃 華蓋 驛馬 盲派 意象直斷 ${bazi.summary} ${bazi.dayMasterElement}`,
     school: "八字命理",
-    strict: false,
+    strict: true,
     topK: 8,
     maxPerBook: 4,
   });
 
-  const userMessage = `${context ? `【典籍參考（祿命法·盲派）】\n${context}\n\n---\n\n` : ""}${buildMessage(bazi, gender)}`;
+  const userMessage = `${context ? `【典籍參考（祿命法·盲派）】\n${context}\n\n---\n\n` : ""}${buildMessage(bazi, gender, body.revisionNotes)}`;
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
@@ -118,6 +209,9 @@ export async function POST(request: NextRequest) {
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,
+      // See cautions/route.ts — without this a validation retry's hash matches
+      // the flagged original and the cache just replays the same flagged text.
+      skipCacheRead: !!body.revisionNotes?.length,
     })
   );
 }
