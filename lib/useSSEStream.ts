@@ -46,8 +46,13 @@ export interface StreamResult {
 }
 
 export interface StreamOpts {
-  /** Run a cross-model (Gemini) validation pass after the reading completes. */
+  /** Run a cross-model validation pass after the reading completes. */
   validate?: boolean;
+  /** Validation endpoint to POST { reading, ziwei|bazi } to. Defaults to the
+   *  紫微 validator (/api/reading/validate, expects `ziwei`). Pass
+   *  "/api/reading/validate-bazi" for 八字-only routes (bazi/bazi-deep/bazi-schools)
+   *  — it expects `bazi` instead and runs 八字-specific checks (see validateBazi.ts). */
+  validateUrl?: string;
 }
 
 // v22: 2026-09-12 niandu: added the "## 八字流年開運" section — old cached niandu
@@ -102,20 +107,32 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   const accText = useRef("");
   const accRefs = useRef<Reference[]>([]);
   const retriedRef = useRef(0);
+  // Server-side KV cache key for the in-flight reading, captured from the SSE
+  // stream's `_cacheKey` event (see sseWriter.ts) — handed back to the validator
+  // so it can delete the KV entry if this reading fails validation.
+  const serverCacheKeyRef = useRef<string | null>(null);
   // ref indirection so the post-stream validator can re-invoke start() (retry) without a circular dep
   const startRef = useRef<(body: object) => Promise<void>>(async () => {});
 
   // Cross-model validation after a reading completes.
   const runValidation = useCallback(async (reading: string, body: object) => {
-    const ziwei = (body as { ziwei?: unknown }).ziwei;
-    if (!opts?.validate || !ziwei || reading.length < 60) return;
+    const url = opts?.validateUrl ?? "/api/reading/validate";
+    const isBaziValidator = url.includes("validate-bazi");
+    const subject = isBaziValidator
+      ? (body as { bazi?: unknown }).bazi
+      : (body as { ziwei?: unknown }).ziwei;
+    if (!opts?.validate || !subject || reading.length < 60) return;
     setValidation("checking");
     setValidationIssues([]);
     try {
-      const res = await fetch("/api/reading/validate", {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reading, ziwei }),
+        body: JSON.stringify(
+          isBaziValidator
+            ? { reading, bazi: subject, cacheKey: serverCacheKeyRef.current }
+            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current }
+        ),
       });
       const v = (await res.json()) as { pass?: boolean; issues?: string[] };
       if (v.pass !== false) {
@@ -136,7 +153,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     } catch {
       setValidation("idle"); // validator unreachable → no badge, never block the reading
     }
-  }, [opts?.validate, cacheKey]);
+  }, [opts?.validate, opts?.validateUrl, cacheKey]);
 
   const start = useCallback(
     async (body: object) => {
@@ -174,6 +191,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
 
       accText.current = "";
       accRefs.current = [];
+      serverCacheKeyRef.current = null;
       setStatus("streaming");
       setText("");
       setRefs([]);
@@ -211,6 +229,9 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
           try {
             const parsed = JSON.parse(raw);
             if (parsed.error) throw new Error(parsed.error);
+            if (typeof parsed._cacheKey === "string") {
+              serverCacheKeyRef.current = parsed._cacheKey;
+            }
             if (typeof parsed.text === "string") {
               accText.current += parsed.text;
               setText((prev) => prev + parsed.text);
