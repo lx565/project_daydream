@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
   const userMessage = `
 【關係類型】${cfg.label}　側重：${cfg.focusHint}
 【四維得分（確定性，請據此解釋）】緣分類型：${score.label}（${score.total}分）
-${score.dims.map(d => `${d.name} ${d.score}`).join(" · ")}
+${score.dims.map(d => `${d.name} ${d.score}（${d.desc}）`).join("\n")}
 
 【甲方基本資訊】
 姓名/稱呼：${labelA}　性別：${genderA==="male"?"男":"女"}

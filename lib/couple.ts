@@ -121,7 +121,7 @@ export interface CoupleScoreV2 {
   total: number;
   label: string;
   color: string;
-  dims: { name: string; score: number }[];
+  dims: { name: string; score: number; desc: string }[];
   weddingStarsA: string[];
   weddingStarsB: string[];
 }
@@ -199,12 +199,25 @@ export function calcCoupleScoreV2(
   const signals = { dm: dm.score, el: el.score, yb: yb.score, db: db.score, ds: ds.score, pp, cp };
   const clamp = (n: number) => Math.min(96, Math.max(66, Math.round(n)));
 
+  // Human-readable grounding per signal — lets the prompt explain each
+  // dimension's score from its actual dominant contributors instead of
+  // inventing a reason for a number it was never told how to derive.
+  const ppDesc = `${primaryPalaceName}宮主星：甲方${ppA.stars.join("、") || "空宮"}、乙方${ppB.stars.join("、") || "空宮"}`;
+  const cpDesc = `子女宮主星：甲方${cpA.stars.join("、") || "空宮"}、乙方${cpB.stars.join("、") || "空宮"}`;
+  const signalDescs: Record<keyof typeof signals, string> = {
+    dm: dm.desc, el: el.desc, yb: yb.desc, db: db.desc, ds: ds.desc, pp: ppDesc, cp: cpDesc,
+  };
+
   const weights = DIMENSION_WEIGHTS[type];
   const dims = cfg.dimensions.map((name, i) => {
     const w = weights[i];
     const raw = w.dm * signals.dm + w.el * signals.el + w.yb * signals.yb
       + w.db * signals.db + w.ds * signals.ds + w.pp * signals.pp + w.cp * signals.cp;
-    return { name, score: clamp(raw) };
+    const contributors = (Object.keys(w) as (keyof typeof signals)[])
+      .filter((k) => w[k] > 0)
+      .sort((a, b) => w[b] - w[a])
+      .map((k) => signalDescs[k]);
+    return { name, score: clamp(raw), desc: contributors.join("；") };
   });
 
   const total = Math.round(dims.reduce((s, d) => s + d.score, 0) / 4);
