@@ -39,11 +39,11 @@ export async function POST(request: NextRequest) {
 
   // Natal chart caution stars
   const cautionPalaces = ziwei.palaces.filter((p) =>
-    p.stars.some((s) => CAUTION_STARS.includes(s.name) || s.mutagen === "化忌")
+    p.stars.some((s) => CAUTION_STARS.includes(s.name) || s.mutagen === "忌")
   );
   const cautionLines = cautionPalaces.map((p) => {
     const major = p.stars.filter((s) => s.type === "major").map((s) => s.name);
-    const notable = p.stars.filter((s) => CAUTION_STARS.includes(s.name) || s.mutagen === "化忌");
+    const notable = p.stars.filter((s) => CAUTION_STARS.includes(s.name) || s.mutagen === "忌");
     const majorStr = major.length ? `主星：${major.join("、")} ｜ ` : "";
     return `${p.name}：${majorStr}注意：${notable.map((s) => `${s.name}${s.mutagen ? `化${s.mutagen}` : ""}`).join("、")}`;
   });
