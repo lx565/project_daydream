@@ -257,14 +257,21 @@ export async function POST(request: NextRequest) {
     ].join("\n");
   })();
 
-  // RAG: fetch 八字 knowledge about relationship + day master elements
+  // RAG: fetch 八字 knowledge about relationship + day master elements.
+  // getKnowledge short-circuits to empty results when buildQueryTerms() sees no
+  // stars/palaces/topic (text alone never populates queryTerms) — this route
+  // used to pass text+school only, so its RAG has always returned nothing
+  // (2026-10-02 audit P1-10). Pass explicit stars so queryTerms is non-empty.
+  const dayTg = tenGod(baziA.day.stem, baziB.day.stem);
+  const dayTgRev = tenGod(baziB.day.stem, baziA.day.stem);
   const ragText = `八字合盤 日主 ${baziA.dayMasterElement}日 ${baziB.dayMasterElement}日 十神 ${cfg.ragTopic} 干支合沖 喜用神 大運`;
   const { context, refs } = await getKnowledge({
+    stars: ["日主", "十神", "合婚", "喜用神", baziA.dayMasterElement, baziB.dayMasterElement, dayTg, dayTgRev].filter(Boolean),
     text: ragText,
     school: "八字命理",
+    strict: true,
     topK: 8,
     maxPerBook: 3,
-    strict: false,
   });
 
   const userMessage = `
