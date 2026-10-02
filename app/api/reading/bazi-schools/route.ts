@@ -61,7 +61,7 @@ const TIANYI_GUIREN: Record<string, string[]> = {
 };
 const YANGREN: Record<string, string> = {
   甲: "卯", 乙: "辰", 丙: "午", 戊: "午", 丁: "未", 己: "未",
-  庚: "酉", 辛: "戌", 壬: "子", 癸: "亥",
+  庚: "酉", 辛: "戌", 壬: "子", 癸: "丑",
 };
 // 三合局分組：每組對應各自的華蓋（末位四庫）與驛馬（前一位對沖）地支
 const SANHE_GROUPS: { branches: string[]; huagai: string; yima: string }[] = [
