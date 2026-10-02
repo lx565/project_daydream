@@ -83,6 +83,10 @@ export async function POST(request: NextRequest) {
       maxTokens: 600,
       system,
       messages: trimmed,
+      // Chat answers are personal/contextual per-user (system prompt embeds the
+      // user's name/chart summary/background readings) — never cache/replay
+      // across users. See lib/sseWriter.ts CACHE_VERSION v46 note.
+      noCache: true,
     })
   );
 }

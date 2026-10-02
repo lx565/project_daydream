@@ -42,6 +42,11 @@ export interface SSEWriterOptions {
    *             on the content people pay for, without the full latency.
    *  Ignored by non-DeepSeek providers. Defaults to "low" when omitted. */
   reasoningEffort?: "none" | "low" | "medium" | "high";
+  /** When true, skip both the cache read and the cache write for this call —
+   *  the response is never persisted to/served from KV. Use for routes whose
+   *  output is inherently personal/contextual per-request (e.g. chat), where
+   *  caching risks serving one user's answer to another. Default false. */
+  noCache?: boolean;
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -75,12 +80,19 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v45"; // 2026-10-01: 10 reading routes (consensus/topic/bazi/daily/bazi-decade/bazi-deep/cautions/synthesis/overview/palaces) also had the same leftover 簡體中文→繁體中文 bug fixed in v44's chat prompt; bumped again to invalidate their cached Simplified-Chinese output
+const CACHE_VERSION = "v46"; // 2026-10-02: PRIVACY FIX — makeCacheKey only hashed the first
+// 100 chars of opts.system. Chat's SYSTEM_BASE is 233 chars, so the user's chart
+// summary/name/background readings/RAG context (all appended after char 100) were
+// excluded from the key — two different users asking the same first question got
+// served each other's cached answers verbatim (including `命主：${name}`). Now hashes
+// the FULL system string (see lib/synthesize.ts's cacheKey for the same pattern).
+// Bumped to invalidate every previously-cached entry computed under the old, truncated key.
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 function makeCacheKey(opts: SSEWriterOptions): string {
-  // Hash system prefix (identifies reading type) + full message content (identifies the person)
-  const input = opts.system.slice(0, 100) + "|" + opts.messages.map((m) => m.content).join("|");
+  // Hash the FULL system string (identifies reading type AND, where applicable,
+  // the specific person it was generated for) + full message content.
+  const input = opts.system + "|" + opts.messages.map((m) => m.content).join("|");
   const hash = createHash("md5").update(input).digest("hex");
   return `rd:${CACHE_VERSION}:${hash}`;
 }
@@ -136,8 +148,8 @@ export async function streamWithRefs(
 
   try {
     // ── Check server-side cache ─────────────────────────────────────────────
-    const cacheKey = makeCacheKey(opts);
-    const cached = await kvGet(cacheKey);
+    const cacheKey = opts.noCache ? null : makeCacheKey(opts);
+    const cached = cacheKey ? await kvGet(cacheKey) : null;
     if (cached) {
       // Replay cached response instantly — no provider call happened, so refund
       // the rate-limit unit the route charged up front.
@@ -201,7 +213,7 @@ export async function streamWithRefs(
     try { await writer.write(encoder.encode("data: [DONE]\n\n")); } catch {}
 
     // ── Save to cache (non-blocking) ────────────────────────────────────────
-    if (fullText) {
+    if (fullText && cacheKey) {
       kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [] }).catch(() => {});
     }
   } catch (err) {
