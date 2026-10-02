@@ -26,7 +26,7 @@ const CAUTION_STARS = ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "cautions" })).allowed) return rateLimitResponse();
 
-  let body: { ziwei: ZiweiResult; birthYear: number; name?: string };
+  let body: { ziwei: ZiweiResult; birthYear: number; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
   });
 
   const nameStr = name ? `命主：${name} · ` : "";
+  const revision = body.revisionNotes?.length
+    ? `\n\n【重要·上一版校驗發現以下問題，請務必修正後重新輸出】\n${body.revisionNotes.join("\n")}`
+    : "";
   const userMessage = `${nameStr}${age}歲  當前年份：${currentYear}年
 命格：${ziwei.summary}
 ${cautionLines.length > 0 ? `命盤注意宮位：\n${cautionLines.join("\n")}` : "命盤整體較為平穩"}
@@ -84,7 +87,7 @@ ${riskYearLines}
 
 參考資料：\n${context || "（暫無）"}
 
-請分兩個板塊：① 一生需特別注意；② 近年需格外留意。`;
+請分兩個板塊：① 一生需特別注意；② 近年需格外留意。${revision}`;
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
@@ -97,6 +100,10 @@ ${riskYearLines}
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,
+      // A validation retry resends the same ziwei/birthYear — without this the
+      // retry's hash would be identical to the flagged original and the cache
+      // would just replay the same flagged text instead of regenerating.
+      skipCacheRead: !!body.revisionNotes?.length,
     })
   );
 }
