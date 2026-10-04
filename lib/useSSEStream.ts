@@ -67,7 +67,12 @@ export interface StreamOpts {
 // fixes; couple-domain cluster (RAG/mutagen-scoring/labels/三合-三刑/飛化互入, 5 fixes);
 // bazi/bazi-decade/bazi-schools RAG+labeling+神煞+teaser-length fixes. Old cached
 // readings for all these tabs would never re-fetch without this.
-const CACHE_PREFIX = "ziwei_rd_v27_";
+// v28: 2026-10-04 truncation-detection fix — paired with sseWriter.ts's
+// CACHE_VERSION bump (two-layer cache rule). Readings already cached client-side
+// as "done" may actually have been truncated under the old logic; this forces a
+// fresh server round-trip (itself cache-missed under the new server key) instead
+// of trusting the stale localStorage copy.
+const CACHE_PREFIX = "ziwei_rd_v28_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
@@ -225,16 +230,35 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
 
         const decoder = new TextDecoder();
         let buffer = "";
+        // Set only by the server's own completion markers (`_done`/`[DONE]`) —
+        // mirrors iOS's parseFullSSE (app/lib/useReading.ts). A connection cut
+        // off mid-generation (e.g. a maxDuration kill) ends the HTTP body with
+        // no error event at all; the missing marker is the only sign the text
+        // below is truncated rather than complete. Checked once after the loop.
+        let sawDone = false;
 
         function processLine(line: string) {
           if (!line.startsWith("data:")) return;
           const raw = line.slice(5).trim();
-          if (raw === "[DONE]") return;
+          if (raw === "[DONE]") { sawDone = true; return; }
           try {
             const parsed = JSON.parse(raw);
             if (parsed.error) throw new Error(parsed.error);
             if (typeof parsed._cacheKey === "string") {
               serverCacheKeyRef.current = parsed._cacheKey;
+            }
+            if (parsed._done === true) sawDone = true;
+            // Server detected its own response was cut off by the token budget
+            // (see lib/sseWriter.ts's finish_reason==="length" check) and is
+            // restarting the generation with a higher ceiling — discard
+            // whatever was accumulated from the truncated attempt so it never
+            // gets prepended in front of the retry's text.
+            if (parsed._restart === true) {
+              accText.current = "";
+              accRefs.current = [];
+              setText("");
+              setRefs([]);
+              return;
             }
             if (typeof parsed.text === "string") {
               accText.current += parsed.text;
@@ -268,6 +292,15 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         // section with no error and no retry, and caching it poisons this
         // chart for this browser indefinitely (see loadCache's matching guard).
         if (!accText.current) throw new Error("AI 未返回內容，請重試");
+
+        // Non-empty text that never reached a completion marker is still a
+        // failure — the connection was cut mid-stream with no error event (the
+        // empty-text guard above wouldn't catch this; there IS text, it's just
+        // incomplete). Never render or cache it as a finished reading — Niki's
+        // hard requirement is that a half/unfinished reading must never be
+        // shown as if it were complete. Ports iOS's parseFullSSE guard
+        // (app/lib/useReading.ts) to web.
+        if (!sawDone) throw new Error("回應不完整，請重試");
 
         if (cacheKey) saveCache(cacheKey, { text: accText.current, refs: accRefs.current });
         setStatus("done");

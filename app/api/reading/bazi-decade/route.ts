@@ -87,7 +87,12 @@ ${context || "（無可用參考，請基於八字命理通論嚴謹推演）"}
       system: SYSTEM,
       messages: [{ role: "user", content: userMsg }],
       refs,
-      maxTokens: 1800,
+      // 1800 → 3400 (2026-10-04): no reasoningEffort override here (defaults to
+      // "low"), so DeepSeek's hidden reasoning phase was competing with the
+      // visible output for the old budget — see lib/sseWriter.ts's
+      // DEEPSEEK_MAX_OUTPUT_TOKENS note for why every route got real headroom,
+      // not another minimal reactive bump.
+      maxTokens: 3400,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

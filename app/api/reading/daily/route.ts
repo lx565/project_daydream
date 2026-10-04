@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
       tier: "fast",
-      maxTokens: 300,
+      // 300 → 800 (2026-10-04): extra margin even with reasoningEffort:"none"
+      // below — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 800,
       temperature: 0.7,
       rateLimit: { ip: clientIp(request), keyPrefix: "daily" },
       reasoningEffort: "none", // FREE public 黃曆 — speed over a reasoning pass

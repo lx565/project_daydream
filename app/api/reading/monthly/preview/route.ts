@@ -117,12 +117,19 @@ export async function POST(request: NextRequest) {
   try {
     const nameStr = name ? `命主：${name}\n` : "";
     const userMessage = `${nameStr}命格摘要：${ziwei.summary}\n\n${flowMonthFactsFrom(flows[0])}\n\n請寫本月短評。`;
-    teaser = await callAI({
+    const { text, truncated } = await callAI({
       system: TEASER_SYSTEM,
       userMessage,
-      maxTokens: 300,
+      // 300 → 700 (2026-10-04): no reasoningEffort override on this callAI call
+      // (defaults to "none"), same headroom fix as the streamWithRefs routes —
+      // see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 700,
       temperature: 0.7,
     });
+    // A cut-off teaser must never be shown as if it were a complete thought —
+    // same non-negotiable as the streaming routes. Fall back to the existing
+    // empty-teaser path below (teaser.trim() on "" → ""), identical to a failed call.
+    teaser = truncated ? "" : text;
   } catch {
     // Teaser is a nice-to-have — the score grid is the core free value, so a
     // failed teaser call shouldn't fail the whole preview response.

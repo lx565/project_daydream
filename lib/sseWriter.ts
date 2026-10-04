@@ -60,6 +60,16 @@ export interface SSEWriterOptions {
 // interpretive writing reads far better at a moderate temperature.
 const DEFAULT_TEMPERATURE = 0.5;
 
+// DeepSeek's documented max_tokens ceiling for the chat-completions endpoint
+// (deepseek-chat/deepseek-reasoner family, which "deepseek-flash"/"deepseek-v4-pro"
+// are aliases of) is 8192 — passing a higher value is rejected by the API rather
+// than silently clamped. This repo has no live network access to re-verify that
+// number against the current DeepSeek API reference for these specific aliases;
+// if it's ever raised provider-side, bump this too. Used both to cap every
+// route's maxTokens (see each route's own comment) and as the ceiling for the
+// one-shot truncation retry below.
+const DEEPSEEK_MAX_OUTPUT_TOKENS = 8192;
+
 // Switch provider via AI_PROVIDER env var: "gemini" (default) | "anthropic" | "deepseek"
 const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic" | "deepseek";
 
@@ -87,7 +97,15 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v52"; // 2026-10-02: P1 bazi/cautions prompt audit batch —
+const CACHE_VERSION = "v53"; // 2026-10-04: truncation-detection fix (this batch) —
+// the server cache key hashes only system+messages, never maxTokens, so raising
+// maxTokens ceilings and adding the finish_reason/stop_reason truncation check
+// did NOT invalidate readings that were already cached truncated under the old
+// logic — they'd keep matching this key and being served as "done" forever.
+// Bumped to force every reading to regenerate under the new truncation-aware
+// retry/error logic. Bump CACHE_PREFIX in lib/useSSEStream.ts together (two-layer
+// cache rule).
+// v52: 2026-10-02: P1 bazi/cautions prompt audit batch —
 // (1) bazi-decade: dropped the hallucination-inviting generic topic:"格局" RAG query
 // (pulled in 紫微 keywords for a 八字 question) for school:"八字命理",strict:true with
 // explicit stars; also labels decades 已過/當前/未來 correctly instead of always
@@ -215,6 +233,10 @@ export function makeSSEResponse(
   });
 }
 
+// How a generation attempt ended, per the provider's own finish_reason/stop_reason
+// — see runGenerationPass's doc comment in streamWithRefs for the full rationale.
+type FinishStatus = "complete" | "truncated" | "blocked";
+
 export async function streamWithRefs(
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
@@ -225,6 +247,10 @@ export async function streamWithRefs(
       await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
     } catch {}
   };
+  // Wall-clock anchor for the retry time-budget check below (Medium 4) — covers
+  // the whole request, including the cache lookup, so it reflects real elapsed
+  // time against the route's maxDuration, not just time spent in the provider call.
+  const requestStartMs = Date.now();
 
   try {
     // ── Check server-side cache ─────────────────────────────────────────────
@@ -261,7 +287,7 @@ export async function streamWithRefs(
     let fullText = "";
     let gen = 0;
     let sentAnyContent = false;
-    const runAttempt = (attemptGen: number, tierOverride?: ModelTier) => {
+    const runAttempt = (attemptGen: number, tierOverride?: ModelTier, maxTokensOverride?: number) => {
       const guardedWrite = async (obj: object) => {
         if (attemptGen !== gen) return;
         if ("text" in obj && typeof (obj as { text: string }).text === "string") {
@@ -270,26 +296,95 @@ export async function streamWithRefs(
         }
         await safeWrite(obj);
       };
-      if (PROVIDER === "gemini") return streamGemini(guardedWrite, opts, tierOverride);
-      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, opts, tierOverride);
-      return streamAnthropic(guardedWrite, opts, tierOverride);
+      const attemptOpts = maxTokensOverride ? { ...opts, maxTokens: maxTokensOverride } : opts;
+      if (PROVIDER === "gemini") return streamGemini(guardedWrite, attemptOpts, tierOverride);
+      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, attemptOpts, tierOverride);
+      return streamAnthropic(guardedWrite, attemptOpts, tierOverride);
     };
 
-    try {
-      gen = 1;
-      await withDeadline(runAttempt(1), opts.attemptTimeoutMs ?? 35_000);
-    } catch (e) {
-      if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
-      // Primary model stalled before emitting anything — on DeepSeek this is
-      // v4-pro's reasoning ("thinking") phase eating the whole window on a slow
-      // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
-      // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
-      // the "fast" tier (deepseek-flash / gemini-2.5-flash / claude-haiku) so
-      // the reader gets *a* reading instead of "AI 服务响应较慢". Only safe because
-      // no content was sent yet (guarded by !sentAnyContent above) — restarting
-      // after partial output would duplicate text.
-      gen = 2; // invalidates any late write from the abandoned first attempt
-      await withDeadline(runAttempt(2, "fast"), opts.retryTimeoutMs ?? 15_000);
+    // One full generation pass, including the existing stalled-first-attempt →
+    // fast-tier fallback. Returns the provider's own verdict on how the response
+    // ended — a signal the old code never looked at, so a truncated-but-nonempty
+    // OR safety/content-filter-cut-but-nonempty response was indistinguishable
+    // from a real, complete one:
+    //   "complete"  — a genuine normal finish (OpenAI/DeepSeek finish_reason
+    //                  "stop", Gemini FinishReason.STOP, Anthropic stop_reason
+    //                  "end_turn"/"stop_sequence"). Only this may be cached/sent as done.
+    //   "truncated" — cut off by the token budget (length/MAX_TOKENS/max_tokens).
+    //                  The only case worth retrying with a higher ceiling.
+    //   "blocked"   — any other non-normal ending (content filter, safety block,
+    //                  recitation, or no finish_reason captured at all). Retrying
+    //                  with more tokens can't fix this, so it goes straight to
+    //                  the error path below, same as a hard provider failure.
+    const runGenerationPass = async (maxTokensOverride?: number): Promise<{ finishStatus: FinishStatus }> => {
+      try {
+        gen += 1;
+        return await withDeadline(runAttempt(gen, undefined, maxTokensOverride), opts.attemptTimeoutMs ?? 35_000);
+      } catch (e) {
+        if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
+        // Primary model stalled before emitting anything — on DeepSeek this is
+        // v4-pro's reasoning ("thinking") phase eating the whole window on a slow
+        // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
+        // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
+        // the "fast" tier (deepseek-flash / gemini-2.5-flash / claude-haiku) so
+        // the reader gets *a* reading instead of "AI 服务响应较慢". Only safe because
+        // no content was sent yet (guarded by !sentAnyContent above) — restarting
+        // after partial output was already flushed would duplicate text.
+        gen += 1; // invalidates any late write from the abandoned first attempt
+        return await withDeadline(runAttempt(gen, "fast", maxTokensOverride), opts.retryTimeoutMs ?? 15_000);
+      }
+    };
+
+    let result = await runGenerationPass();
+
+    // Non-negotiable: a response the provider itself flagged as cut off by the
+    // token budget must never reach the client marked as a complete reading —
+    // whether or not it's nonempty. Try once, invisibly, with real headroom
+    // above this route's already-raised ceiling before giving up. Text already
+    // streamed to the client for the truncated attempt is live-typing UX, not a
+    // finished artifact — _restart tells the client to discard it and re-accumulate
+    // from the retry, so nothing half-finished is ever left on screen as "done".
+    if (result.finishStatus === "truncated") {
+      const retryMaxTokens = Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * 1.5));
+      // The first attempt can already have eaten most of the route's maxDuration
+      // budget before truncation is even detected (only known once the full
+      // attempt resolves) — retrying is doomed if Vercel is about to kill the
+      // whole function mid-retry anyway, which also means the refund below never
+      // gets the chance to run. attemptTimeoutMs/retryTimeoutMs are already sized
+      // proportionally to each route's own maxDuration (see attemptTimeoutMs's doc
+      // comment — e.g. 55s+20s for a 90s route, 35s+15s default for 60s), so their
+      // sum plus a conservative overhead margin stands in for "the route's real
+      // budget" without needing every call site to thread maxDuration through.
+      // Require as much headroom as a full fresh attempt (attemptTimeoutMs) could
+      // need before even trying a retry.
+      const OVERHEAD_MARGIN_MS = 10_000;
+      const estimatedRouteBudgetMs =
+        (opts.attemptTimeoutMs ?? 35_000) + (opts.retryTimeoutMs ?? 15_000) + OVERHEAD_MARGIN_MS;
+      const elapsedMs = Date.now() - requestStartMs;
+      const hasTimeForRetry = elapsedMs + (opts.attemptTimeoutMs ?? 35_000) <= estimatedRouteBudgetMs;
+      if (retryMaxTokens > opts.maxTokens && hasTimeForRetry) {
+        await safeWrite({ _restart: true });
+        fullText = "";
+        sentAnyContent = false;
+        result = await runGenerationPass(retryMaxTokens);
+      }
+    }
+
+    if (result.finishStatus !== "complete") {
+      // Still truncated after the retry (or no headroom/time left to even try),
+      // or the provider ended abnormally for a reason more tokens can't fix
+      // (content filter, safety block, etc. — never worth a second generation).
+      // Surface the same explicit error event the mid-stream timeout-kill path
+      // already uses, so the client's existing error UI/retry button takes over.
+      // Never send _done/[DONE] and never cache this text.
+      if (opts.rateLimit) {
+        refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
+      }
+      const message = result.finishStatus === "truncated"
+        ? "AI 回應過長被截斷，請重試"
+        : "AI 回應被中斷，請重試";
+      await safeWrite({ error: message });
+      return;
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
@@ -322,8 +417,8 @@ async function streamGemini(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
   tierOverride?: ModelTier
-) {
-  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+): Promise<{ finishStatus: FinishStatus }> {
+  const { GoogleGenerativeAI, FinishReason } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
   const model = genAI.getGenerativeModel({
@@ -342,6 +437,15 @@ async function streamGemini(
     const text = chunk.text();
     if (text) await safeWrite({ text });
   }
+  // The aggregated final response (not individual stream chunks) carries the
+  // definitive finishReason once the whole stream has been consumed. Only STOP
+  // is a genuine normal finish — anything else (SAFETY/RECITATION/OTHER/etc.)
+  // is non-normal and must not be treated as a successful completion.
+  const finalResponse = await result.response;
+  const finishReason = finalResponse.candidates?.[0]?.finishReason;
+  if (finishReason === FinishReason.STOP) return { finishStatus: "complete" };
+  if (finishReason === FinishReason.MAX_TOKENS) return { finishStatus: "truncated" };
+  return { finishStatus: "blocked" };
 }
 
 // ── DeepSeek (OpenAI-compatible) ─────────────────────────────────────────────
@@ -350,7 +454,7 @@ async function streamDeepSeek(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
   tierOverride?: ModelTier
-) {
+): Promise<{ finishStatus: FinishStatus }> {
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
@@ -374,10 +478,19 @@ async function streamDeepSeek(
     ],
   });
 
+  // finish_reason is null on every intermediate chunk and only set on the
+  // terminal one — track the last non-null value seen. Only "stop" is a genuine
+  // normal finish — anything else (including never receiving a finish_reason at
+  // all, e.g. a dropped connection mid-stream) is non-normal.
+  let finishReason: string | null = null;
   for await (const chunk of stream) {
     const text = chunk.choices[0]?.delta?.content ?? "";
     if (text) await safeWrite({ text });
+    if (chunk.choices[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
   }
+  if (finishReason === "stop") return { finishStatus: "complete" };
+  if (finishReason === "length") return { finishStatus: "truncated" };
+  return { finishStatus: "blocked" };
 }
 
 // ── Anthropic ────────────────────────────────────────────────────────────────
@@ -386,7 +499,7 @@ async function streamAnthropic(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
   tierOverride?: ModelTier
-) {
+): Promise<{ finishStatus: FinishStatus }> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -407,4 +520,15 @@ async function streamAnthropic(
       await safeWrite({ text: event.delta.text });
     }
   }
+  // finalMessage() resolves once the stream has fully ended and carries the
+  // definitive stop_reason. "end_turn"/"stop_sequence" are genuine normal
+  // finishes; "max_tokens" is the budget cutting the response off; anything
+  // else ("tool_use" shouldn't occur here since no tools are passed, or null)
+  // is non-normal.
+  const final = await stream.finalMessage();
+  if (final.stop_reason === "end_turn" || final.stop_reason === "stop_sequence") {
+    return { finishStatus: "complete" };
+  }
+  if (final.stop_reason === "max_tokens") return { finishStatus: "truncated" };
+  return { finishStatus: "blocked" };
 }

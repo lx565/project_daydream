@@ -91,7 +91,9 @@ ${riskYearLines}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 1800,
+      // 1800 → 3400 (2026-10-04): real reasoning-phase headroom, not a minimal
+      // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 3400,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

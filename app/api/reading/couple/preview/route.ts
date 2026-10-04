@@ -143,7 +143,9 @@ ${minggeBlock}
       // palace/star/mutagen citations instead of 2 bare lines, so the same
       // "must never render blank on this highest-intent free teaser" caution
       // from the original 1500 tuning still applies, just at a higher floor.
-      maxTokens: 2200,
+      // 2200 → 3200 (2026-10-04): extra margin even with reasoningEffort:"none"
+      // below — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 3200,
       reasoningEffort: "none",
       temperature: 0.7,
       rateLimit: { ip: clientIp(request), keyPrefix: "couple-preview" },

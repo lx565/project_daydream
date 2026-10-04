@@ -112,13 +112,19 @@ export async function POST(request: NextRequest) {
   // codebase: start from an estimate, verify against real output).
   let raw = "";
   try {
-    raw = await callAI({
+    // callAI now surfaces `truncated`, but this route doesn't need to check it —
+    // truncated JSON already falls back to per-month placeholders below, same as
+    // a parse failure.
+    ({ text: raw } = await callAI({
       system: SYSTEM,
       userMessage,
-      maxTokens: 2200,
+      // 2200 → 3400 (2026-10-04): same DeepSeek reasoning-phase headroom fix as
+      // the streamWithRefs routes (see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS
+      // note).
+      maxTokens: 3400,
       temperature: 0.7,
       jsonMode: true,
-    });
+    }));
   } catch {
     raw = "";
   }

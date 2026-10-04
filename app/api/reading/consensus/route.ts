@@ -102,7 +102,9 @@ export async function POST(request: NextRequest) {
       // fast tier especially, can consume 1200 entirely BEFORE any visible token —
       // producing an empty reading (observed 2026-08-03: 紫薇綜合 rendered refs but no
       // body). Generous headroom so reasoning never starves the actual output.
-      maxTokens: 3000,
+      // 3000 → 4200 (2026-10-04): extra margin even with reasoningEffort:"none"
+      // below — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 4200,
       temperature: 0.5,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,

@@ -98,7 +98,9 @@ ${buildPalaceDetail(ziwei)}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 4500,
+      // 4500 → 8192 (2026-10-04): raised to DeepSeek's documented max_tokens
+      // ceiling — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 8192,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

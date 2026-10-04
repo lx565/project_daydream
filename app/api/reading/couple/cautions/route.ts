@@ -94,7 +94,9 @@ ${context || "（暫無）"}
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 2000,
+      // 2000 → 3800 (2026-10-04): real reasoning-phase headroom, not a minimal
+      // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 3800,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "couple-cautions" },

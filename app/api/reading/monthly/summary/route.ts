@@ -64,12 +64,19 @@ export async function POST(request: NextRequest) {
 
   let summary = "";
   try {
-    summary = await callAI({
+    const { text, truncated } = await callAI({
       system: SYSTEM,
       userMessage,
-      maxTokens: 500,
+      // 500 → 1000 (2026-10-04): no reasoningEffort override on this callAI call
+      // (defaults to "none"), same headroom fix as the streamWithRefs routes —
+      // see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 1000,
       temperature: 0.7,
     });
+    // A cut-off summary must never be shown as if it were complete — same
+    // non-negotiable as the streaming routes. Fall back to the existing
+    // empty-summary path below, identical to a failed call.
+    summary = truncated ? "" : text;
   } catch {
     summary = "";
   }

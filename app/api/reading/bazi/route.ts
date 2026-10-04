@@ -89,7 +89,10 @@ export async function POST(request: NextRequest) {
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 1400,
+      // 1400 → 2600 (2026-10-04): headroom even with reasoningEffort:"none" below
+      // (output itself can still legitimately grow) — see lib/sseWriter.ts's
+      // DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 2600,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

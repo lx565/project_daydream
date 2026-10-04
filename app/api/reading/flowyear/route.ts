@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
       // 3 years × ~150字 critique each — old single-year route used 1100 for ~340字 total,
       // so 3x that content needs meaningfully more than a flat 1400 (was observed truncating
       // mid-sentence on the 2nd of 3 years at 1400).
-      maxTokens: 2400,
+      // 2400 → 4400 (2026-10-04): real reasoning-phase headroom, not a minimal
+      // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 4400,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

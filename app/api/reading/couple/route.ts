@@ -350,7 +350,11 @@ ${context||"（暫無）"}
       // against this same budget (see lib/synthesize.ts's note on the 2026-07-25 model
       // change) — 2800 was observed truncating output mid-section. This route now asks
       // for 10 sections (added 宮位對照), bumped from 6000 to keep headroom.
-      maxTokens: 6800,
+      // 2026-10-04: raised again to DeepSeek's documented max_tokens ceiling
+      // (8192, see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS) — this route's
+      // past incident (above) shows it has little headroom, and sseWriter.ts now
+      // refuses to mark a finish_reason:"length" response as done regardless.
+      maxTokens: 8192,
       // This route declares maxDuration=90 (vs the usual 60) because its 8-section
       // output (甲方/乙方/飞化互入/合盘综析/...) was observed exceeding
       // streamWithRefs's default 35s deadline while still legitimately streaming

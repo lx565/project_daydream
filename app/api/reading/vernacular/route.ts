@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
       // classical routes' 6400-6800 ceiling, but keep headroom for DeepSeek's
       // reasoning_content (see couple/route.ts's maxTokens comment for why
       // that eats into this same budget).
-      maxTokens: 3200,
+      // 3200 → 5800 (2026-10-04): real reasoning-phase headroom, not a minimal
+      // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
+      maxTokens: 5800,
       rateLimit: { ip: clientIp(request), keyPrefix: "vernacular" },
       temperature: 0.75,
       system: buildVernacularSystem(),

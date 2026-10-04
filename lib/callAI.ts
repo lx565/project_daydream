@@ -17,7 +17,19 @@ interface CallAIOpts {
   reasoningEffort?: "none" | "low" | "medium" | "high";
 }
 
-async function callOnce(opts: CallAIOpts): Promise<string> {
+/** `truncated` mirrors sseWriter.ts's finish_reason/stop_reason check: false
+ *  only for a genuine normal finish (OpenAI/DeepSeek "stop", Gemini
+ *  FinishReason.STOP, Anthropic "end_turn"/"stop_sequence"). Anything else
+ *  (length/max_tokens, content_filter, safety, or no finish_reason captured
+ *  at all) is true — callAI itself doesn't retry on this (it has no SSE
+ *  client to send a `_restart` to), so callers must treat `text` as unusable
+ *  and fall back to their own existing placeholder copy when `truncated` is true. */
+interface CallAIResult {
+  text: string;
+  truncated: boolean;
+}
+
+async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
   const { system, userMessage, maxTokens = 1500, temperature = 0.3, jsonMode = false, reasoningEffort = "none" } = opts;
 
   if (PROVIDER === "deepseek") {
@@ -40,7 +52,9 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
         { role: "user", content: userMessage },
       ],
     });
-    return res.choices[0]?.message?.content ?? "";
+    const text = res.choices[0]?.message?.content ?? "";
+    const finishReason = res.choices[0]?.finish_reason;
+    return { text, truncated: finishReason !== "stop" };
   }
 
   if (PROVIDER === "anthropic") {
@@ -53,11 +67,13 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
       messages: [{ role: "user", content: userMessage }],
     });
     const block = msg.content[0];
-    return block.type === "text" ? block.text : "";
+    const text = block.type === "text" ? block.text : "";
+    const truncated = msg.stop_reason !== "end_turn" && msg.stop_reason !== "stop_sequence";
+    return { text, truncated };
   }
 
   // Gemini
-  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const { GoogleGenerativeAI, FinishReason } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
   const generationConfig: Record<string, unknown> = { maxOutputTokens: maxTokens, temperature };
   if (jsonMode) generationConfig.responseMimeType = "application/json";
@@ -67,7 +83,9 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
     generationConfig,
   });
   const result = await model.generateContent(userMessage);
-  return result.response.text();
+  const text = result.response.text();
+  const finishReason = result.response.candidates?.[0]?.finishReason;
+  return { text, truncated: finishReason !== FinishReason.STOP };
 }
 
 // A hung provider call is bounded well under Vercel's maxDuration and retried
@@ -75,7 +93,7 @@ async function callOnce(opts: CallAIOpts): Promise<string> {
 // application code to react, so retrying only helps if it happens *inside*
 // that budget. See lib/aiRetry.ts and lib/sseWriter.ts (same pattern, applied
 // to the streaming path) for the full rationale.
-export async function callAI(opts: CallAIOpts): Promise<string> {
+export async function callAI(opts: CallAIOpts): Promise<CallAIResult> {
   try {
     return await withDeadline(callOnce(opts), 35_000);
   } catch (e) {

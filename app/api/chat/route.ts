@@ -80,7 +80,12 @@ export async function POST(request: NextRequest) {
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
-      maxTokens: 600,
+      // 1600, not 600: chat has no reasoningEffort override (defaults to "low"),
+      // so DeepSeek's hidden reasoning phase competes with the ~120-180字 visible
+      // answer for this same budget — this route had never been through the
+      // incident-and-fix cycle every other route below already has (see
+      // lib/sseWriter.ts's finish_reason truncation check, 2026-10-04).
+      maxTokens: 1600,
       system,
       messages: trimmed,
       // Chat answers are personal/contextual per-user (system prompt embeds the

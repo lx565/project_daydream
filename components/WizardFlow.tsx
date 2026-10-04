@@ -3,14 +3,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Md from "./Md";
-import { useSSEStream } from "@/lib/useSSEStream";
+import { useSSEStream, type ValidationStatus, type StreamStatus } from "@/lib/useSSEStream";
 import type { Reference } from "@/lib/rag";
 import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import FlowYearDetail from "./FlowYearDetail";
 import BaziDecades from "./BaziDecades";
 import ChatInterface from "./ChatInterface";
-import { parseModernBlocks } from "@/lib/modernBlocks";
+import { parseModernBlocks, stripModern } from "@/lib/modernBlocks";
 import PaywallLock from "./PaywallLock";
 import { usePaywall } from "@/lib/usePaywall";
 import { gtagEvent } from "@/lib/gtag";
@@ -300,22 +300,36 @@ function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs
 // Per-palace card view — parses the palaces reading so each 宮 shows as clean rows:
 // row 1 = 宮位 · 地支 + 主星, row 2 = 解讀. Avoids the "everything clustered" markdown blob.
 function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
+  // Split on each "## " heading FIRST, on the raw untouched text — the first chunk may be
+  // intro text (no heading). This must happen before any [現代] extraction: the model doesn't
+  // always close that tag (see ShareCardBlock's matching comment in HepanResultView.tsx), and
+  // an unclosed [現代] regex-matches to the end of the string. Stripping it from the *whole*
+  // text before splitting let one dangling tag swallow every "## " heading after it — i.e. one
+  // stray tag right after 命宮 deleted 兄弟宮 onward, the exact "only 命宮 shows" bug. Splitting
+  // on headings first bounds any dangling tag to the single already-isolated block it's in.
+  const blocks = text.split(/\n(?=##\s)/).map((b) => b.trim()).filter(Boolean);
+
   // The palaces reading ends with ONE whole-reading [現代]/[现代] "給你的話" block — a summary of
-  // the whole person, not any single palace. Pull it out FIRST so it isn't swallowed into
-  // the last palace card (父母宮), where it wrongly reads as a parents-specific note.
-  // Render it once, after all the palace cards.
-  // Match both Traditional and Simplified variants, with or without a closing tag.
-  const modernMatch = text.match(/\[(?:現代|现代)\][\s\S]*?(?:\[\/(?:現代|现代)\]|$)/);
-  const modernBlock = modernMatch ? modernMatch[0] : "";
-  const palacesText = modernBlock ? text.replace(modernBlock, "").trim() : text;
-  // Split on each "## " heading; the first chunk may be intro text (no heading).
-  const blocks = palacesText.split(/\n(?=##\s)/).map((b) => b.trim()).filter(Boolean);
+  // the whole person, not any single palace. It can only legitimately land in the LAST block
+  // (nothing follows it), so pull it out of just that block — rendered once, after all cards —
+  // instead of leaving it to read as a parents-specific (父母宮) note.
+  let modernBlock = "";
+  if (blocks.length > 0) {
+    const lastIdx = blocks.length - 1;
+    const modernParts = parseModernBlocks(blocks[lastIdx]).filter((p) => p.type === "modern");
+    if (modernParts.length > 0) {
+      modernBlock = modernParts.map((p) => p.content).join("\n\n");
+      blocks[lastIdx] = stripModern(blocks[lastIdx]);
+    }
+  }
+  const finalBlocks = blocks.filter(Boolean);
 
   return (
     <div className="space-y-3 animate-fade-in">
-      {blocks.map((block, i) => {
+      {finalBlocks.map((block, i) => {
         if (!block.startsWith("##")) {
-          // Intro or trailing [現代] block — render as-is.
+          // Intro text (no heading) — render as-is. The trailing [現代] block was
+          // already pulled out above and is rendered once, after all the cards.
           return <ClassicalMd key={i} text={block} />;
         }
         const nl = block.indexOf("\n");
@@ -343,7 +357,7 @@ function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
           </div>
         );
       })}
-      {modernBlock && <ClassicalMd text={modernBlock} />}
+      {modernBlock && <ModernBlock content={modernBlock} />}
       <RefList refs={refs} />
     </div>
   );
@@ -436,16 +450,33 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   const baziDeep      = useSSEStream("/api/reading/bazi-deep",     ck("bazideep"), { validate: true, validateUrl: "/api/reading/validate-bazi" });  // B1 · 八字 tab (deep, paid)
   const baziSchools   = useSSEStream("/api/reading/bazi-schools",  ck("bazischools"), { validate: true, validateUrl: "/api/reading/validate-bazi" });  // B3 · 各派視角 (祿命+盲派)
 
+  // A reading this session's cross-model validator actively flagged ("fail")
+  // or is currently re-generating after a flag ("reprocessing") must never
+  // ground a chat answer — mirrors the iOS app's isTrustedCacheEntry gate
+  // (mingli-app/app/lib/useReading.ts). Readings with no validator at all
+  // (flowYearHighlights/consensus never pass `validate: true`) or whose check
+  // simply hasn't settled yet ("idle"/"checking") stay trusted, same as iOS
+  // treats "unavailable"/never-checked entries — only an *active* flag excludes.
+  // Also requires status === "done": useSSEStream's catch block never clears
+  // accumulated text on error, so a reading still streaming OR one that just
+  // landed in the new "回應不完整"/truncated error path (see useSSEStream.ts)
+  // still has its partial text sitting in `.text` — that half-finished text must
+  // never flow into chat's background context as if it were a finished reading.
+  const isTrustedReading = (status: StreamStatus, validation: ValidationStatus) =>
+    status === "done" && validation !== "fail" && validation !== "reprocessing";
+
   // Background context for 問命 ChatInterface — built live from stream texts
   const backgroundReadings: Record<string, string> = {};
-  if (synthesis.text) backgroundReadings.synthesis = synthesis.text;
-  if (overview.text)  backgroundReadings.overview  = overview.text;
-  if (bazi_.text)     backgroundReadings.bazi       = bazi_.text;
-  if (baziDeep.text)  backgroundReadings.baziDeep   = baziDeep.text;
-  if (palaces.text)   backgroundReadings.palaces    = palaces.text;
-  if (decades.text)   backgroundReadings.decades    = decades.text;
-  if (cautions.text)  backgroundReadings.cautions   = cautions.text;
-  if (flowYearHighlights.text) backgroundReadings.flowYears = flowYearHighlights.text;
+  if (synthesis.text && isTrustedReading(synthesis.status, synthesis.validation)) backgroundReadings.synthesis = synthesis.text;
+  if (overview.text  && isTrustedReading(overview.status, overview.validation))  backgroundReadings.overview  = overview.text;
+  if (bazi_.text     && isTrustedReading(bazi_.status, bazi_.validation))     backgroundReadings.bazi       = bazi_.text;
+  if (baziDeep.text  && isTrustedReading(baziDeep.status, baziDeep.validation))  backgroundReadings.baziDeep   = baziDeep.text;
+  if (palaces.text   && isTrustedReading(palaces.status, palaces.validation))   backgroundReadings.palaces    = palaces.text;
+  if (decades.text   && isTrustedReading(decades.status, decades.validation))   backgroundReadings.decades    = decades.text;
+  if (cautions.text  && isTrustedReading(cautions.status, cautions.validation))  backgroundReadings.cautions   = cautions.text;
+  // No validator ever runs on this route (no `validate: true` above), but still
+  // require status === "done" — same truncated/still-streaming guard as above.
+  if (flowYearHighlights.text && flowYearHighlights.status === "done") backgroundReadings.flowYears = flowYearHighlights.text;
 
   const ziweiPayload     = { ziwei, gender, name };
   const ziweiWithBirth   = { ziwei, birthYear, name };

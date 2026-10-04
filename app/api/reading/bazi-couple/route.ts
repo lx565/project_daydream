@@ -316,7 +316,12 @@ ${context || "（暫無相關典籍）"}
       // reasoning_content eats into this budget — see that file's comment) — this
       // route asks for a comparably long 9-10 section output, bumped from 6000
       // for the 大運時機 section's expanded 今明兩年 annual-outlook content.
-      maxTokens: 6400,
+      // 2026-10-04: raised again to DeepSeek's documented max_tokens ceiling
+      // (8192, see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS) — this route's
+      // past incidents (the comment above) show it has the least headroom of any
+      // route, and lib/sseWriter.ts now refuses to mark a finish_reason:"length"
+      // response as done regardless, so there's no downside to maxing this out.
+      maxTokens: 8192,
       // Wider deadline — DeepSeek was observed exceeding the 35s default while still
       // legitimately streaming; see couple/route.ts for the full rationale.
       attemptTimeoutMs: 55_000,

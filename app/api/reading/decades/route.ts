@@ -202,7 +202,11 @@ ${context || "（暫無）"}
       // against this same budget (see lib/synthesize.ts's note on the same
       // 2026-07-25 model change) — 4000 was already observed truncating the
       // final section (下一大限預告) before this change made the target longer.
-      maxTokens: 6000,
+      // 2026-10-04: raised again to DeepSeek's documented max_tokens ceiling
+      // (8192, see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS) — this route's
+      // past incident (above) shows it has little headroom, and sseWriter.ts now
+      // refuses to mark a finish_reason:"length" response as done regardless.
+      maxTokens: 8192,
       // This route declares maxDuration=90 (vs the usual 60) specifically because
       // its output is long — streamWithRefs's default 35s/15s deadlines don't
       // know that and were observed killing legitimately-in-progress generations

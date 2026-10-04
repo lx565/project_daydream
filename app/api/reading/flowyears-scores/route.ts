@@ -92,10 +92,15 @@ export async function POST(request: NextRequest) {
     `請為每年評分。`;
 
   try {
-    const raw = await callAI({
+    const { text: raw } = await callAI({
       system: SYSTEM,
       userMessage,
-      maxTokens: 2000,
+      // 2000 → 3200 (2026-10-04): same DeepSeek reasoning-phase headroom fix as
+      // the streamWithRefs routes (see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS
+      // note). callAI now surfaces `truncated`, but this route doesn't need to check
+      // it — truncated JSON already fails to parse below and 500s, never silently
+      // shown as a complete reading.
+      maxTokens: 3200,
       temperature: 0.5,
       jsonMode: true,
     });

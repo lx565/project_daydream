@@ -94,7 +94,11 @@ ${bazi.summary}
       // comment for the documented pattern). This route now asks for up to 5
       // dual-format blocks (4 domain signals + 八字流年開運), matching the
       // per-section token ratio couple/bazi-couple already use.
-      maxTokens: 5200,
+      // 2026-10-04: raised again to DeepSeek's documented max_tokens ceiling
+      // (8192, see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS) — this route's
+      // past incident (above) shows it has little headroom, and sseWriter.ts now
+      // refuses to mark a finish_reason:"length" response as done regardless.
+      maxTokens: 8192,
       attemptTimeoutMs: 55_000,
       retryTimeoutMs: 20_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "niandu" },
