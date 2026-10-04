@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { validateBaziReading } from "@/lib/validateBazi";
 import type { BaziResult } from "@/lib/bazi";
 
 const SYSTEM = `你是精通子平八字的命理師。這是"總覽"的八字格局速讀——只聚焦命局的核心格局與用神方向，讓使用者先知道"這是什麼命"。性格底色、事業財運、婚姻六親的展開在"八字"標籤頁的深度詳批中，此處不重複那些內容。
@@ -105,6 +106,17 @@ export async function POST(request: NextRequest) {
       // See cautions/route.ts — without this a validation retry's hash matches
       // the flagged original and the cache just replays the same flagged text.
       skipCacheRead: !!body.revisionNotes?.length,
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateBaziReading(fullText, bazi);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // and never actually checked the content — propagate as null so
+          // sseWriter.ts's fail-open handling runs instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null;
+        }
+      },
     })
   );
 }

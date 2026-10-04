@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowYears } from "@/lib/flowYears";
 
@@ -219,6 +220,17 @@ ${context || "（暫無）"}
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateReading(fullText, ziwei);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // and never actually checked the content — propagate as null so
+          // sseWriter.ts's fail-open handling runs instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null;
+        }
+      },
     })
   );
 }

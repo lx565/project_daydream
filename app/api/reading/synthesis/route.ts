@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getSharedRetrieval, getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
-import { buildChartFacts } from "@/lib/validateReading";
+import { buildChartFacts, validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import type { Reference } from "@/lib/rag";
@@ -166,6 +166,21 @@ ${baziFacts}
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs: allRefs,
+      // Synchronous server-side quality gate (see lib/sseWriter.ts's opts.validate) —
+      // runs before this reading is ever sent to the client as done. ziwei is
+      // already in scope here, so this closure keeps sseWriter.ts itself generic.
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateReading(fullText, ziwei);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // (timeout/API error/bad JSON/missing key) and never actually checked
+          // the content — propagate that as null so sseWriter.ts's own fail-open
+          // handling runs (ship, don't mark validated) instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null; // fail-open, same policy as the pre-existing async validator
+        }
+      },
     })
   );
 }

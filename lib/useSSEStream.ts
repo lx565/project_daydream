@@ -67,12 +67,16 @@ export interface StreamOpts {
 // fixes; couple-domain cluster (RAG/mutagen-scoring/labels/三合-三刑/飛化互入, 5 fixes);
 // bazi/bazi-decade/bazi-schools RAG+labeling+神煞+teaser-length fixes. Old cached
 // readings for all these tabs would never re-fetch without this.
+// v29: 2026-10-04 switched standard model to deepseek-v4-pro — paired with
+// sseWriter.ts's CACHE_VERSION bump (two-layer cache rule), so a localStorage
+// copy generated under the old deepseek-flash default is discarded and
+// regenerated under v4-pro instead of being served until its TTL expires.
 // v28: 2026-10-04 truncation-detection fix — paired with sseWriter.ts's
 // CACHE_VERSION bump (two-layer cache rule). Readings already cached client-side
 // as "done" may actually have been truncated under the old logic; this forces a
 // fresh server round-trip (itself cache-missed under the new server key) instead
 // of trusting the stale localStorage copy.
-const CACHE_PREFIX = "ziwei_rd_v28_";
+const CACHE_PREFIX = "ziwei_rd_v29_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
@@ -120,6 +124,11 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   // stream's `_cacheKey` event (see sseWriter.ts) — handed back to the validator
   // so it can delete the KV entry if this reading fails validation.
   const serverCacheKeyRef = useRef<string | null>(null);
+  // Set from the SSE stream's `_validated` event (see sseWriter.ts's synchronous
+  // server-side validate gate) — means the reading already passed cross-model
+  // validation in-process, before it was ever sent as done. When true, the
+  // client skips its own redundant async re-check below.
+  const serverValidatedRef = useRef(false);
   // ref indirection so the post-stream validator can re-invoke start() (retry) without a circular dep
   const startRef = useRef<(body: object) => Promise<void>>(async () => {});
 
@@ -201,6 +210,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
       accText.current = "";
       accRefs.current = [];
       serverCacheKeyRef.current = null;
+      serverValidatedRef.current = false;
       setStatus("streaming");
       setText("");
       setRefs([]);
@@ -248,6 +258,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
               serverCacheKeyRef.current = parsed._cacheKey;
             }
             if (parsed._done === true) sawDone = true;
+            if (parsed._validated === true) serverValidatedRef.current = true;
             // Server detected its own response was cut off by the token budget
             // (see lib/sseWriter.ts's finish_reason==="length" check) and is
             // restarting the generation with a higher ceiling — discard
@@ -302,10 +313,24 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         // (app/lib/useReading.ts) to web.
         if (!sawDone) throw new Error("回應不完整，請重試");
 
-        if (cacheKey) saveCache(cacheKey, { text: accText.current, refs: accRefs.current });
+        if (cacheKey) {
+          saveCache(cacheKey, {
+            text: accText.current,
+            refs: accRefs.current,
+            ...(serverValidatedRef.current ? { validated: true } : {}),
+          });
+        }
         setStatus("done");
-        // Kick off cross-model validation (non-blocking for the reading display).
-        void runValidation(accText.current, body);
+        if (serverValidatedRef.current) {
+          // Already passed the server's synchronous validate gate before this
+          // reading was ever sent as done — skip the redundant client-side check.
+          setValidation("pass");
+        } else {
+          // Kick off cross-model validation (non-blocking for the reading display).
+          // Safety net for routes/outcomes the synchronous server-side gate didn't
+          // (or couldn't) confirm — see sseWriter.ts's opts.validate.
+          void runValidation(accText.current, body);
+        }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         const message = (err as Error).message ?? "未知错误";

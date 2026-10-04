@@ -54,6 +54,26 @@ export interface SSEWriterOptions {
    *  that accept `revisionNotes` should pass `skipCacheRead: !!body.revisionNotes?.length`.
    *  Default false. */
   skipCacheRead?: boolean;
+  /** Synchronous, server-side cross-model quality gate — runs in-process, after
+   *  the existing truncation/blocked finishStatus gate passes and BEFORE the
+   *  reading is ever sent to the client as done, so nothing is ever marked
+   *  validated (cached/sent as `_validated: true`) without a genuine check.
+   *  The route builds this closure with its own chart data (ziwei/bazi) already
+   *  captured, so streamWithRefs itself stays generic and never needs to know
+   *  those shapes.
+   *  Contract: return `null` if the validator itself is unavailable/errored, OR
+   *  if it fail-opened internally without genuinely reviewing the content (e.g.
+   *  lib/validateReading.ts's `deepseekJsonReview` returning `reviewed: false`
+   *  on a timeout/API error/bad JSON/missing key — that case returns
+   *  `{pass:true,...}`, which the route closure must translate to `null` here,
+   *  not forward as a real pass) — fail-open, ship the reading exactly as if
+   *  this option were never passed; `validated` is never set true. Return
+   *  `{ pass: true, issues: [] }` only on a genuine, reviewed pass. Return
+   *  `{ pass: false, issues }` on a genuine, reviewed failure — the reading
+   *  still ships (no in-process regeneration, see streamWithRefs), unvalidated,
+   *  and falls through to the existing CLIENT-side async validate/revise flow
+   *  (lib/useSSEStream.ts) as the safety net. */
+  validate?: (fullText: string) => Promise<{ pass: boolean; issues: string[] } | null>;
 }
 
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
@@ -77,13 +97,17 @@ const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic"
 // reflects it automatically; no code edits. Falls back to a sensible default per provider.
 const MODEL_DEFAULTS = {
   gemini:    { standard: "gemini-2.5-flash",          fast: "gemini-2.5-flash" },
-  // TEMP (2026-08-03): standard set to flash, not v4-pro. v4-pro's reasoning
-  // phase was returning 55s+ on every reading (site-wide "AI 服务响应较慢"); flash
-  // is ~4x faster and still strong at Chinese. Revert `standard` to "deepseek-v4-pro"
-  // (or set env DEEPSEEK_MODEL=deepseek-v4-pro) once DeepSeek v4-pro latency recovers.
+  // 2026-10-04: switched `standard` to deepseek-v4-pro after a live side-by-side
+  // comparison showed it meaningfully richer/more coherent than flash, and the
+  // 55s+ latency spike documented below (2026-08-03) did NOT reproduce in that
+  // test (31.0s vs flash's 24.1s on the same prompt) — directional, not
+  // exhaustively re-verified across every route/chart. The stalled-attempt →
+  // fast-tier fallback (runGenerationPass, below) is what protects against a
+  // genuinely slow night: if v4-pro stalls before emitting anything, it falls
+  // back to deepseek-flash (the `fast` tier) automatically.
   // (2026-09-10: DeepSeek retired the old "v4-flash" alias and renamed it to
   // "deepseek-flash" — same underlying model, id only.)
-  deepseek:  { standard: "deepseek-flash",         fast: "deepseek-flash" },
+  deepseek:  { standard: "deepseek-v4-pro",         fast: "deepseek-flash" },
   anthropic: { standard: "claude-sonnet-4-6",         fast: "claude-haiku-4-5-20251001" },
 } as const;
 
@@ -97,7 +121,11 @@ function resolveModel(tier: ModelTier = "standard"): string {
 
 // ── Server-side KV cache ──────────────────────────────────────────────────────
 // Bump CACHE_VERSION when prompt structure changes significantly
-const CACHE_VERSION = "v53"; // 2026-10-04: truncation-detection fix (this batch) —
+const CACHE_VERSION = "v54"; // 2026-10-04: switched standard model to deepseek-v4-pro —
+// force every reading to regenerate under the new model rather than keep serving
+// old deepseek-flash-generated text from cache until its TTL naturally expires
+// (Niki's explicit call — product decision, not a correctness requirement).
+// Earlier same-day bump, still true: truncation-detection fix (prior batch) —
 // the server cache key hashes only system+messages, never maxTokens, so raising
 // maxTokens ceilings and adding the finish_reason/stop_reason truncation check
 // did NOT invalidate readings that were already cached truncated under the old
@@ -170,15 +198,17 @@ function makeCacheKey(opts: SSEWriterOptions): string {
   return `rd:${CACHE_VERSION}:${hash}`;
 }
 
-async function kvGet(key: string): Promise<{ text: string; refs: Reference[] } | null> {
+type KVCacheValue = { text: string; refs: Reference[]; validated?: boolean };
+
+async function kvGet(key: string): Promise<KVCacheValue | null> {
   if (!process.env.KV_REST_API_URL) return null;
   try {
     const { kv } = await import("@vercel/kv");
-    return await kv.get<{ text: string; refs: Reference[] }>(key);
+    return await kv.get<KVCacheValue>(key);
   } catch { return null; }
 }
 
-async function kvSet(key: string, value: { text: string; refs: Reference[] }): Promise<void> {
+async function kvSet(key: string, value: KVCacheValue): Promise<void> {
   if (!process.env.KV_REST_API_URL) return;
   try {
     const { kv } = await import("@vercel/kv");
@@ -237,6 +267,25 @@ export function makeSSEResponse(
 // — see runGenerationPass's doc comment in streamWithRefs for the full rationale.
 type FinishStatus = "complete" | "truncated" | "blocked";
 
+// Shared time-budget check: is there enough of the route's maxDuration left to
+// justify firing one more attempt that needs `neededMs`? Used by the
+// truncation-retry path below (defaults `neededMs` to attemptTimeoutMs, sizing
+// for one more full generation attempt — unchanged behavior) and by the
+// synchronous validate gate (passes the validator's own ~20s deadline instead,
+// since a full generation attempt's duration is the wrong estimate for a much
+// smaller call). attemptTimeoutMs/retryTimeoutMs size the overall budget
+// proportionally to each route's own maxDuration; OVERHEAD_MARGIN_MS covers the
+// cache lookup, validator calls, etc. that aren't captured by either timeout.
+// `elapsedMs` is measured from the `requestStartMs` anchor, so a check made
+// later correctly sees less headroom than one made earlier.
+function hasTimeForAnotherAttempt(requestStartMs: number, opts: SSEWriterOptions, neededMs?: number): boolean {
+  const OVERHEAD_MARGIN_MS = 10_000;
+  const estimatedRouteBudgetMs =
+    (opts.attemptTimeoutMs ?? 35_000) + (opts.retryTimeoutMs ?? 15_000) + OVERHEAD_MARGIN_MS;
+  const elapsedMs = Date.now() - requestStartMs;
+  return elapsedMs + (neededMs ?? opts.attemptTimeoutMs ?? 35_000) <= estimatedRouteBudgetMs;
+}
+
 export async function streamWithRefs(
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
@@ -268,6 +317,12 @@ export async function streamWithRefs(
       }
       await safeWrite({ text: cached.text });
       if (cached.refs?.length) await safeWrite({ refs: cached.refs });
+      // Tell the client this cached text already passed the synchronous
+      // validate gate (see opts.validate below) so it skips its own redundant
+      // async re-check — same signal as a fresh, just-validated generation.
+      // Older cache entries (written before this field existed) simply lack
+      // `validated`, so this is a no-op for them — identical to today's behavior.
+      if (cached.validated) await safeWrite({ _validated: true });
       await safeWrite({ _done: true });
       try { await writer.write(encoder.encode("data: [DONE]\n\n")); } catch {}
       return;
@@ -316,10 +371,12 @@ export async function streamWithRefs(
     //                  recitation, or no finish_reason captured at all). Retrying
     //                  with more tokens can't fix this, so it goes straight to
     //                  the error path below, same as a hard provider failure.
-    const runGenerationPass = async (maxTokensOverride?: number): Promise<{ finishStatus: FinishStatus }> => {
+    type GenerationPassResult = { finishStatus: FinishStatus; tierUsed: ModelTier; usedFallback: boolean };
+    const runGenerationPass = async (maxTokensOverride?: number): Promise<GenerationPassResult> => {
       try {
         gen += 1;
-        return await withDeadline(runAttempt(gen, undefined, maxTokensOverride), opts.attemptTimeoutMs ?? 35_000);
+        const { finishStatus } = await withDeadline(runAttempt(gen, undefined, maxTokensOverride), opts.attemptTimeoutMs ?? 35_000);
+        return { finishStatus, tierUsed: opts.tier ?? "standard", usedFallback: false };
       } catch (e) {
         if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
         // Primary model stalled before emitting anything — on DeepSeek this is
@@ -331,11 +388,13 @@ export async function streamWithRefs(
         // no content was sent yet (guarded by !sentAnyContent above) — restarting
         // after partial output was already flushed would duplicate text.
         gen += 1; // invalidates any late write from the abandoned first attempt
-        return await withDeadline(runAttempt(gen, "fast", maxTokensOverride), opts.retryTimeoutMs ?? 15_000);
+        const { finishStatus } = await withDeadline(runAttempt(gen, "fast", maxTokensOverride), opts.retryTimeoutMs ?? 15_000);
+        return { finishStatus, tierUsed: "fast", usedFallback: true };
       }
     };
 
     let result = await runGenerationPass();
+    let fastTierFallbackUsed = result.usedFallback;
 
     // Non-negotiable: a response the provider itself flagged as cut off by the
     // token budget must never reach the client marked as a complete reading —
@@ -344,6 +403,7 @@ export async function streamWithRefs(
     // streamed to the client for the truncated attempt is live-typing UX, not a
     // finished artifact — _restart tells the client to discard it and re-accumulate
     // from the retry, so nothing half-finished is ever left on screen as "done".
+    let truncationRetryAttempted = false;
     if (result.finishStatus === "truncated") {
       const retryMaxTokens = Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * 1.5));
       // The first attempt can already have eaten most of the route's maxDuration
@@ -357,26 +417,41 @@ export async function streamWithRefs(
       // budget" without needing every call site to thread maxDuration through.
       // Require as much headroom as a full fresh attempt (attemptTimeoutMs) could
       // need before even trying a retry.
-      const OVERHEAD_MARGIN_MS = 10_000;
-      const estimatedRouteBudgetMs =
-        (opts.attemptTimeoutMs ?? 35_000) + (opts.retryTimeoutMs ?? 15_000) + OVERHEAD_MARGIN_MS;
-      const elapsedMs = Date.now() - requestStartMs;
-      const hasTimeForRetry = elapsedMs + (opts.attemptTimeoutMs ?? 35_000) <= estimatedRouteBudgetMs;
-      if (retryMaxTokens > opts.maxTokens && hasTimeForRetry) {
+      if (retryMaxTokens > opts.maxTokens && hasTimeForAnotherAttempt(requestStartMs, opts)) {
+        truncationRetryAttempted = true;
         await safeWrite({ _restart: true });
         fullText = "";
         sentAnyContent = false;
         result = await runGenerationPass(retryMaxTokens);
+        fastTierFallbackUsed = fastTierFallbackUsed || result.usedFallback;
       }
     }
 
-    if (result.finishStatus !== "complete") {
-      // Still truncated after the retry (or no headroom/time left to even try),
-      // or the provider ended abnormally for a reason more tokens can't fix
-      // (content filter, safety block, etc. — never worth a second generation).
-      // Surface the same explicit error event the mid-stream timeout-kill path
-      // already uses, so the client's existing error UI/retry button takes over.
-      // Never send _done/[DONE] and never cache this text.
+    // Observability only (not user-facing, not stored) — one grep-able line per
+    // generation recording which tier actually produced the text, how the
+    // provider says it ended, whether the stalled-attempt fast-tier fallback or
+    // the truncation retry fired, and total wall-clock latency. Logged here
+    // (right after the pre-existing truncation/blocked handling settles on a
+    // final `result`) so it reflects the generation step itself — a separate
+    // "reading_validation" line below covers the synchronous validate gate,
+    // since that's a distinct later event.
+    console.log(JSON.stringify({
+      event: "reading_generation",
+      provider: PROVIDER,
+      tier: result.tierUsed,
+      finishStatus: result.finishStatus,
+      fastTierFallback: fastTierFallbackUsed,
+      truncationRetry: truncationRetryAttempted,
+      latencyMs: Date.now() - requestStartMs,
+    }));
+
+    // Still truncated after the retry (or no headroom/time left to even try), or
+    // the provider ended abnormally for a reason more tokens can't fix (content
+    // filter, safety block, etc.). Surface the same explicit error event the
+    // mid-stream timeout-kill path already uses, so the client's existing error
+    // UI/retry button takes over. Never send _done/[DONE] and never cache this text.
+    const failIfIncomplete = async (): Promise<boolean> => {
+      if (result.finishStatus === "complete") return false;
       if (opts.rateLimit) {
         refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
       }
@@ -384,16 +459,63 @@ export async function streamWithRefs(
         ? "AI 回應過長被截斷，請重試"
         : "AI 回應被中斷，請重試";
       await safeWrite({ error: message });
-      return;
+      return true;
+    };
+    if (await failIfIncomplete()) return;
+
+    // ── Synchronous server-side quality gate (runs BEFORE _done) ────────────
+    // Niki's explicit call: this adds one validator call's latency — accepted
+    // tradeoff so nothing is ever cached/sent as "validated" without a genuine
+    // cross-model check. On failure, ship the reading as-is, unvalidated — no
+    // in-process regeneration. (2026-10-04: regeneration was removed after
+    // review found the worst case — a regeneration attempt + fast-tier fallback
+    // + a second validator call, all stacked AFTER an already-slow first
+    // generation — could reach ~125s against a 90s maxDuration, with the
+    // existing time-budget gate only checked before the regeneration started,
+    // not before the second validator call. Simplest fix: drop regeneration
+    // entirely rather than patch the budget accounting, removing the timeout
+    // risk as a class instead of tightening around it.) The pre-existing
+    // CLIENT-side async validate/revise flow (lib/useSSEStream.ts) remains the
+    // safety net for a failed/skipped validation, exactly as it was before this
+    // synchronous gate existed.
+    let validated: boolean | undefined;
+    if (opts.validate) {
+      // The validator (deepseekJsonReview, lib/validateReading.ts) has its own
+      // ~20s internal deadline that hasTimeForAnotherAttempt's default sizing
+      // (a full generation attempt) doesn't account for — without this check, a
+      // validate call fired after an already-slow generation could still get
+      // killed by Vercel's maxDuration mid-call, turning a reading that was
+      // already fully generated into a lost "回應不完整" error for the user
+      // instead of just shipping it unvalidated. Skipping the call entirely
+      // when there's no time left is the same fail-open outcome as a validator
+      // timeout/error — just decided before spending the call instead of after.
+      const VALIDATOR_TIMEOUT_MS = 20_000; // matches lib/validateReading.ts's withDeadline(..., 20_000)
+      if (!hasTimeForAnotherAttempt(requestStartMs, opts, VALIDATOR_TIMEOUT_MS)) {
+        console.log(JSON.stringify({ event: "reading_validation", skipped: "no_time_budget" }));
+      } else {
+        const verdict = await opts.validate(fullText);
+        if (verdict === null) {
+          // Validator unavailable/errored (or, per each route's closure, didn't
+          // genuinely review the content) — fail open, exactly as if `validate`
+          // had never been passed (same documented policy as the pre-existing
+          // client-side async validator). `validated` stays undefined: we don't
+          // know it passed, so we don't claim it did.
+        } else if (verdict.pass) {
+          validated = true;
+        } else {
+          console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length }));
+        }
+      }
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
+    if (validated) await safeWrite({ _validated: true });
     await safeWrite({ _done: true });
     try { await writer.write(encoder.encode("data: [DONE]\n\n")); } catch {}
 
     // ── Save to cache (non-blocking) ────────────────────────────────────────
     if (fullText && cacheKey) {
-      kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [] }).catch(() => {});
+      kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [], ...(validated ? { validated: true } : {}) }).catch(() => {});
     }
   } catch (err) {
     console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);

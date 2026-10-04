@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 
 const SYSTEM = `你是紫微斗數命理師，三合派與四化派功底深厚，像一位真誠的兄長為你逐宮講解——有據可循，也有溫度。
@@ -109,6 +110,17 @@ ${buildPalaceDetail(ziwei)}
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
       refs,
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateReading(fullText, ziwei);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // and never actually checked the content — propagate as null so
+          // sseWriter.ts's fail-open handling runs instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null;
+        }
+      },
     })
   );
 }

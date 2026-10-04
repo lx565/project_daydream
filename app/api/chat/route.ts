@@ -86,6 +86,16 @@ export async function POST(request: NextRequest) {
       // incident-and-fix cycle every other route below already has (see
       // lib/sseWriter.ts's finish_reason truncation check, 2026-10-04).
       maxTokens: 1600,
+      // This route declares maxDuration=60 and had been relying on
+      // streamWithRefs's default attemptTimeoutMs=35_000/retryTimeoutMs=15_000
+      // (50s sum) — too tight now that `standard` resolves to deepseek-v4-pro
+      // (2026-10-04, see lib/sseWriter.ts MODEL_DEFAULTS), whose reasoning phase
+      // runs meaningfully slower than flash. 42s/13s (55s sum) gives v4-pro
+      // realistic room to finish within the 60s ceiling while still leaving a
+      // 5s margin, matching couple/route.ts:364 and decades/route.ts:215's fix
+      // for the same class of issue on their 90s routes.
+      attemptTimeoutMs: 42_000,
+      retryTimeoutMs: 13_000,
       system,
       messages: trimmed,
       // Chat answers are personal/contextual per-user (system prompt embeds the

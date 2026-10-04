@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowYears } from "@/lib/flowYears";
 import { buildStarPalaceMap, pickRiskYears } from "@/lib/flowRisk";
@@ -106,6 +107,17 @@ ${riskYearLines}
       // retry's hash would be identical to the flagged original and the cache
       // would just replay the same flagged text instead of regenerating.
       skipCacheRead: !!body.revisionNotes?.length,
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateReading(fullText, ziwei);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // and never actually checked the content — propagate as null so
+          // sseWriter.ts's fail-open handling runs instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null;
+        }
+      },
     })
   );
 }

@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { NextRequest } from "next/server";
 import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { validateBaziReading } from "@/lib/validateBazi";
 import type { BaziResult } from "@/lib/bazi";
 
 // B3 · 八字 tab — 各派視角 (祿命派 + 盲派)
@@ -214,6 +215,17 @@ export async function POST(request: NextRequest) {
       // See cautions/route.ts — without this a validation retry's hash matches
       // the flagged original and the cache just replays the same flagged text.
       skipCacheRead: !!body.revisionNotes?.length,
+      validate: async (fullText: string) => {
+        try {
+          const r = await validateBaziReading(fullText, bazi);
+          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // and never actually checked the content — propagate as null so
+          // sseWriter.ts's fail-open handling runs instead of a false pass.
+          return r.reviewed ? { pass: r.pass, issues: r.issues } : null;
+        } catch {
+          return null;
+        }
+      },
     })
   );
 }

@@ -107,7 +107,10 @@ export async function deepseekJsonReview(prompt: string): Promise<{ pass: boolea
     return {
       pass: parsed.pass !== false,
       issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
-      reviewed: true,
+      // Valid JSON with no boolean `pass` (e.g. "{}") didn't actually answer the
+      // question — that's a reviewer failure, not a genuine pass, so it must
+      // fail open (reviewed:false) rather than be trusted and cached as validated.
+      reviewed: typeof parsed.pass === "boolean",
     };
   } catch (err) {
     console.warn("[review] deepseek review skipped:", (err as Error).message);
