@@ -384,7 +384,7 @@ export async function streamWithRefs(
         // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
         // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
         // the "fast" tier (deepseek-flash / gemini-2.5-flash / claude-haiku) so
-        // the reader gets *a* reading instead of "AI 服务响应较慢". Only safe because
+        // the reader gets *a* reading instead of "AI 服務回應較慢". Only safe because
         // no content was sent yet (guarded by !sentAnyContent above) — restarting
         // after partial output was already flushed would duplicate text.
         gen += 1; // invalidates any late write from the abandoned first attempt
@@ -525,8 +525,8 @@ export async function streamWithRefs(
       refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
     }
     const message = err instanceof AttemptTimeoutError
-      ? "AI 服务响应较慢，请稍后重试"
-      : err instanceof Error ? err.message : "服务暂时不可用";
+      ? "AI 服務回應較慢，請稍後重試"
+      : err instanceof Error ? err.message : "服務暫時無法使用";
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
     } catch {}

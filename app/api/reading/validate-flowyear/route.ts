@@ -3,6 +3,7 @@ export const maxDuration = 30;
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { validateFlowYearReading } from "@/lib/validateFlowYear";
+import { toClientValidation } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 
 export async function POST(request: NextRequest) {
@@ -15,5 +16,5 @@ export async function POST(request: NextRequest) {
   if (!reading || !ziwei?.birth?.solarDate || !year) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const result = await validateFlowYearReading(reading, ziwei, year);
-  return Response.json(result);
+  return Response.json(toClientValidation(result));
 }

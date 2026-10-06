@@ -152,21 +152,31 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
             : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current }
         ),
       });
-      const v = (await res.json()) as { pass?: boolean; issues?: string[] };
-      if (v.pass !== false) {
+      // A non-2xx response (e.g. a 429 rate-limit `{error}` body) has no `pass`
+      // field at all — must be treated as no verdict, not silently read as a
+      // pass via the old `v.pass !== false` check.
+      if (!res.ok) { setValidation("idle"); return; }
+      const v = (await res.json()) as { pass?: boolean | null; issues?: string[] };
+      if (v.pass === true) {
         setValidation("pass");
         if (cacheKey) saveCache(cacheKey, { text: accText.current, refs: accRefs.current, validated: true });
-      } else if (retriedRef.current < 1) {
-        // Failed review → tell the user it's being reprocessed, regenerate with the notes.
-        retriedRef.current += 1;
-        setValidation("reprocessing");
-        setValidationIssues(v.issues ?? []);
-        if (cacheKey) deleteCache(cacheKey);
-        await startRef.current({ ...body, revisionNotes: v.issues ?? [] });
+      } else if (v.pass === false) {
+        if (retriedRef.current < 1) {
+          // Failed review → tell the user it's being reprocessed, regenerate with the notes.
+          retriedRef.current += 1;
+          setValidation("reprocessing");
+          setValidationIssues(v.issues ?? []);
+          if (cacheKey) deleteCache(cacheKey);
+          await startRef.current({ ...body, revisionNotes: v.issues ?? [] });
+        } else {
+          // Still flagged after one retry — surface softly, keep the reading.
+          setValidation("fail");
+          setValidationIssues(v.issues ?? []);
+        }
       } else {
-        // Still flagged after one retry — surface softly, keep the reading.
-        setValidation("fail");
-        setValidationIssues(v.issues ?? []);
+        // pass is null/missing — the reviewer failed open, i.e. no verdict at
+        // all. Never block the reading, but never mark it validated either.
+        setValidation("idle");
       }
     } catch {
       setValidation("idle"); // validator unreachable → no badge, never block the reading
@@ -333,7 +343,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        const message = (err as Error).message ?? "未知错误";
+        const message = (err as Error).message ?? "未知錯誤";
         setErrorMsg(message);
         setStatus("error");
         // Fired here rather than per-component so every reading route is covered

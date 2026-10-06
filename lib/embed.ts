@@ -41,9 +41,18 @@ export function quantize(unit: Float32Array): Int8Array {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const PER_FETCH_TIMEOUT_MS = 5000;
+
 async function embedOne(
   text: string,
-  taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"
+  taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY",
+  // Overall wall-clock budget for ALL attempts combined (fetches + sleeps).
+  // Set only by embedQuery — the runtime RAG path runs inside a time-budgeted
+  // reading route (see sseWriter.ts's requestStartMs checks), and the 7x
+  // retry loop below has no visibility into that budget on its own. Left
+  // unset for embedDocuments (offline ingest script), which has no such
+  // constraint and should keep its full retry allowance.
+  deadlineMs?: number
 ): Promise<Float32Array> {
   const url = `${ENDPOINT(EMBED_MODEL)}?key=${apiKey()}`;
   const body = JSON.stringify({
@@ -52,11 +61,19 @@ async function embedOne(
     taskType,
     outputDimensionality: EMBED_DIM,
   });
+  const startedAt = Date.now();
+  const timedOut = () => deadlineMs !== undefined && Date.now() - startedAt >= deadlineMs;
 
   for (let attempt = 1; ; attempt++) {
+    if (timedOut()) throw new Error(`embed exceeded ${deadlineMs}ms deadline`);
     let retryable = false;
     try {
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(PER_FETCH_TIMEOUT_MS),
+      });
       if (res.ok) {
         const j = (await res.json()) as { embedding: { values: number[] } };
         return normalize(j.embedding.values);
@@ -65,15 +82,21 @@ async function embedOne(
       const detail = (await res.text()).slice(0, 160);
       if (!retryable || attempt >= 7) throw new Error(`embed ${res.status}: ${detail}`);
     } catch (e) {
+      if (timedOut()) throw new Error(`embed exceeded ${deadlineMs}ms deadline`);
       if (!retryable || attempt >= 7) throw e;
     }
-    await sleep(Math.min(20000, 1500 * attempt));
+    if (timedOut()) throw new Error(`embed exceeded ${deadlineMs}ms deadline`);
+    const remaining = deadlineMs !== undefined ? deadlineMs - (Date.now() - startedAt) : Infinity;
+    await sleep(Math.max(0, Math.min(20000, 1500 * attempt, remaining)));
   }
 }
 
-/** Embed a single query string → normalized Float32 vector. */
+/** Embed a single query string → normalized Float32 vector. Bounded to an
+ *  ~8s overall deadline so a slow/rate-limited embed provider can't eat the
+ *  calling route's time budget — see streamWithRefs's requestStartMs checks
+ *  in sseWriter.ts, which this call happens BEFORE and so can't otherwise see. */
 export function embedQuery(text: string): Promise<Float32Array> {
-  return embedOne(text.slice(0, 2000), "RETRIEVAL_QUERY");
+  return embedOne(text.slice(0, 2000), "RETRIEVAL_QUERY", 8000);
 }
 
 /** Concurrency-limited document embedding (used by ingest). */

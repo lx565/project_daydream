@@ -2,7 +2,7 @@ export const maxDuration = 30;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
-import { validateReading } from "@/lib/validateReading";
+import { validateReading, toClientValidation } from "@/lib/validateReading";
 import { invalidateReadingCache } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 
@@ -21,6 +21,6 @@ export async function POST(request: NextRequest) {
   // invalidateReadingCache verifies the cached entry actually matches `reading`
   // before deleting — cacheKey is client-supplied and unauthenticated, so without
   // that check a caller could delete any other chart's cache entry by name.
-  if (!result.pass && body.cacheKey) invalidateReadingCache(body.cacheKey, reading).catch(() => {});
-  return Response.json(result);
+  if (result.pass === false && body.cacheKey) invalidateReadingCache(body.cacheKey, reading).catch(() => {});
+  return Response.json(toClientValidation(result));
 }

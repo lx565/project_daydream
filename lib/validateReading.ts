@@ -16,6 +16,26 @@ export interface ValidationResult {
   pass: boolean;
   issues: string[];
   reviewed: boolean; // false if the DeepSeek reviewer was skipped (e.g. API error)
+  // true when `pass` was decided by a deterministic (non-AI) check — e.g.
+  // structuralCheck — so it's a genuine verdict even though reviewed is false.
+  // Without this, a route can't tell that apart from the reviewer failing open
+  // (which is ALSO reviewed:false but is NOT a real verdict).
+  deterministic?: boolean;
+}
+
+/**
+ * What a client should actually treat as the verdict: `reviewed` (the AI
+ * reviewer ran) or `deterministic` (a non-AI check decided it) are both real
+ * verdicts — anything else is the reviewer failing open, i.e. no verdict at
+ * all, which must not be reported as pass:true. Shared across all three
+ * validate-* routes so "validated" means the same thing everywhere.
+ */
+export function toClientValidation(result: ValidationResult): { pass: boolean | null; issues: string[]; reviewed: boolean } {
+  return {
+    pass: result.reviewed || result.deterministic ? result.pass : null,
+    issues: result.issues,
+    reviewed: result.reviewed,
+  };
 }
 
 const REVIEW_MODEL = "deepseek-v4-pro";
@@ -145,7 +165,7 @@ ${reading.slice(0, 8000)}`;
 
 export async function validateReading(reading: string, ziwei: ZiweiResult): Promise<ValidationResult> {
   const structural = structuralCheck(reading);
-  if (structural.length) return { pass: false, issues: structural, reviewed: false };
+  if (structural.length) return { pass: false, issues: structural, reviewed: false, deterministic: true };
 
   // Deterministic 格局-fabrication gate (free) — fail fast so the reading is
   // regenerated without the invented 格局; no need to spend a review call.

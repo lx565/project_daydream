@@ -162,11 +162,12 @@ interface PalaceCellProps {
   isTrine: boolean;
   isOpposite: boolean;
   isLiuNian: boolean;
+  isLaiYin: boolean;
   liuNianSihua: Record<string, string>;
   onClick: () => void;
 }
 
-function PalaceCell({ palace, isSelected, isTrine, isOpposite, isLiuNian, liuNianSihua, onClick }: PalaceCellProps) {
+function PalaceCell({ palace, isSelected, isTrine, isOpposite, isLiuNian, isLaiYin, liuNianSihua, onClick }: PalaceCellProps) {
   const pos = BRANCH_POSITION[palace.earthlyBranch];
   if (!pos) return null;
   const [row, col] = pos;
@@ -264,6 +265,9 @@ function PalaceCell({ palace, isSelected, isTrine, isOpposite, isLiuNian, liuNia
           {palace.isBodyPalace && (
             <span className="inline-block text-[7px] sm:text-[8px] leading-none px-1 py-px bg-amber-500 text-white font-bold rounded-sm">身</span>
           )}
+          {isLaiYin && (
+            <span className="inline-block text-[7px] sm:text-[8px] leading-none px-1 py-px bg-indigo-500 text-white font-bold rounded-sm">來</span>
+          )}
           {isLiuNian && (
             <span className="inline-block text-[7px] sm:text-[8px] leading-none px-1 py-px bg-purple-500 text-white font-bold rounded-sm">年</span>
           )}
@@ -356,7 +360,8 @@ function CenterBlock({ name, gender, fiveElementsClass, mainStar, bodyStar, hint
 }
 
 export default function ZiweiChart({ palaces, soulPalace, bodyPalace, fiveElementsClass, mainStar, bodyStar, name, gender, isExample, birthYear, ziwei, sessionId }: ZiweiChartProps) {
-  void soulPalace; void bodyPalace; void sessionId; void ziwei;
+  void soulPalace; void bodyPalace; void sessionId;
+  const laiYinPalace = ziwei?.laiYinPalace;
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [liuNianYear, setLiuNianYear] = useState(() => new Date().getFullYear());
 
@@ -413,6 +418,7 @@ export default function ZiweiChart({ palaces, soulPalace, bodyPalace, fiveElemen
             isTrine={trine.has(palace.earthlyBranch)}
             isOpposite={opposite === palace.earthlyBranch}
             isLiuNian={!isExample && palace.earthlyBranch === liuNianBranch}
+            isLaiYin={palace.name === laiYinPalace}
             liuNianSihua={liuNianSihua}
             onClick={() => handlePalaceClick(palace.earthlyBranch)}
           />
