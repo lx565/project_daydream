@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://www.mingli.study/terms" },
 };
 
-const UPDATED = "2026年6月17日";
+const UPDATED = "2026年10月7日";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -125,6 +125,18 @@ export default function TermsPage() {
             為提供解讀服務並做匿名的產品分析（如年齡、性別分佈與使用量統計），
             本平臺會記錄您提交的出生資料（出生日期、時辰、性別及可選的稱呼）。
             這些資料僅用於內部分析與改進服務，不會公開展示或出售給第三方。
+          </p>
+          <p>
+            <strong>命裡 iOS App：</strong>
+            App 本身不要求註冊帳號。您新增的命盤資料（出生日期、時辰、性別、暱稱）僅儲存於您的裝置本機，
+            並於每次生成解讀時傳送至本平臺伺服器進行排盤與 AI 解讀運算，伺服器端僅作短期快取，不連結至任何使用者帳號。
+            App 目前未使用任何第三方分析或追蹤工具收集您的使用行為。
+          </p>
+          <p>
+            <strong>第三方資料處理者：</strong>
+            解讀所需的 AI 運算由第三方 AI 服務供應商（DeepSeek、Google Gemini 或 Anthropic
+            其中之一，依當時系統設定而定）協助處理，僅用於生成當次解讀內容；若透過網站完成付費解鎖，
+            款項由 Stripe 處理，本平臺不會接觸或儲存您的付款卡號等資訊。
           </p>
         </Section>
 
