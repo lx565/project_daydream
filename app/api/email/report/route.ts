@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildReadingEmail, type ReadingEmailData } from "@/lib/emailTemplate";
-
-const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
+import { SHEETS_URL } from "@/lib/sheetsWebhook";
 
 function validEmail(e: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
