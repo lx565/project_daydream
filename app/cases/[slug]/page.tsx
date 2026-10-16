@@ -49,7 +49,7 @@ export default async function CaseDetailPage(
   // JSON-LD: extract author name before 《 in sourceLabel, e.g. "韦千里" from "韦千里《千里命稿》"
   const authorName = c.sourceLabel.includes("《")
     ? c.sourceLabel.split("《")[0].trim()
-    : "命理大师";
+    : "命理大師";
   const pageTitle = `${c.rizi}${c.geju ? `·${c.geju}` : ""}命造 | ${c.sourceLabel}`;
   const jsonld = articleSchema({
     headline: pageTitle,

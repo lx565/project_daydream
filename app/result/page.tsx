@@ -17,13 +17,13 @@ function formatDate(dateStr: string): string {
 }
 
 const SHICHEN: Record<number, string> = {
-  0: "子时", 1: "丑时", 3: "寅时", 5: "卯时",
-  7: "辰时", 9: "巳时", 11: "午时", 13: "未时",
-  15: "申时", 17: "酉时", 19: "戌时", 21: "亥时",
+  0: "子時", 1: "丑時", 3: "寅時", 5: "卯時",
+  7: "辰時", 9: "巳時", 11: "午時", 13: "未時",
+  15: "申時", 17: "酉時", 19: "戌時", 21: "亥時",
 };
 function shichenLabel(h: number) {
   const key = h === 0 || h === 23 ? 0 : h % 2 === 0 ? h - 1 : h;
-  return SHICHEN[key] ?? `${h}时`;
+  return SHICHEN[key] ?? `${h}時`;
 }
 
 interface SearchParams {
@@ -100,7 +100,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-6 bg-vermillion rounded-full" />
               <h2 className="text-base font-bold text-ink tracking-wide">
-                {name ? `${name} · ` : ""}命盘
+                {name ? `${name} · ` : ""}命盤
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-2">
@@ -112,7 +112,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
             </div>
             {tzAdjusted && (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1.5">
-                <span>→ 北京时间推盘：{formatDate(`${bjtYear}-${String(bjtMonth).padStart(2,"0")}-${String(bjtDay).padStart(2,"0")}`)} {shichenLabel(hour)}</span>
+                <span>→ 北京時間推盤：{formatDate(`${bjtYear}-${String(bjtMonth).padStart(2,"0")}-${String(bjtDay).padStart(2,"0")}`)} {shichenLabel(hour)}</span>
               </p>
             )}
             <p className="text-xs text-ink-4 mt-1.5">
@@ -134,7 +134,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
           {ziweiResult.palaces.length > 0 && (
             <div className="border-t border-border-light px-5 py-4">
               <p className="text-[11px] text-ink-4 tracking-widest uppercase mb-3 flex items-center gap-2">
-                <span className="w-px h-3 bg-ink-4 inline-block" />紫微斗数命盘
+                <span className="w-px h-3 bg-ink-4 inline-block" />紫微斗數命盤
               </p>
               <ZiweiChart
                 palaces={ziweiResult.palaces}
@@ -209,7 +209,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
         )}
 
         <p className="text-center text-xs text-ink-4 pb-4">
-          仅供学习参考与娱乐，请理性看待，切勿迷信
+          僅供學習參考與娛樂，請理性看待，切勿迷信
         </p>
       </div>
       <BugReportButton sessionId={sessionId} page="result" />

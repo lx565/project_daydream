@@ -63,7 +63,7 @@ export default function HistoricalCases({ bazi }: Props) {
 
             {c.outcome && (
               <p className="mt-1.5 text-[11px] text-green-700">
-                <span className="font-medium">结局：</span>{c.outcome}
+                <span className="font-medium">結局：</span>{c.outcome}
               </p>
             )}
 
