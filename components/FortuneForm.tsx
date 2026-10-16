@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -129,7 +130,7 @@ export default function FortuneForm() {
 
       {/* Input method toggle */}
       <div>
-        <label className={labelClass}>出生信息 <span className="text-vermillion">*</span></label>
+        <label className={labelClass}>出生資訊 <span className="text-vermillion">*</span></label>
         <div className="flex rounded-lg overflow-hidden border border-border-warm mb-3">
           {(["solar", "bazi"] as const).map((m) => (
             <button key={m} type="button"
@@ -139,7 +140,7 @@ export default function FortuneForm() {
                   ? "bg-vermillion text-white"
                   : "bg-paper text-ink-3 hover:text-vermillion"
               }`}>
-              {m === "solar" ? "公历出生日期" : "八字四柱"}
+              {m === "solar" ? "公曆出生日期" : "八字四柱"}
             </button>
           ))}
         </div>

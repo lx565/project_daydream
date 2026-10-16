@@ -1,3 +1,4 @@
+import { tradDisplay } from "@/lib/displayTrad";
 import { loadCaseIndex } from "@/lib/casesData";
 import Link from "next/link";
 import LibraryNav from "@/components/LibraryNav";
@@ -77,7 +78,7 @@ export default function CasesHubPage() {
                     href={`/cases/${c.slug}`}
                     className="bg-paper rounded-lg shadow-sm border border-border p-3 hover:shadow-md transition-shadow"
                   >
-                    <p className="text-xs font-medium text-ink truncate">{c.geju || rizi}</p>
+                    <p className="text-xs font-medium text-ink truncate">{tradDisplay(c.geju) || rizi}</p>
                     <p className="text-[11px] text-ink-4 mt-1 truncate">{c.source.split("-").pop()}</p>
                     {c.hasOutcome && (
                       <span className="inline-block mt-1.5 text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-sm">有結局</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tradDisplay } from "@/lib/displayTrad";
 import Link from "next/link";
 import type { BaziResult } from "@/lib/bazi";
 import type { CaseRecord } from "@/lib/casesData";
@@ -42,7 +43,7 @@ export default function HistoricalCases({ bazi }: Props) {
         <span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" />
         <span className="text-xs font-semibold text-amber-800">歷史類似命盤</span>
         <span className="text-[10px] text-ink-4 ml-1">
-          {data.rizi}{data.geju ? ` · ${data.geju}` : ""}
+          {data.rizi}{tradDisplay(data.geju) ? ` · ${tradDisplay(data.geju)}` : ""}
         </span>
       </div>
 
@@ -51,19 +52,19 @@ export default function HistoricalCases({ bazi }: Props) {
           <div key={c.id} className="px-3 py-3">
             <div className="flex items-start justify-between gap-2 mb-1.5">
               <div>
-                <span className="text-xs font-semibold text-ink">{c.rizi}{c.geju ? `·${c.geju}` : ""}</span>
+                <span className="text-xs font-semibold text-ink">{c.rizi}{tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}</span>
                 {c.bazi_text && (
                   <span className="ml-2 text-[11px] font-mono text-ink-3">{c.bazi_text}</span>
                 )}
               </div>
-              <span className="text-[10px] text-ink-4 whitespace-nowrap shrink-0">{c.sourceLabel}</span>
+              <span className="text-[10px] text-ink-4 whitespace-nowrap shrink-0">{tradDisplay(c.sourceLabel)}</span>
             </div>
 
             <p className="text-[12px] text-ink-2 leading-relaxed line-clamp-3">{c.analysis}</p>
 
-            {c.outcome && (
+            {tradDisplay(c.outcome) && (
               <p className="mt-1.5 text-[11px] text-green-700">
-                <span className="font-medium">結局：</span>{c.outcome}
+                <span className="font-medium">結局：</span>{tradDisplay(c.outcome)}
               </p>
             )}
 

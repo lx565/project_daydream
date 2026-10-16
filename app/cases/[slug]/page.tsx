@@ -1,3 +1,4 @@
+import { tradDisplay } from "@/lib/displayTrad";
 import { getCaseBySlug, getCasesByRizi, loadCaseIndex } from "@/lib/casesData";
 import { SOURCE_BOOKS } from "@/lib/sourcesData";
 import { notFound } from "next/navigation";
@@ -23,7 +24,7 @@ export async function generateMetadata(
   const c = getCaseBySlug(slug);
   if (!c) return { title: "案例未找到" };
   return {
-    title: `${c.rizi}${c.geju ? `·${c.geju}` : ""}命造案例 | 命裡`,
+    title: `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}命造案例 | 命裡`,
     description: c.analysis.slice(0, 100),
     alternates: { canonical: `https://www.mingli.study/cases/${slug}` },
   };
@@ -47,10 +48,10 @@ export default async function CaseDetailPage(
   const sourceUrlSlug = sourceBook?.urlSlug ?? null;
 
   // JSON-LD: extract author name before 《 in sourceLabel, e.g. "韦千里" from "韦千里《千里命稿》"
-  const authorName = c.sourceLabel.includes("《")
-    ? c.sourceLabel.split("《")[0].trim()
+  const authorName = tradDisplay(c.sourceLabel).includes("《")
+    ? tradDisplay(c.sourceLabel).split("《")[0].trim()
     : "命理大師";
-  const pageTitle = `${c.rizi}${c.geju ? `·${c.geju}` : ""}命造 | ${c.sourceLabel}`;
+  const pageTitle = `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}命造 | ${tradDisplay(c.sourceLabel)}`;
   const jsonld = articleSchema({
     headline: pageTitle,
     description: c.analysis.slice(0, 100),
@@ -69,8 +70,8 @@ export default async function CaseDetailPage(
   // quotations and must not be paraphrased or treated as site-authored copy.
   const faq = [
     {
-      question: `${c.rizi}${c.geju ? `·${c.geju}` : ""}是什麼命造案例？`,
-      answer: `此為${c.sourceLabel}所載的命造案例，日主${c.rizi}${c.geju ? `，格局為${c.geju}` : ""}${c.yongshen ? `，用神${c.yongshen}` : ""}。`,
+      question: `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}是什麼命造案例？`,
+      answer: `此為${tradDisplay(c.sourceLabel)}所載的命造案例，日主${c.rizi}${tradDisplay(c.geju) ? `，格局為${tradDisplay(c.geju)}` : ""}${c.yongshen ? `，用神${c.yongshen}` : ""}。`,
     },
     {
       question: "這些命造案例的分析可靠嗎？",
@@ -86,19 +87,19 @@ export default async function CaseDetailPage(
         <nav className="text-xs text-ink-4 mb-4">
           <Link href="/cases" className="hover:underline">命造案例</Link>
           {" › "}
-          <span>{c.rizi}{c.geju ? ` · ${c.geju}` : ""}</span>
+          <span>{c.rizi}{tradDisplay(c.geju) ? ` · ${tradDisplay(c.geju)}` : ""}</span>
         </nav>
 
         {/* Header */}
         <h1 className="text-xl font-bold text-ink mb-1">
-          {c.rizi}{c.geju ? `·${c.geju}` : ""}命造
+          {c.rizi}{tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}命造
         </h1>
-        <p className="text-xs text-ink-4 mb-6">{c.sourceLabel} · {c.era || "年代不詳"}</p>
+        <p className="text-xs text-ink-4 mb-6">{tradDisplay(c.sourceLabel)} · {tradDisplay(c.era) || "年代不詳"}</p>
 
         {/* 命理特徵 chips */}
         <div className="flex flex-wrap gap-2 mb-6">
           {c.rizi && <Chip label="日主" value={c.rizi} />}
-          {c.geju && <Chip label="格局" value={c.geju} />}
+          {tradDisplay(c.geju) && <Chip label="格局" value={tradDisplay(c.geju)} />}
           {c.yongshen && <Chip label="用神" value={c.yongshen} />}
           {c.gender !== "unknown" && (
             <Chip label="性別" value={c.gender === "male" ? "男" : "女"} />
@@ -119,7 +120,7 @@ export default async function CaseDetailPage(
           <blockquote className="border-l-2 border-vermillion pl-4 text-sm text-ink-2 leading-relaxed whitespace-pre-wrap">
             {c.analysis}
           </blockquote>
-          <p className="text-xs text-ink-4 mt-2">— {c.sourceLabel}</p>
+          <p className="text-xs text-ink-4 mt-2">— {tradDisplay(c.sourceLabel)}</p>
         </section>
 
         {/* 預測 */}
@@ -141,7 +142,7 @@ export default async function CaseDetailPage(
         {/* 來源 */}
         <section className="mb-8">
           <p className="text-xs text-ink-4">
-            來源：{c.sourceLabel}
+            來源：{tradDisplay(c.sourceLabel)}
             {sourceUrlSlug && (
               <>
                 {" · "}
@@ -183,8 +184,8 @@ export default async function CaseDetailPage(
                   href={`/cases/${r.slug}`}
                   className="bg-paper rounded-lg border border-border p-3 hover:shadow-sm transition-shadow"
                 >
-                  <p className="text-xs font-medium text-ink">{r.geju || r.rizi}</p>
-                  <p className="text-[11px] text-ink-4 mt-1 truncate">{r.sourceLabel}</p>
+                  <p className="text-xs font-medium text-ink">{tradDisplay(r.geju) || r.rizi}</p>
+                  <p className="text-[11px] text-ink-4 mt-1 truncate">{tradDisplay(r.sourceLabel)}</p>
                 </Link>
               ))}
             </div>
@@ -194,7 +195,7 @@ export default async function CaseDetailPage(
           breadcrumbSchema([
             { name: "命裡", path: "/" },
             { name: "命造案例", path: "/cases" },
-            { name: `${c.rizi}${c.geju ? `·${c.geju}` : ""}`, path: `/cases/${c.slug}` },
+            { name: `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}`, path: `/cases/${c.slug}` },
           ]),
           jsonldWithAuthor,
           faqSchema(faq),
