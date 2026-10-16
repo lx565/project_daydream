@@ -4,7 +4,9 @@
 //
 // Uses the REST embedContent endpoint directly: this key only exposes
 // gemini-embedding-001 (embedContent / asyncBatchEmbedContent), not the SDK's
-// synchronous batchEmbedContents. We request outputDimensionality=768 (MRL)
+// synchronous batchEmbedContents. That is an embedding-method
+// limit, not a limit on which models the key can call (validateReading.ts uses
+// generateContent on gemini-2.5-flash). We request outputDimensionality=768 (MRL)
 // and re-normalize, which keeps the vector store small (~13MB int8).
 
 export const EMBED_MODEL = "gemini-embedding-001";

@@ -1,8 +1,8 @@
 // 八字 reading validator — cross-checks a 八字 reading against the deterministically
 // computed 八字 chart (四柱 / 日主 / 五行 / 大運). The 紫微 validator (lib/validateReading.ts)
-// can't do this: 八字 has no stars/palaces. Reuses the shared DeepSeek review helper. Fail-open.
+// can't do this: 八字 has no stars/palaces. Reuses the shared Gemini review helper. Fail-open.
 import type { BaziResult } from "./bazi";
-import { deepseekJsonReview, type ValidationResult } from "./validateReading";
+import { jsonReview, type ValidationResult } from "./validateReading";
 
 /** Authoritative, deterministic 八字 facts the reading must not contradict. */
 export function buildBaziFacts(bazi: BaziResult): string {
@@ -20,7 +20,7 @@ export function buildBaziFacts(bazi: BaziResult): string {
   ].join("\n");
 }
 
-/** DeepSeek v4-pro cross-checks a 八字 reading against the authoritative 八字 facts. */
+/** Gemini cross-checks a 八字 reading against the authoritative 八字 facts. */
 export async function validateBaziReading(reading: string, bazi: BaziResult): Promise<ValidationResult> {
   if (!reading || !bazi?.day?.stem) return { pass: true, issues: [], reviewed: false };
   const facts = buildBaziFacts(bazi);
@@ -37,12 +37,12 @@ export async function validateBaziReading(reading: string, bazi: BaziResult): Pr
 
 重要：解讀中涉及流年、具體年份吉凶、神煞、十神引申等**推斷性**內容不在下方"事實"範圍內——只有當解讀與下方**已明確列出的事實直接衝突**時（例如說日主為甲木、但事實為庚金）才判 pass=false。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。
+返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威八字事實】
 ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return deepseekJsonReview(prompt);
+  return jsonReview(prompt);
 }

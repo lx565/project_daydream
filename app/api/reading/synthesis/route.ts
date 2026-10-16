@@ -175,7 +175,7 @@ ${baziFacts}
       validate: async (fullText: string) => {
         try {
           const r = await validateReading(fullText, ziwei);
-          // r.reviewed === false means the DeepSeek reviewer itself failed open
+          // r.reviewed === false means the Gemini reviewer itself failed open
           // (timeout/API error/bad JSON/missing key) and never actually checked
           // the content — propagate that as null so sseWriter.ts's own fail-open
           // handling runs (ship, don't mark validated) instead of a false pass.

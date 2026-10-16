@@ -1,12 +1,12 @@
 // 流年 (per-year) reading validator. The natal 紫微 validator (lib/validateReading.ts)
 // deliberately ignores 運限/流年 dynamics, so per-year readings were grounded but never
 // proofread. This checks a flow-year reading against the deterministic 流年 facts
-// (流年命宮落宮 / 流年四化 / 流耀 / 三方四正). Reuses the shared DeepSeek review helper. Fail-open.
+// (流年命宮落宮 / 流年四化 / 流耀 / 三方四正). Reuses the shared Gemini review helper. Fail-open.
 import type { ZiweiResult } from "./ziwei";
 import { getFlowYears, flowYearFactsFrom } from "./flowYears";
-import { deepseekJsonReview, type ValidationResult } from "./validateReading";
+import { jsonReview, type ValidationResult } from "./validateReading";
 
-/** DeepSeek v4-pro cross-checks a single-year 流年 reading against its authoritative 流年 facts. */
+/** Gemini cross-checks a single-year 流年 reading against its authoritative 流年 facts. */
 export async function validateFlowYearReading(
   reading: string,
   ziwei: ZiweiResult,
@@ -30,12 +30,12 @@ export async function validateFlowYearReading(
 不要評判文采、詳略或觀點；輕微措辭差異、合理引申不算錯誤。只抓硬性事實錯誤。
 注意：本命層面的泛論（如命主性格）不在下方流年事實範圍內，不要因此判錯；只有當解讀與下方**已明確列出的流年事實直接衝突**時才判 pass=false。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。
+返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威流年事實】
 ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return deepseekJsonReview(prompt);
+  return jsonReview(prompt);
 }
