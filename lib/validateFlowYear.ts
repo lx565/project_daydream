@@ -30,7 +30,7 @@ export async function validateFlowYearReading(
 不要評判文采、詳略或觀點；輕微措辭差異、合理引申不算錯誤。只抓硬性事實錯誤。
 注意：本命層面的泛論（如命主性格）不在下方流年事實範圍內，不要因此判錯；只有當解讀與下方**已明確列出的流年事實直接衝突**時才判 pass=false。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。
+返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威流年事實】
 ${facts}

@@ -37,7 +37,7 @@ export async function validateBaziReading(reading: string, bazi: BaziResult): Pr
 
 重要：解讀中涉及流年、具體年份吉凶、神煞、十神引申等**推斷性**內容不在下方"事實"範圍內——只有當解讀與下方**已明確列出的事實直接衝突**時（例如說日主為甲木、但事實為庚金）才判 pass=false。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。
+返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威八字事實】
 ${facts}

@@ -113,10 +113,10 @@ export async function jsonReview(prompt: string): Promise<{ pass: boolean; issue
     const generationConfig: Record<string, unknown> = {
       temperature: 0,
       responseMimeType: "application/json",
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
       thinkingConfig: { thinkingBudget: 0 },
     };
-    const model = genAI.getGenerativeModel({ model: REVIEW_MODEL, generationConfig });
+    const model = genAI.getGenerativeModel({ model: REVIEW_MODEL, generationConfig }, { timeout: 20_000 });
     // Called from maxDuration=30 routes and the sseWriter gate — bounded well
     // under that so a slow response fails open here. See aiRetry.ts.
     const res = await withDeadline(model.generateContent(prompt), 20_000);
@@ -150,7 +150,7 @@ async function logicReview(reading: string, facts: string): Promise<{ pass: bool
 
 重要：解讀中涉及流年、大限、流耀、流年四化等"運限/動態"資訊**不在**下方本命事實範圍內——不要因為下方事實未列出這些動態資訊就判錯；只有當解讀與下方**已明確列出的本命事實直接衝突**時（例如說某主星在某宮、但事實並非如此）才判 pass=false。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。
+返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威命盤事實】
 ${facts}
