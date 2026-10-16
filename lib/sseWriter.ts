@@ -139,6 +139,13 @@ const DEFAULT_TIMEOUT_ERROR_MESSAGE =
 // one-shot truncation retry below.
 const DEEPSEEK_MAX_OUTPUT_TOKENS = 8192;
 
+// v4-pro's hidden reasoning_content is billed against max_tokens (the API has no
+// separate reasoning budget — only reasoning_effort, which routes already set),
+// so standard-tier calls that think get this much extra headroom, capped at the
+// ceiling above. Routes already at the ceiling gain nothing; they rely on the
+// fast-tier truncation retry instead.
+const THINKING_HEADROOM_FACTOR = 1.35;
+
 // Switch provider via AI_PROVIDER env var: "gemini" (default) | "anthropic" | "deepseek"
 const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic" | "deepseek";
 
@@ -456,7 +463,7 @@ export async function streamWithRefs(
        *  Undefined when usedFallback is false. */
       fallbackReason?: string;
     };
-    const runGenerationPass = async (maxTokensOverride?: number): Promise<GenerationPassResult> => {
+    const runGenerationPass = async (maxTokensOverride?: number, forceFast = false): Promise<GenerationPassResult> => {
       const firstContentTimeoutMs = opts.firstContentTimeoutMs ?? DEFAULT_FIRST_CONTENT_TIMEOUT_MS;
       const attemptTimeoutMs = opts.attemptTimeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
       const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
@@ -465,6 +472,15 @@ export async function streamWithRefs(
       // once either deadline below fires, so an abandoned provider call stops
       // consuming tokens/holding a connection instead of running to completion
       // in the background purely for us to discard its output via the `gen` guard.
+      if (forceFast) {
+        const fastController = new AbortController();
+        const { finishStatus } = await withDeadline(
+          runAttempt(gen, "fast", maxTokensOverride, fastController.signal),
+          retryTimeoutMs,
+          () => fastController.abort()
+        );
+        return { finishStatus, tierUsed: "fast", usedFallback: false };
+      }
       const primaryController = new AbortController();
       try {
         const { finishStatus } = await withTwoPhaseDeadline(
@@ -528,12 +544,25 @@ export async function streamWithRefs(
       // doc comment — rather than an estimate derived from attemptTimeoutMs/
       // retryTimeoutMs. Require as much headroom as a full fresh attempt
       // (attemptTimeoutMs) could need before even trying a retry.
-      if (retryMaxTokens > opts.maxTokens && hasTimeForAnotherAttempt(requestStartMs, opts)) {
+      // The retry runs on the FAST tier (no reasoning phase, so it's quicker and
+      // its whole budget goes to visible output) and is therefore sized with the
+      // fast-tier budget (retryTimeoutMs, 90s), not a full attemptTimeoutMs
+      // (130s): a v4-pro reading is typically truncated at 40-70s, which the old
+      // full-attempt gate (130 + elapsed <= 170) always rejected. Worst case
+      // that still passes: elapsed 70 + 90 retry = 160 <= 170, leaving only 10s
+      // before the route ceiling (the validate gate then skips itself, needing
+      // 20s). Truncation at 71s+ fails the gate and falls through to the error.
+      // Routes already at the token ceiling (retryMaxTokens === maxTokens) are
+      // still worth retrying when the failed pass was the thinking tier, since
+      // flash doesn't spend the budget on reasoning.
+      const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
+      const worthRetrying = retryMaxTokens > opts.maxTokens || result.tierUsed !== "fast";
+      if (worthRetrying && hasTimeForAnotherAttempt(requestStartMs, opts, retryTimeoutMs)) {
         truncationRetryAttempted = true;
         await safeWrite({ _restart: true });
         fullText = "";
         sentAnyContent = false;
-        result = await runGenerationPass(retryMaxTokens);
+        result = await runGenerationPass(retryMaxTokens, true);
         fastTierFallbackUsed = fastTierFallbackUsed || result.usedFallback;
         fallbackReason = fallbackReason ?? result.fallbackReason;
       }
@@ -555,6 +584,7 @@ export async function streamWithRefs(
       fastTierFallback: fastTierFallbackUsed,
       ...(fallbackReason ? { fallbackReason } : {}),
       truncationRetry: truncationRetryAttempted,
+      ...(truncationRetryAttempted ? { truncationRetryTier: "fast" } : {}),
       latencyMs: Date.now() - requestStartMs,
     }));
 
@@ -714,9 +744,14 @@ async function streamDeepSeek(
   // the live production provider (PROVIDER=deepseek), so this is the path
   // that actually stops a stalled v4-pro "thinking" call from continuing to
   // consume tokens after we've already moved on to the fast-tier fallback.
+  const effectiveTier = tierOverride ?? opts.tier ?? "standard";
+  const thinks = effectiveTier === "standard" && (opts.reasoningEffort ?? "low") !== "none";
+  const maxTokens = thinks
+    ? Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * THINKING_HEADROOM_FACTOR))
+    : opts.maxTokens;
   const stream = await client.chat.completions.create({
-    model: resolveModel(tierOverride ?? opts.tier),
-    max_tokens: opts.maxTokens,
+    model: resolveModel(effectiveTier),
+    max_tokens: maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     stream: true,
     // DeepSeek v4 models "think" (emit reasoning_content) by default — that phase
