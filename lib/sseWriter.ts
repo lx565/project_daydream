@@ -129,15 +129,20 @@ const DEFAULT_RETRY_TIMEOUT_MS = 90_000;
 const DEFAULT_TIMEOUT_ERROR_MESSAGE =
   "這份解讀使用深度推理模型，運算時間較長，這次未能及時完成。請點『重試』，通常再試一次就會成功。";
 
-// DeepSeek's documented max_tokens ceiling for the chat-completions endpoint
-// (deepseek-chat/deepseek-reasoner family, which "deepseek-flash"/"deepseek-v4-pro"
-// are aliases of) is 8192 — passing a higher value is rejected by the API rather
-// than silently clamped. This repo has no live network access to re-verify that
-// number against the current DeepSeek API reference for these specific aliases;
-// if it's ever raised provider-side, bump this too. Used both to cap every
-// route's maxTokens (see each route's own comment) and as the ceiling for the
-// one-shot truncation retry below.
-const DEEPSEEK_MAX_OUTPUT_TOKENS = 8192;
+// Output-token ceiling we allow. DeepSeek documents MAX OUTPUT 384K for both
+// deepseek-flash and deepseek-v4-pro (https://api-docs.deepseek.com/quick_start/pricing);
+// the old 8192 limit belonged to deepseek-chat. 16384 leaves routes that set 8192
+// room for reasoning plus visible text. A longer output must still fit the
+// per-attempt cap (DEFAULT_ATTEMPT_TIMEOUT_MS). Caps the thinking-headroom
+// factor and the one-shot truncation retry below.
+const DEEPSEEK_MAX_OUTPUT_TOKENS = 16384;
+
+// v4-pro's hidden reasoning_content is billed against max_tokens (the API has no
+// separate reasoning budget — only reasoning_effort, which routes already set),
+// so standard-tier calls that think get this much extra headroom, capped at the
+// ceiling above. Routes already at the ceiling gain nothing; they rely on the
+// fast-tier truncation retry instead.
+const THINKING_HEADROOM_FACTOR = 1.35;
 
 // Switch provider via AI_PROVIDER env var: "gemini" (default) | "anthropic" | "deepseek"
 const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic" | "deepseek";
@@ -456,7 +461,7 @@ export async function streamWithRefs(
        *  Undefined when usedFallback is false. */
       fallbackReason?: string;
     };
-    const runGenerationPass = async (maxTokensOverride?: number): Promise<GenerationPassResult> => {
+    const runGenerationPass = async (maxTokensOverride?: number, forceFast = false): Promise<GenerationPassResult> => {
       const firstContentTimeoutMs = opts.firstContentTimeoutMs ?? DEFAULT_FIRST_CONTENT_TIMEOUT_MS;
       const attemptTimeoutMs = opts.attemptTimeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
       const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
@@ -465,6 +470,15 @@ export async function streamWithRefs(
       // once either deadline below fires, so an abandoned provider call stops
       // consuming tokens/holding a connection instead of running to completion
       // in the background purely for us to discard its output via the `gen` guard.
+      if (forceFast) {
+        const fastController = new AbortController();
+        const { finishStatus } = await withDeadline(
+          runAttempt(gen, "fast", maxTokensOverride, fastController.signal),
+          retryTimeoutMs,
+          () => fastController.abort()
+        );
+        return { finishStatus, tierUsed: "fast", usedFallback: false };
+      }
       const primaryController = new AbortController();
       try {
         const { finishStatus } = await withTwoPhaseDeadline(
@@ -528,12 +542,28 @@ export async function streamWithRefs(
       // doc comment — rather than an estimate derived from attemptTimeoutMs/
       // retryTimeoutMs. Require as much headroom as a full fresh attempt
       // (attemptTimeoutMs) could need before even trying a retry.
-      if (retryMaxTokens > opts.maxTokens && hasTimeForAnotherAttempt(requestStartMs, opts)) {
+      // The retry runs on the FAST tier (no reasoning phase, so it's quicker and
+      // its whole budget goes to visible output) and is therefore sized with the
+      // fast-tier budget (retryTimeoutMs, 90s), not a full attemptTimeoutMs
+      // (130s): a v4-pro reading is typically truncated at 40-70s, which the old
+      // full-attempt gate (130 + elapsed <= 170) always rejected. Truncation
+      // detected after ~65s of elapsed time fails the gate and falls through to the error.
+      // Routes already at the token ceiling (retryMaxTokens === maxTokens) are
+      // still worth retrying when the failed pass was the thinking tier, since
+      // flash doesn't spend the budget on reasoning.
+      const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
+      const worthRetrying = retryMaxTokens > opts.maxTokens || result.tierUsed !== "fast";
+      // requestStartMs is taken inside streamWithRefs, after pre-stream work
+      // (rate limit, body parse, RAG embedding: up to ~15s) that it can't see, so
+      // pad the needed time by that overhead. Worst case: 15 (pre-stream) + 65
+      // (max elapsed at detection: 65 + 105 <= 180 - 10) + 90 (retry) = 170 < 180.
+      const PRE_STREAM_OVERHEAD_MS = 15_000;
+      if (worthRetrying && hasTimeForAnotherAttempt(requestStartMs, opts, retryTimeoutMs + PRE_STREAM_OVERHEAD_MS)) {
         truncationRetryAttempted = true;
         await safeWrite({ _restart: true });
         fullText = "";
         sentAnyContent = false;
-        result = await runGenerationPass(retryMaxTokens);
+        result = await runGenerationPass(retryMaxTokens, true);
         fastTierFallbackUsed = fastTierFallbackUsed || result.usedFallback;
         fallbackReason = fallbackReason ?? result.fallbackReason;
       }
@@ -555,6 +585,7 @@ export async function streamWithRefs(
       fastTierFallback: fastTierFallbackUsed,
       ...(fallbackReason ? { fallbackReason } : {}),
       truncationRetry: truncationRetryAttempted,
+      ...(truncationRetryAttempted ? { truncationRetryTier: "fast" } : {}),
       latencyMs: Date.now() - requestStartMs,
     }));
 
@@ -714,9 +745,17 @@ async function streamDeepSeek(
   // the live production provider (PROVIDER=deepseek), so this is the path
   // that actually stops a stalled v4-pro "thinking" call from continuing to
   // consume tokens after we've already moved on to the fast-tier fallback.
+  const effectiveTier = tierOverride ?? opts.tier ?? "standard";
+  // The fast tier exists to be quick: it never reasons, whatever the route's
+  // reasoningEffort says (flash thinks by default if not told "none").
+  const effort = tierOverride === "fast" ? "none" : (opts.reasoningEffort ?? "low");
+  const thinks = effort !== "none";
+  const maxTokens = thinks
+    ? Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * THINKING_HEADROOM_FACTOR))
+    : opts.maxTokens;
   const stream = await client.chat.completions.create({
-    model: resolveModel(tierOverride ?? opts.tier),
-    max_tokens: opts.maxTokens,
+    model: resolveModel(effectiveTier),
+    max_tokens: maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     stream: true,
     // DeepSeek v4 models "think" (emit reasoning_content) by default — that phase
@@ -724,7 +763,7 @@ async function streamDeepSeek(
     // to empty output). Free 總覽 readings pass "none" (speed); paid deep readings
     // default to "low" (light reasoning for accuracy). "none" isn't in OpenAI's
     // ReasoningEffort union, hence the value cast — DeepSeek's endpoint accepts it.
-    reasoning_effort: (opts.reasoningEffort ?? "low") as "low",
+    reasoning_effort: effort as "low",
     messages: [
       { role: "system", content: opts.system },
       ...opts.messages,
