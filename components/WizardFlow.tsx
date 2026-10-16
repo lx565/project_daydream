@@ -106,16 +106,31 @@ const LOADING_STEPS = [
   "生成個人化解讀…",
 ];
 
-function LoadingSkeleton({ label }: { label?: string }) {
+// Per-reading narration, each step true for that route's pipeline:
+// RAG = getKnowledge/getSharedRetrieval; 驗證 = route passes opts.validate (sync gate).
+const SYNTHESIS_STEPS = ["正在讀取紫微命盤與八字四柱…", "檢索紫微與八字典籍…", "融合紫微與八字…", "核對命盤事實…", "生成混合解讀…"];
+const CONSENSUS_STEPS = ["正在讀取命盤資料…", "檢索三合派與飛星派典籍…", "比對兩派論斷…", "生成紫薇綜合解讀…"];
+const BAZI_SUMMARY_STEPS = ["正在排列八字四柱…", "檢索子平八字典籍…", "核對命盤事實…", "生成八字綜合解讀…"];
+const PALACES_STEPS = ["正在讀取十二宮位星曜…", "檢索各宮主星典籍…", "逐宮梳理三方四正…", "核對命盤事實…", "生成逐宮解讀…"];
+const DECADES_STEPS = ["正在計算大運流年…", "檢索大運相關典籍…", "梳理各階段運勢脈絡…", "核對命盤事實…", "生成大運解讀…"];
+const FLOWYEAR_STEPS = ["正在掃描未來十年流年…", "檢索流年相關典籍…", "挑選重點流年…", "生成流年重點解讀…"];
+const BAZI_DEEP_STEPS = ["正在排列八字四柱…", "檢索子平八字典籍…", "分析五行生克與用神…", "核對命盤事實…", "生成深度詳批解讀…"];
+const BAZI_SCHOOLS_STEPS = ["正在排列八字四柱…", "檢索祿命法與盲派典籍…", "比對兩派視角…", "核對命盤事實…", "生成各派視角解讀…"];
+const OVERVIEW_STEPS = ["正在讀取命盤資料…", "檢索三合、四化、飛星等流派典籍…", "比對各流派論斷…", "核對命盤事實…", "生成三派詳解…"];
+const CAUTIONS_STEPS = ["正在掃描風險流年與命盤警示…", "檢索相關典籍…", "核對命盤事實…", "生成注意事項解讀…"];
+
+function LoadingSkeleton({ label, steps: stepsProp }: { label?: string; steps?: string[] }) {
   const [step, setStep] = React.useState(0);
+  const steps = label ? [label] : stepsProp && stepsProp.length > 0 ? stepsProp : LOADING_STEPS;
+  const stepsKey = steps.join("|");
   React.useEffect(() => {
-    const steps = label ? [label] : LOADING_STEPS;
+    setStep(0);
     if (steps.length <= 1) return;
     const id = setInterval(() => setStep((s) => (s + 1) % steps.length), 2200);
     return () => clearInterval(id);
-  }, [label]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepsKey]);
 
-  const steps = label ? [label] : LOADING_STEPS;
   const current = steps[step % steps.length];
 
   return (
@@ -129,9 +144,9 @@ function LoadingSkeleton({ label }: { label?: string }) {
         <span className="text-sm text-ink-3 transition-all duration-500">{current}</span>
       </div>
       {/* Step dots */}
-      {!label && (
+      {!label && steps.length > 1 && (
         <div className="flex items-center gap-1.5 pl-9">
-          {LOADING_STEPS.map((_, i) => (
+          {steps.map((_, i) => (
             <div key={i} className={`h-1 rounded-full transition-all duration-500 ${
               i <= step ? "bg-vermillion w-4" : "bg-border-warm w-2"
             }`} />
@@ -187,11 +202,13 @@ function ClassicalMd({ text }: { text: string }) {
 function ReadingCard({
   stream,
   skeleton,
+  steps,
   children,
   onMount,
 }: {
   stream: ReturnType<typeof useSSEStream>;
   skeleton?: string;
+  steps?: string[];
   children?: React.ReactNode;
   onMount?: () => void;
 }) {
@@ -209,7 +226,7 @@ function ReadingCard({
     </div>
   );
 
-  if (stream.status === "streaming") return <LoadingSkeleton label={skeleton} />;
+  if (stream.status === "streaming") return <LoadingSkeleton label={skeleton} steps={steps} />;
 
   if (stream.status === "done") return (
     <div className="animate-fade-in space-y-1">
@@ -219,7 +236,7 @@ function ReadingCard({
     </div>
   );
 
-  return children ? <>{children}</> : <LoadingSkeleton label={skeleton} />;
+  return children ? <>{children}</> : <LoadingSkeleton label={skeleton} steps={steps} />;
 }
 
 // Multi-school overview split (三合 / 四化 / 飛星 + 綜合共識)
@@ -607,7 +624,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             <div className="space-y-4">
               <SectionTitle>混合解讀</SectionTitle>
               {synthesis.status === "streaming" ? (
-                <LoadingSkeleton label="正在融合紫微與八字…" />
+                <LoadingSkeleton steps={SYNTHESIS_STEPS} />
               ) : synthesis.status === "done" ? (
                 <div>
                   <ClassicalMd text={synthesis.text} />
@@ -628,7 +645,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             <div className="space-y-4 pt-4 border-t border-border-light">
               <SectionTitle accent="gold">紫薇綜合</SectionTitle>
               {consensus.status === "streaming" ? (
-                <LoadingSkeleton label="正在生成紫薇綜合…" />
+                <LoadingSkeleton steps={CONSENSUS_STEPS} />
               ) : consensus.status === "done" ? (
                 <div>
                   <ClassicalMd text={consensus.text} />
@@ -659,7 +676,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                   <button onClick={() => bazi_.start(baziPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
-                <ReadingCard stream={bazi_} skeleton="正在生成八字綜合…"
+                <ReadingCard stream={bazi_} steps={BAZI_SUMMARY_STEPS}
                   onMount={() => bazi_.status === "idle" && bazi_.start(baziPayload)} />
               )}
             </div>
@@ -704,7 +721,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             ) : palaces.status === "done" ? (
               <PalacesView text={palaces.text} refs={palaces.refs} />
             ) : (
-              <ReadingCard stream={palaces} skeleton="正在逐宮分析…" />
+              <ReadingCard stream={palaces} steps={PALACES_STEPS} />
             )}
             <ValidationBadge status={palaces.validation} />
           </div>
@@ -724,14 +741,14 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 </button>
               </div>
             ) : (
-              <ReadingCard stream={decades} skeleton="正在分析大運…" />
+              <ReadingCard stream={decades} steps={DECADES_STEPS} />
             )}
             <ValidationBadge status={decades.validation} />
             {/* Per-year 流年 deep reading — moved here from the ziwei chart */}
             <FlowYearDetail ziwei={ziwei} birthYear={birthYear} name={name} onReady={setFlowYearsText} />
             <div className="pt-2 border-t border-parchment-2">
               <SectionTitle>流年重點詳批</SectionTitle>
-              <ReadingCard stream={flowYearHighlights} skeleton="正在挑選重點流年…"
+              <ReadingCard stream={flowYearHighlights} steps={FLOWYEAR_STEPS}
                 onMount={() => flowYearHighlights.status === "idle" && flowYearHighlights.start(ziweiWithBirth)} />
             </div>
           </div>
@@ -741,12 +758,12 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         return (
           <div className="space-y-6">
             <SectionTitle accent="gold">八字命理 · 深度詳批</SectionTitle>
-            <ReadingCard stream={baziDeep} skeleton="正在深度排盤解八字…"
+            <ReadingCard stream={baziDeep} steps={BAZI_DEEP_STEPS}
               onMount={() => baziDeep.status === "idle" && baziDeep.start(baziPayload)} />
             <div className="pt-2 border-t border-parchment-2">
               <SectionTitle>各派視角 · 祿命法與盲派</SectionTitle>
               <p className="text-xs text-ink-3 mb-3">以子平法（B1）為主軸，以下補充兩種歷史流派的獨特解讀視角，供對照參考。</p>
-              <ReadingCard stream={baziSchools} skeleton="正在調取祿命法與盲派視角…"
+              <ReadingCard stream={baziSchools} steps={BAZI_SCHOOLS_STEPS}
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender, ziwei })} />
             </div>
             <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} onReady={setBaziDecadesText} />
@@ -770,7 +787,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
               </div>
             ) : (
-              <ReadingCard stream={overview} skeleton="正在生成三派詳解…"
+              <ReadingCard stream={overview} steps={OVERVIEW_STEPS}
                 onMount={() => overview.status === "idle" && overview.start(ziweiPayload)} />
             )}
           </div>
@@ -780,7 +797,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         return (
           <div className="space-y-4">
             <SectionTitle accent="jade">特別注意 & 當前運勢</SectionTitle>
-            <ReadingCard stream={cautions} skeleton="正在分析注意事項…"
+            <ReadingCard stream={cautions} steps={CAUTIONS_STEPS}
               onMount={() => cautions.status === "idle" && cautions.start(ziweiWithBirth)} />
           </div>
         );
