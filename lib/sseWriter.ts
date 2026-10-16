@@ -27,7 +27,7 @@ export interface SSEWriterOptions {
    *  start — covers both the silent-thinking phase AND the actual writing.
    *  Once content has started streaming, the attempt is never cut off before
    *  this (only firstContentTimeoutMs can kill a pre-content attempt).
-   *  Default DEFAULT_ATTEMPT_TIMEOUT_MS (140_000). Also used by
+   *  Default DEFAULT_ATTEMPT_TIMEOUT_MS (130_000). Also used by
    *  hasTimeForAnotherAttempt as the per-attempt budget estimate when a route
    *  doesn't pass routeMaxDurationMs. */
   attemptTimeoutMs?: number;
@@ -35,7 +35,7 @@ export interface SSEWriterOptions {
    *  whenever the primary attempt is abandoned (timeout) or fails outright
    *  BEFORE sending any content (see runGenerationPass's catch — any
    *  pre-content failure falls back once, not only a timeout). Default
-   *  DEFAULT_RETRY_TIMEOUT_MS (60_000). */
+   *  DEFAULT_RETRY_TIMEOUT_MS (90_000). */
   retryTimeoutMs?: number;
   /** The route's own `export const maxDuration` in ms (e.g. 180_000 for a
    *  `maxDuration = 180` route) — lets hasTimeForAnotherAttempt check a
@@ -110,8 +110,17 @@ const DEFAULT_TEMPERATURE = 0.5;
 // maxDuration=180 (see each route file). Centralized here instead of 17 routes
 // each repeating the same literals.
 const DEFAULT_FIRST_CONTENT_TIMEOUT_MS = 50_000;
-const DEFAULT_ATTEMPT_TIMEOUT_MS = 140_000;
-const DEFAULT_RETRY_TIMEOUT_MS = 60_000;
+// 140_000 → 130_000 (2026-10-15): requestStartMs (below) starts inside
+// streamWithRefs, AFTER rate-limit, body parse, RAG embedding (up to ~8s),
+// and KV/getFlowYears — none of that pre-stream overhead was budgeted.
+// Worst case on the primary path is now overhead (~15s) + 130 + 20 (validator)
+// = 165 < 180. Live max is ~53s, so no practical cost.
+const DEFAULT_ATTEMPT_TIMEOUT_MS = 130_000;
+// 60_000 → 90_000 (2026-10-15): decades and couple allow 8192 output tokens,
+// and fast-tier output can run past 60s on those — this was cutting off a
+// fallback attempt that just needed more time. Worst case on the fallback
+// path is now 50 (firstContentTimeoutMs) + 90 + 20 (validator) = 160 ≤ 170.
+const DEFAULT_RETRY_TIMEOUT_MS = 90_000;
 
 // Default user-facing copy for a generation that failed outright (primary
 // attempt AND the fast-tier fallback both failed/timed out before any
@@ -320,11 +329,10 @@ type FinishStatus = "complete" | "truncated" | "blocked";
 // 180_000 for `maxDuration = 180`) when the route passes it, per Niki's D —
 // the old estimate (attemptTimeoutMs + retryTimeoutMs + margin) stopped being
 // a meaningful proxy for the route's actual ceiling once those two numbers
-// were raised independently of maxDuration. Routes that don't pass
-// routeMaxDurationMs (the untouched daily/monthly/flowyears-scores/validate*
-// routes) keep the old estimate-based fallback — their own maxDuration was
-// never threaded through before this change either, so this preserves their
-// exact prior behavior.
+// were raised independently of maxDuration. Every streamWithRefs caller now
+// passes routeMaxDurationMs explicitly (see each route's own options) sized
+// to its own maxDuration; this estimate-based fallback only remains for
+// defensiveness against a future caller that omits it.
 const OVERHEAD_MARGIN_MS = 10_000;
 function hasTimeForAnotherAttempt(requestStartMs: number, opts: SSEWriterOptions, neededMs?: number): boolean {
   const attemptTimeoutMs = opts.attemptTimeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
@@ -629,10 +637,14 @@ export async function streamWithRefs(
     if (opts.rateLimit) {
       refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
     }
-    // Reached only when BOTH the primary attempt AND the fast-tier fallback
-    // failed/timed out before any content — see runGenerationPass. Always the
-    // canned copy below, never `err.message`: that used to leak a raw
-    // provider error (e.g. the literal string "terminated" from a dropped
+    // Reached when the primary attempt AND the fast-tier fallback both
+    // failed/timed out before any content (see runGenerationPass) — but also
+    // after content has already started streaming, if a mid-stream drop or
+    // the attempt's own total cap (attemptTimeoutMs) throws past that point;
+    // sentAnyContent being true there re-throws out of runGenerationPass
+    // instead of falling back, landing here with partial text already sent.
+    // Always the canned copy below, never `err.message`: that used to leak a
+    // raw provider error (e.g. the literal string "terminated" from a dropped
     // connection) straight to a Chinese-speaking user.
     const message = opts.timeoutErrorMessage ?? DEFAULT_TIMEOUT_ERROR_MESSAGE;
     try {

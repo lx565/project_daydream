@@ -149,6 +149,18 @@ ${minggeBlock}
       reasoningEffort: "none",
       temperature: 0.7,
       rateLimit: { ip: clientIp(request), keyPrefix: "couple-preview" },
+      // This route's `maxDuration = 30` (top of file) is far under the 180s
+      // routes' default two-phase deadline (lib/sseWriter.ts) — without these
+      // explicit overrides it would inherit those defaults and the truncation-
+      // retry budget check (hasTimeForAnotherAttempt) could let a retry start
+      // too late for Vercel's 30s ceiling to let it finish. Sized to fit well
+      // inside 30s, matching this route's prior effective behavior (old
+      // defaults were attemptTimeoutMs 35_000/retryTimeoutMs 15_000).
+      routeMaxDurationMs: 30_000,
+      firstContentTimeoutMs: 12_000,
+      attemptTimeoutMs: 20_000,
+      retryTimeoutMs: 12_000,
+      timeoutErrorMessage: "這次解讀未能及時完成，請點『重試』再試一次。",
       system: buildSystem(cfg.hasPastLife),
       messages: [{ role: "user", content: userMessage }],
       refs: [],
