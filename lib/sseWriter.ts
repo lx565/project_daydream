@@ -129,15 +129,13 @@ const DEFAULT_RETRY_TIMEOUT_MS = 90_000;
 const DEFAULT_TIMEOUT_ERROR_MESSAGE =
   "這份解讀使用深度推理模型，運算時間較長，這次未能及時完成。請點『重試』，通常再試一次就會成功。";
 
-// DeepSeek's documented max_tokens ceiling for the chat-completions endpoint
-// (deepseek-chat/deepseek-reasoner family, which "deepseek-flash"/"deepseek-v4-pro"
-// are aliases of) is 8192 — passing a higher value is rejected by the API rather
-// than silently clamped. This repo has no live network access to re-verify that
-// number against the current DeepSeek API reference for these specific aliases;
-// if it's ever raised provider-side, bump this too. Used both to cap every
-// route's maxTokens (see each route's own comment) and as the ceiling for the
-// one-shot truncation retry below.
-const DEEPSEEK_MAX_OUTPUT_TOKENS = 8192;
+// Output-token ceiling we allow. DeepSeek documents MAX OUTPUT 384K for both
+// deepseek-flash and deepseek-v4-pro (https://api-docs.deepseek.com/quick_start/pricing);
+// the old 8192 limit belonged to deepseek-chat. 16384 leaves routes that set 8192
+// room for reasoning plus visible text. A longer output must still fit the
+// per-attempt cap (DEFAULT_ATTEMPT_TIMEOUT_MS). Caps the thinking-headroom
+// factor and the one-shot truncation retry below.
+const DEEPSEEK_MAX_OUTPUT_TOKENS = 16384;
 
 // v4-pro's hidden reasoning_content is billed against max_tokens (the API has no
 // separate reasoning budget — only reasoning_effort, which routes already set),
@@ -548,16 +546,19 @@ export async function streamWithRefs(
       // its whole budget goes to visible output) and is therefore sized with the
       // fast-tier budget (retryTimeoutMs, 90s), not a full attemptTimeoutMs
       // (130s): a v4-pro reading is typically truncated at 40-70s, which the old
-      // full-attempt gate (130 + elapsed <= 170) always rejected. Worst case
-      // that still passes: elapsed 70 + 90 retry = 160 <= 170, leaving only 10s
-      // before the route ceiling (the validate gate then skips itself, needing
-      // 20s). Truncation at 71s+ fails the gate and falls through to the error.
+      // full-attempt gate (130 + elapsed <= 170) always rejected. Truncation
+      // detected after ~65s of elapsed time fails the gate and falls through to the error.
       // Routes already at the token ceiling (retryMaxTokens === maxTokens) are
       // still worth retrying when the failed pass was the thinking tier, since
       // flash doesn't spend the budget on reasoning.
       const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
       const worthRetrying = retryMaxTokens > opts.maxTokens || result.tierUsed !== "fast";
-      if (worthRetrying && hasTimeForAnotherAttempt(requestStartMs, opts, retryTimeoutMs)) {
+      // requestStartMs is taken inside streamWithRefs, after pre-stream work
+      // (rate limit, body parse, RAG embedding: up to ~15s) that it can't see, so
+      // pad the needed time by that overhead. Worst case: 15 (pre-stream) + 65
+      // (max elapsed at detection: 65 + 105 <= 180 - 10) + 90 (retry) = 170 < 180.
+      const PRE_STREAM_OVERHEAD_MS = 15_000;
+      if (worthRetrying && hasTimeForAnotherAttempt(requestStartMs, opts, retryTimeoutMs + PRE_STREAM_OVERHEAD_MS)) {
         truncationRetryAttempted = true;
         await safeWrite({ _restart: true });
         fullText = "";
@@ -745,7 +746,10 @@ async function streamDeepSeek(
   // that actually stops a stalled v4-pro "thinking" call from continuing to
   // consume tokens after we've already moved on to the fast-tier fallback.
   const effectiveTier = tierOverride ?? opts.tier ?? "standard";
-  const thinks = effectiveTier === "standard" && (opts.reasoningEffort ?? "low") !== "none";
+  // The fast tier exists to be quick: it never reasons, whatever the route's
+  // reasoningEffort says (flash thinks by default if not told "none").
+  const effort = tierOverride === "fast" ? "none" : (opts.reasoningEffort ?? "low");
+  const thinks = effort !== "none";
   const maxTokens = thinks
     ? Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * THINKING_HEADROOM_FACTOR))
     : opts.maxTokens;
@@ -759,7 +763,7 @@ async function streamDeepSeek(
     // to empty output). Free 總覽 readings pass "none" (speed); paid deep readings
     // default to "low" (light reasoning for accuracy). "none" isn't in OpenAI's
     // ReasoningEffort union, hence the value cast — DeepSeek's endpoint accepts it.
-    reasoning_effort: (opts.reasoningEffort ?? "low") as "low",
+    reasoning_effort: effort as "low",
     messages: [
       { role: "system", content: opts.system },
       ...opts.messages,
