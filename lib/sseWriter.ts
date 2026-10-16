@@ -1,6 +1,6 @@
 import type { Reference } from "./rag";
 import { createHash } from "crypto";
-import { withDeadline, AttemptTimeoutError } from "./aiRetry";
+import { withDeadline, withTwoPhaseDeadline, AttemptTimeoutError } from "./aiRetry";
 import { refundRateLimit } from "./rateLimit";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
@@ -15,18 +15,41 @@ export interface SSEWriterOptions {
   /** Sampling temperature. Default 0.5 (factual readings). Narrative routes
    *  (流年/今日/合盘) pass ~0.7 for richer, less generic prose. Was hardcoded 0. */
   temperature?: number;
-  /** First-attempt deadline in ms before retrying (if no content sent yet) or
-   *  failing (if content already streamed). Default 35_000 — matches every
-   *  route's `maxDuration = 60` with margin for retry + overhead. Routes that
-   *  declare a longer `maxDuration` (e.g. decades' 90) and generate enough
-   *  content to need more real time should pass a proportionally longer value
-   *  here — otherwise a legitimately-in-progress-but-slow generation gets
-   *  killed mid-stream at the default 35s regardless of how much headroom the
-   *  route's own maxDuration actually has. */
+  /** Deadline in ms for the primary attempt to produce its FIRST visible
+   *  content. 2026-10 (deepseek-v4-pro is a thinking model that emits nothing
+   *  visible while reasoning — live reads showed 9-29s of silent thinking):
+   *  if nothing has been written by this deadline, the attempt is abandoned
+   *  (AttemptTimeoutError) and the fast-tier fallback takes over. Once content
+   *  HAS started, this deadline is a no-op — see attemptTimeoutMs, the total
+   *  cap. Default DEFAULT_FIRST_CONTENT_TIMEOUT_MS (50_000). */
+  firstContentTimeoutMs?: number;
+  /** TOTAL wall-clock cap in ms for the primary attempt, counted from attempt
+   *  start — covers both the silent-thinking phase AND the actual writing.
+   *  Once content has started streaming, the attempt is never cut off before
+   *  this (only firstContentTimeoutMs can kill a pre-content attempt).
+   *  Default DEFAULT_ATTEMPT_TIMEOUT_MS (140_000). Also used by
+   *  hasTimeForAnotherAttempt as the per-attempt budget estimate when a route
+   *  doesn't pass routeMaxDurationMs. */
   attemptTimeoutMs?: number;
-  /** Retry-attempt deadline in ms, only used if the first attempt timed out
-   *  with zero content sent. Default 15_000. See attemptTimeoutMs. */
+  /** TOTAL wall-clock cap in ms for the fast-tier fallback attempt — fired
+   *  whenever the primary attempt is abandoned (timeout) or fails outright
+   *  BEFORE sending any content (see runGenerationPass's catch — any
+   *  pre-content failure falls back once, not only a timeout). Default
+   *  DEFAULT_RETRY_TIMEOUT_MS (60_000). */
   retryTimeoutMs?: number;
+  /** The route's own `export const maxDuration` in ms (e.g. 180_000 for a
+   *  `maxDuration = 180` route) — lets hasTimeForAnotherAttempt check a
+   *  prospective retry/validator call against the route's REAL remaining
+   *  budget instead of an estimate derived from attemptTimeoutMs/
+   *  retryTimeoutMs. Routes that don't pass this fall back to the old
+   *  estimate-based behavior (attemptTimeoutMs + retryTimeoutMs + margin). */
+  routeMaxDurationMs?: number;
+  /** User-facing text sent when generation ultimately fails (primary attempt
+   *  AND the fast-tier fallback both failed/timed out before any content).
+   *  Default DEFAULT_TIMEOUT_ERROR_MESSAGE (reading-specific copy about the
+   *  deep-reasoning model taking too long). The chat route passes its own
+   *  reply-specific wording — see app/api/chat/route.ts. */
+  timeoutErrorMessage?: string;
   /** When set, the route already charged one rate-limit unit up front (via
    *  checkRateLimit). streamWithRefs refunds that unit if the request never
    *  actually hit the AI provider — a cache replay or a failed/timed-out
@@ -79,6 +102,23 @@ export interface SSEWriterOptions {
 // Default temperature for readings. 0 produced flat, repetitive, generic prose;
 // interpretive writing reads far better at a moderate temperature.
 const DEFAULT_TEMPERATURE = 0.5;
+
+// 2026-10-15: shared defaults for the two-phase deadline (see firstContentTimeoutMs/
+// attemptTimeoutMs/retryTimeoutMs's doc comments above) — sized against live
+// production timings against deepseek-v4-pro (silent thinking 9-29s, writing
+// 11-25s, totals 39.5-53.1s) with real headroom, under every reading route's
+// maxDuration=180 (see each route file). Centralized here instead of 17 routes
+// each repeating the same literals.
+const DEFAULT_FIRST_CONTENT_TIMEOUT_MS = 50_000;
+const DEFAULT_ATTEMPT_TIMEOUT_MS = 140_000;
+const DEFAULT_RETRY_TIMEOUT_MS = 60_000;
+
+// Default user-facing copy for a generation that failed outright (primary
+// attempt AND the fast-tier fallback both failed/timed out before any
+// content) — never leaks a raw provider error (e.g. "terminated") or the old
+// generic "AI 服務回應較慢" to the client. See timeoutErrorMessage.
+const DEFAULT_TIMEOUT_ERROR_MESSAGE =
+  "這份解讀使用深度推理模型，運算時間較長，這次未能及時完成。請點『重試』，通常再試一次就會成功。";
 
 // DeepSeek's documented max_tokens ceiling for the chat-completions endpoint
 // (deepseek-chat/deepseek-reasoner family, which "deepseek-flash"/"deepseek-v4-pro"
@@ -273,17 +313,31 @@ type FinishStatus = "complete" | "truncated" | "blocked";
 // for one more full generation attempt — unchanged behavior) and by the
 // synchronous validate gate (passes the validator's own ~20s deadline instead,
 // since a full generation attempt's duration is the wrong estimate for a much
-// smaller call). attemptTimeoutMs/retryTimeoutMs size the overall budget
-// proportionally to each route's own maxDuration; OVERHEAD_MARGIN_MS covers the
-// cache lookup, validator calls, etc. that aren't captured by either timeout.
-// `elapsedMs` is measured from the `requestStartMs` anchor, so a check made
-// later correctly sees less headroom than one made earlier.
+// smaller call). `elapsedMs` is measured from the `requestStartMs` anchor, so
+// a check made later correctly sees less headroom than one made earlier.
+//
+// Measured against the route's REAL budget (opts.routeMaxDurationMs, e.g.
+// 180_000 for `maxDuration = 180`) when the route passes it, per Niki's D —
+// the old estimate (attemptTimeoutMs + retryTimeoutMs + margin) stopped being
+// a meaningful proxy for the route's actual ceiling once those two numbers
+// were raised independently of maxDuration. Routes that don't pass
+// routeMaxDurationMs (the untouched daily/monthly/flowyears-scores/validate*
+// routes) keep the old estimate-based fallback — their own maxDuration was
+// never threaded through before this change either, so this preserves their
+// exact prior behavior.
+const OVERHEAD_MARGIN_MS = 10_000;
 function hasTimeForAnotherAttempt(requestStartMs: number, opts: SSEWriterOptions, neededMs?: number): boolean {
-  const OVERHEAD_MARGIN_MS = 10_000;
-  const estimatedRouteBudgetMs =
-    (opts.attemptTimeoutMs ?? 35_000) + (opts.retryTimeoutMs ?? 15_000) + OVERHEAD_MARGIN_MS;
+  const attemptTimeoutMs = opts.attemptTimeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
   const elapsedMs = Date.now() - requestStartMs;
-  return elapsedMs + (neededMs ?? opts.attemptTimeoutMs ?? 35_000) <= estimatedRouteBudgetMs;
+  const needed = neededMs ?? attemptTimeoutMs;
+  if (opts.routeMaxDurationMs != null) {
+    return elapsedMs + needed <= opts.routeMaxDurationMs - OVERHEAD_MARGIN_MS;
+  }
+  // No real budget passed — old estimate-based behavior, unchanged, for the
+  // routes this change deliberately leaves alone.
+  const estimatedRouteBudgetMs =
+    attemptTimeoutMs + (opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS) + OVERHEAD_MARGIN_MS;
+  return elapsedMs + needed <= estimatedRouteBudgetMs;
 }
 
 export async function streamWithRefs(
@@ -291,11 +345,26 @@ export async function streamWithRefs(
   encoder: TextEncoder,
   opts: SSEWriterOptions
 ) {
+  let lastActivityMs = Date.now();
   const safeWrite = async (obj: object) => {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      lastActivityMs = Date.now();
     } catch {}
   };
+  // DeepSeek's thinking phase emits nothing visible for up to firstContentTimeoutMs
+  // (50s default) — iOS's URLSession drops a connection after ~60s of total
+  // silence. An SSE comment line (`: ...\n\n`, per the spec never a `data:`
+  // line) keeps the connection alive without being mistaken for content by any
+  // client parser — verified against web's lib/useSSEStream.ts and the iOS
+  // app's parseFullSSE (both only act on lines starting with "data:", so a
+  // comment line is silently skipped). Cleared in the `finally` below on every
+  // exit path (done, error, abort, client disconnect).
+  const HEARTBEAT_INTERVAL_MS = 15_000;
+  const heartbeatTimer = setInterval(() => {
+    if (Date.now() - lastActivityMs < HEARTBEAT_INTERVAL_MS) return;
+    writer.write(encoder.encode(": ping\n\n")).then(() => { lastActivityMs = Date.now(); }, () => {});
+  }, HEARTBEAT_INTERVAL_MS);
   // Wall-clock anchor for the retry time-budget check below (Medium 4) — covers
   // the whole request, including the cache lookup, so it reflects real elapsed
   // time against the route's maxDuration, not just time spent in the provider call.
@@ -342,7 +411,7 @@ export async function streamWithRefs(
     let fullText = "";
     let gen = 0;
     let sentAnyContent = false;
-    const runAttempt = (attemptGen: number, tierOverride?: ModelTier, maxTokensOverride?: number) => {
+    const runAttempt = (attemptGen: number, tierOverride?: ModelTier, maxTokensOverride?: number, signal?: AbortSignal) => {
       const guardedWrite = async (obj: object) => {
         if (attemptGen !== gen) return;
         if ("text" in obj && typeof (obj as { text: string }).text === "string") {
@@ -352,12 +421,12 @@ export async function streamWithRefs(
         await safeWrite(obj);
       };
       const attemptOpts = maxTokensOverride ? { ...opts, maxTokens: maxTokensOverride } : opts;
-      if (PROVIDER === "gemini") return streamGemini(guardedWrite, attemptOpts, tierOverride);
-      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, attemptOpts, tierOverride);
-      return streamAnthropic(guardedWrite, attemptOpts, tierOverride);
+      if (PROVIDER === "gemini") return streamGemini(guardedWrite, attemptOpts, tierOverride, signal);
+      if (PROVIDER === "deepseek") return streamDeepSeek(guardedWrite, attemptOpts, tierOverride, signal);
+      return streamAnthropic(guardedWrite, attemptOpts, tierOverride, signal);
     };
 
-    // One full generation pass, including the existing stalled-first-attempt →
+    // One full generation pass, including the stalled/failed-first-attempt →
     // fast-tier fallback. Returns the provider's own verdict on how the response
     // ended — a signal the old code never looked at, so a truncated-but-nonempty
     // OR safety/content-filter-cut-but-nonempty response was indistinguishable
@@ -371,30 +440,66 @@ export async function streamWithRefs(
     //                  recitation, or no finish_reason captured at all). Retrying
     //                  with more tokens can't fix this, so it goes straight to
     //                  the error path below, same as a hard provider failure.
-    type GenerationPassResult = { finishStatus: FinishStatus; tierUsed: ModelTier; usedFallback: boolean };
+    type GenerationPassResult = {
+      finishStatus: FinishStatus;
+      tierUsed: ModelTier;
+      usedFallback: boolean;
+      /** Why the fallback fired, for the reading_generation log line below.
+       *  Undefined when usedFallback is false. */
+      fallbackReason?: string;
+    };
     const runGenerationPass = async (maxTokensOverride?: number): Promise<GenerationPassResult> => {
+      const firstContentTimeoutMs = opts.firstContentTimeoutMs ?? DEFAULT_FIRST_CONTENT_TIMEOUT_MS;
+      const attemptTimeoutMs = opts.attemptTimeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
+      const retryTimeoutMs = opts.retryTimeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
+      gen += 1;
+      // Aborts the actual upstream HTTP request (not just our own local wait)
+      // once either deadline below fires, so an abandoned provider call stops
+      // consuming tokens/holding a connection instead of running to completion
+      // in the background purely for us to discard its output via the `gen` guard.
+      const primaryController = new AbortController();
       try {
-        gen += 1;
-        const { finishStatus } = await withDeadline(runAttempt(gen, undefined, maxTokensOverride), opts.attemptTimeoutMs ?? 35_000);
+        const { finishStatus } = await withTwoPhaseDeadline(
+          runAttempt(gen, undefined, maxTokensOverride, primaryController.signal),
+          firstContentTimeoutMs,
+          attemptTimeoutMs,
+          () => sentAnyContent,
+          () => primaryController.abort()
+        );
         return { finishStatus, tierUsed: opts.tier ?? "standard", usedFallback: false };
       } catch (e) {
-        if (!(e instanceof AttemptTimeoutError) || sentAnyContent) throw e;
-        // Primary model stalled before emitting anything — on DeepSeek this is
-        // v4-pro's reasoning ("thinking") phase eating the whole window on a slow
-        // night (v4-pro ~7s vs v4-flash ~1.8s on the same short prompt; on real
-        // readings v4-pro was blowing past 55s while v4-flash returns). Fall back to
-        // the "fast" tier (deepseek-flash / gemini-2.5-flash / claude-haiku) so
-        // the reader gets *a* reading instead of "AI 服務回應較慢". Only safe because
-        // no content was sent yet (guarded by !sentAnyContent above) — restarting
-        // after partial output was already flushed would duplicate text.
-        gen += 1; // invalidates any late write from the abandoned first attempt
-        const { finishStatus } = await withDeadline(runAttempt(gen, "fast", maxTokensOverride), opts.retryTimeoutMs ?? 15_000);
-        return { finishStatus, tierUsed: "fast", usedFallback: true };
+        // Content already reached the client — never fall back (would
+        // duplicate text in front of the retry's own stream). Propagate as-is;
+        // the outer catch decides what the user sees.
+        if (sentAnyContent) throw e;
+        // Nothing reached the client yet: fall back to the fast tier for ANY
+        // failure, not just a timeout — on DeepSeek this is v4-pro's reasoning
+        // ("thinking") phase eating the whole window on a slow night (v4-pro
+        // ~7s vs v4-flash ~1.8s on the same short prompt; on real readings
+        // v4-pro was blowing well past the old 55s while v4-flash returns), OR
+        // a hard failure before any content (a dropped connection — observed
+        // live as the upstream error "terminated" — ECONNRESET, a provider
+        // 5xx). Either way the reader should get *a* reading instead of a bare
+        // error. Only safe because no content was sent yet (guarded above) —
+        // restarting after partial output was already flushed would duplicate
+        // text.
+        const fallbackReason = e instanceof AttemptTimeoutError
+          ? `timeout:${firstContentTimeoutMs}ms`
+          : `error:${e instanceof Error ? e.message : String(e)}`;
+        gen += 1; // invalidates any late write from the abandoned primary attempt
+        const fallbackController = new AbortController();
+        const { finishStatus } = await withDeadline(
+          runAttempt(gen, "fast", maxTokensOverride, fallbackController.signal),
+          retryTimeoutMs,
+          () => fallbackController.abort()
+        );
+        return { finishStatus, tierUsed: "fast", usedFallback: true, fallbackReason };
       }
     };
 
     let result = await runGenerationPass();
     let fastTierFallbackUsed = result.usedFallback;
+    let fallbackReason = result.fallbackReason;
 
     // Non-negotiable: a response the provider itself flagged as cut off by the
     // token budget must never reach the client marked as a complete reading —
@@ -410,13 +515,11 @@ export async function streamWithRefs(
       // budget before truncation is even detected (only known once the full
       // attempt resolves) — retrying is doomed if Vercel is about to kill the
       // whole function mid-retry anyway, which also means the refund below never
-      // gets the chance to run. attemptTimeoutMs/retryTimeoutMs are already sized
-      // proportionally to each route's own maxDuration (see attemptTimeoutMs's doc
-      // comment — e.g. 55s+20s for a 90s route, 35s+15s default for 60s), so their
-      // sum plus a conservative overhead margin stands in for "the route's real
-      // budget" without needing every call site to thread maxDuration through.
-      // Require as much headroom as a full fresh attempt (attemptTimeoutMs) could
-      // need before even trying a retry.
+      // gets the chance to run. hasTimeForAnotherAttempt checks against the
+      // route's REAL budget (opts.routeMaxDurationMs) when passed — see its own
+      // doc comment — rather than an estimate derived from attemptTimeoutMs/
+      // retryTimeoutMs. Require as much headroom as a full fresh attempt
+      // (attemptTimeoutMs) could need before even trying a retry.
       if (retryMaxTokens > opts.maxTokens && hasTimeForAnotherAttempt(requestStartMs, opts)) {
         truncationRetryAttempted = true;
         await safeWrite({ _restart: true });
@@ -424,23 +527,25 @@ export async function streamWithRefs(
         sentAnyContent = false;
         result = await runGenerationPass(retryMaxTokens);
         fastTierFallbackUsed = fastTierFallbackUsed || result.usedFallback;
+        fallbackReason = fallbackReason ?? result.fallbackReason;
       }
     }
 
     // Observability only (not user-facing, not stored) — one grep-able line per
     // generation recording which tier actually produced the text, how the
-    // provider says it ended, whether the stalled-attempt fast-tier fallback or
-    // the truncation retry fired, and total wall-clock latency. Logged here
-    // (right after the pre-existing truncation/blocked handling settles on a
-    // final `result`) so it reflects the generation step itself — a separate
-    // "reading_validation" line below covers the synchronous validate gate,
-    // since that's a distinct later event.
+    // provider says it ended, whether the stalled/failed-attempt fast-tier
+    // fallback or the truncation retry fired (and why, for the fallback), and
+    // total wall-clock latency. Logged here (right after the pre-existing
+    // truncation/blocked handling settles on a final `result`) so it reflects
+    // the generation step itself — a separate "reading_validation" line below
+    // covers the synchronous validate gate, since that's a distinct later event.
     console.log(JSON.stringify({
       event: "reading_generation",
       provider: PROVIDER,
       tier: result.tierUsed,
       finishStatus: result.finishStatus,
       fastTierFallback: fastTierFallbackUsed,
+      ...(fallbackReason ? { fallbackReason } : {}),
       truncationRetry: truncationRetryAttempted,
       latencyMs: Date.now() - requestStartMs,
     }));
@@ -524,12 +629,17 @@ export async function streamWithRefs(
     if (opts.rateLimit) {
       refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
     }
-    const message = err instanceof AttemptTimeoutError
-      ? "AI 服務回應較慢，請稍後重試"
-      : err instanceof Error ? err.message : "服務暫時無法使用";
+    // Reached only when BOTH the primary attempt AND the fast-tier fallback
+    // failed/timed out before any content — see runGenerationPass. Always the
+    // canned copy below, never `err.message`: that used to leak a raw
+    // provider error (e.g. the literal string "terminated" from a dropped
+    // connection) straight to a Chinese-speaking user.
+    const message = opts.timeoutErrorMessage ?? DEFAULT_TIMEOUT_ERROR_MESSAGE;
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
     } catch {}
+  } finally {
+    clearInterval(heartbeatTimer);
   }
 }
 
@@ -538,7 +648,8 @@ export async function streamWithRefs(
 async function streamGemini(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
-  tierOverride?: ModelTier
+  tierOverride?: ModelTier,
+  signal?: AbortSignal
 ): Promise<{ finishStatus: FinishStatus }> {
   const { GoogleGenerativeAI, FinishReason } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
@@ -554,7 +665,9 @@ async function streamGemini(
     parts: [{ text: m.content }],
   }));
 
-  const result = await model.generateContentStream({ contents });
+  // Aborts the actual upstream request once the two-phase deadline in
+  // streamWithRefs gives up on this attempt — see runGenerationPass.
+  const result = await model.generateContentStream({ contents }, signal ? { signal } : undefined);
   for await (const chunk of result.stream) {
     const text = chunk.text();
     if (text) await safeWrite({ text });
@@ -575,7 +688,8 @@ async function streamGemini(
 async function streamDeepSeek(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
-  tierOverride?: ModelTier
+  tierOverride?: ModelTier,
+  signal?: AbortSignal
 ): Promise<{ finishStatus: FinishStatus }> {
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({
@@ -583,6 +697,11 @@ async function streamDeepSeek(
     baseURL: "https://api.deepseek.com",
   });
 
+  // Aborts the actual upstream request once the two-phase deadline in
+  // streamWithRefs gives up on this attempt — see runGenerationPass. This is
+  // the live production provider (PROVIDER=deepseek), so this is the path
+  // that actually stops a stalled v4-pro "thinking" call from continuing to
+  // consume tokens after we've already moved on to the fast-tier fallback.
   const stream = await client.chat.completions.create({
     model: resolveModel(tierOverride ?? opts.tier),
     max_tokens: opts.maxTokens,
@@ -598,7 +717,7 @@ async function streamDeepSeek(
       { role: "system", content: opts.system },
       ...opts.messages,
     ],
-  });
+  }, signal ? { signal } : undefined);
 
   // finish_reason is null on every intermediate chunk and only set on the
   // terminal one — track the last non-null value seen. Only "stop" is a genuine
@@ -620,7 +739,8 @@ async function streamDeepSeek(
 async function streamAnthropic(
   safeWrite: (obj: object) => Promise<void>,
   opts: SSEWriterOptions,
-  tierOverride?: ModelTier
+  tierOverride?: ModelTier,
+  signal?: AbortSignal
 ): Promise<{ finishStatus: FinishStatus }> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -629,13 +749,15 @@ async function streamAnthropic(
     { type: "text" as const, text: opts.system, cache_control: { type: "ephemeral" as const } },
   ];
 
+  // Aborts the actual upstream request once the two-phase deadline in
+  // streamWithRefs gives up on this attempt — see runGenerationPass.
   const stream = client.messages.stream({
     model: resolveModel(tierOverride ?? opts.tier),
     max_tokens: opts.maxTokens,
     temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
     system: systemBlocks,
     messages: opts.messages,
-  });
+  }, signal ? { signal } : undefined);
 
   for await (const event of stream) {
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {

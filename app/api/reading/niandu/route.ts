@@ -1,5 +1,5 @@
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -99,8 +99,13 @@ ${bazi.summary}
       // past incident (above) shows it has little headroom, and sseWriter.ts now
       // refuses to mark a finish_reason:"length" response as done regardless.
       maxTokens: 8192,
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "niandu" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

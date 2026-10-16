@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 180;
 import { NextRequest } from "next/server";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getKnowledge } from "@/lib/rag";
@@ -86,16 +86,16 @@ export async function POST(request: NextRequest) {
       // incident-and-fix cycle every other route below already has (see
       // lib/sseWriter.ts's finish_reason truncation check, 2026-10-04).
       maxTokens: 1600,
-      // This route declares maxDuration=60 and had been relying on
-      // streamWithRefs's default attemptTimeoutMs=35_000/retryTimeoutMs=15_000
-      // (50s sum) — too tight now that `standard` resolves to deepseek-v4-pro
-      // (2026-10-04, see lib/sseWriter.ts MODEL_DEFAULTS), whose reasoning phase
-      // runs meaningfully slower than flash. 42s/13s (55s sum) gives v4-pro
-      // realistic room to finish within the 60s ceiling while still leaving a
-      // 5s margin, matching couple/route.ts:364 and decades/route.ts:215's fix
-      // for the same class of issue on their 90s routes.
-      attemptTimeoutMs: 42_000,
-      retryTimeoutMs: 13_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
+      // Reply-specific copy (not the reading-specific default) for the
+      // all-fallbacks-exhausted error — see lib/sseWriter.ts's timeoutErrorMessage.
+      timeoutErrorMessage: "AI 使用深度推理模型，運算時間較長，這次未能及時回覆。請再試一次，通常就會成功。",
       system,
       messages: trimmed,
       // Chat answers are personal/contextual per-user (system prompt embeds the

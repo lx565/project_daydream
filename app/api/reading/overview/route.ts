@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 
 import { NextRequest } from "next/server";
@@ -201,10 +201,13 @@ export async function POST(request: NextRequest) {
       // 5000 → 8192 (2026-10-04): raised to DeepSeek's documented max_tokens
       // ceiling — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
       maxTokens: 8192,
-      // Wider deadline — DeepSeek was observed exceeding the 35s default while still
-      // legitimately streaming; see couple/route.ts for the full rationale.
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "overview" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

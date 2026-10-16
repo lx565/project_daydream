@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -322,10 +322,13 @@ ${context || "（暫無相關典籍）"}
       // route, and lib/sseWriter.ts now refuses to mark a finish_reason:"length"
       // response as done regardless, so there's no downside to maxing this out.
       maxTokens: 8192,
-      // Wider deadline — DeepSeek was observed exceeding the 35s default while still
-      // legitimately streaming; see couple/route.ts for the full rationale.
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "bazi-couple" },
       temperature: 0.7,
       system: systemPrompt,

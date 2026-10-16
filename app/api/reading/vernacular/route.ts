@@ -1,5 +1,5 @@
 import { buildVernacularSystem } from "@/lib/modernInstruction";
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -31,16 +31,13 @@ export async function POST(request: NextRequest) {
       // 3200 → 5800 (2026-10-04): real reasoning-phase headroom, not a minimal
       // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
       maxTokens: 5800,
-      // This route declares maxDuration=60 and had been relying on
-      // streamWithRefs's default attemptTimeoutMs=35_000/retryTimeoutMs=15_000
-      // (50s sum) — too tight now that `standard` resolves to deepseek-v4-pro
-      // (2026-10-04, see lib/sseWriter.ts MODEL_DEFAULTS), whose reasoning phase
-      // runs meaningfully slower than flash. 42s/13s (55s sum) gives v4-pro
-      // realistic room to finish within the 60s ceiling while still leaving a
-      // 5s margin, matching couple/route.ts:364 and decades/route.ts:215's fix
-      // for the same class of issue on their 90s routes.
-      attemptTimeoutMs: 42_000,
-      retryTimeoutMs: 13_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "vernacular" },
       temperature: 0.75,
       system: buildVernacularSystem(),

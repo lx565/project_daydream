@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -97,8 +97,13 @@ ${context || "（暫無）"}
       // 2000 → 3800 (2026-10-04): real reasoning-phase headroom, not a minimal
       // reactive bump — see lib/sseWriter.ts's DEEPSEEK_MAX_OUTPUT_TOKENS note.
       maxTokens: 3800,
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // routeMaxDurationMs matches this route's own `maxDuration = 180` (top of
+      // file) so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "couple-cautions" },
       temperature: 0.5,
       system: SYSTEM,

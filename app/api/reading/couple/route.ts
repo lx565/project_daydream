@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -355,14 +355,14 @@ ${context||"（暫無）"}
       // past incident (above) shows it has little headroom, and sseWriter.ts now
       // refuses to mark a finish_reason:"length" response as done regardless.
       maxTokens: 8192,
-      // This route declares maxDuration=90 (vs the usual 60) because its 8-section
-      // output (甲方/乙方/飞化互入/合盘综析/...) was observed exceeding
-      // streamWithRefs's default 35s deadline while still legitimately streaming
-      // content, which skips the retry (content already sent) and surfaces as a
-      // hard error instead of just finishing slowly. 55s/20s leaves 15s margin
-      // under the 90s ceiling, matching decades/route.ts's fix for the same issue.
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // This route declares maxDuration=180 because its 8-section output
+      // (甲方/乙方/飞化互入/合盘综析/...) needs real room, and routeMaxDurationMs
+      // matches that so hasTimeForAnotherAttempt (lib/sseWriter.ts) checks the
+      // truncation-retry/validator budget against the real ceiling.
+      // attemptTimeoutMs/retryTimeoutMs now default to values sized for
+      // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
+      // need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "couple" },
       temperature: 0.7,
       system: systemPrompt,

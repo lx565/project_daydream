@@ -1,5 +1,5 @@
 import { MODERN_INSTRUCTION } from "@/lib/modernInstruction";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
@@ -208,13 +208,13 @@ ${context || "（暫無）"}
       // past incident (above) shows it has little headroom, and sseWriter.ts now
       // refuses to mark a finish_reason:"length" response as done regardless.
       maxTokens: 8192,
-      // This route declares maxDuration=90 (vs the usual 60) specifically because
-      // its output is long — streamWithRefs's default 35s/15s deadlines don't
-      // know that and were observed killing legitimately-in-progress generations
-      // mid-stream once the current-decade section was expanded. 55s/20s leaves
-      // 15s margin under the 90s ceiling for the KV check, retry, and SSE close.
-      attemptTimeoutMs: 55_000,
-      retryTimeoutMs: 20_000,
+      // This route declares maxDuration=180 specifically because its output is
+      // long, and routeMaxDurationMs matches that so hasTimeForAnotherAttempt
+      // (lib/sseWriter.ts) checks the truncation-retry/validator budget against
+      // the real ceiling. attemptTimeoutMs/retryTimeoutMs now default to values
+      // sized for deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts)
+      // — no need to override them here.
+      routeMaxDurationMs: 180_000,
       rateLimit: { ip: clientIp(request), keyPrefix: "decades" },
       temperature: 0.6,
       system: SYSTEM,
