@@ -2,6 +2,7 @@ import type { Reference } from "./rag";
 import { createHash } from "crypto";
 import { withDeadline, withTwoPhaseDeadline, AttemptTimeoutError } from "./aiRetry";
 import { refundRateLimit } from "./rateLimit";
+import { REVIEW_MODEL } from "./validateReading";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
 export type ModelTier = "standard" | "fast";
@@ -86,7 +87,7 @@ export interface SSEWriterOptions {
    *  those shapes.
    *  Contract: return `null` if the validator itself is unavailable/errored, OR
    *  if it fail-opened internally without genuinely reviewing the content (e.g.
-   *  lib/validateReading.ts's `deepseekJsonReview` returning `reviewed: false`
+   *  lib/validateReading.ts's `jsonReview` returning `reviewed: false`
    *  on a timeout/API error/bad JSON/missing key — that case returns
    *  `{pass:true,...}`, which the route closure must translate to `null` here,
    *  not forward as a real pass) — fail-open, ship the reading exactly as if
@@ -593,7 +594,7 @@ export async function streamWithRefs(
     // synchronous gate existed.
     let validated: boolean | undefined;
     if (opts.validate) {
-      // The validator (deepseekJsonReview, lib/validateReading.ts) has its own
+      // The validator (jsonReview, lib/validateReading.ts) has its own
       // ~20s internal deadline that hasTimeForAnotherAttempt's default sizing
       // (a full generation attempt) doesn't account for — without this check, a
       // validate call fired after an already-slow generation could still get
@@ -604,7 +605,7 @@ export async function streamWithRefs(
       // timeout/error — just decided before spending the call instead of after.
       const VALIDATOR_TIMEOUT_MS = 20_000; // matches lib/validateReading.ts's withDeadline(..., 20_000)
       if (!hasTimeForAnotherAttempt(requestStartMs, opts, VALIDATOR_TIMEOUT_MS)) {
-        console.log(JSON.stringify({ event: "reading_validation", skipped: "no_time_budget" }));
+        console.log(JSON.stringify({ event: "reading_validation", skipped: "no_time_budget", reviewModel: REVIEW_MODEL }));
       } else {
         const verdict = await opts.validate(fullText);
         if (verdict === null) {
@@ -616,7 +617,7 @@ export async function streamWithRefs(
         } else if (verdict.pass) {
           validated = true;
         } else {
-          console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length }));
+          console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length, reviewModel: REVIEW_MODEL }));
         }
       }
     }

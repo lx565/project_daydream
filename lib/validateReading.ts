@@ -1,11 +1,10 @@
 // Cross-model validation for AI readings.
 // (A) cheap deterministic structural check + (A2) deterministic 格局-fabrication
-// check + (B) a DeepSeek v4-pro logic review that cross-checks the
+// check + (B) a Gemini 2.5 Flash logic review that cross-checks the
 // (DeepSeek-generated) reading against the authoritative, iztro-computed chart
-// facts. Deliberately a different DeepSeek model from whichever one did the
-// synthesis (see DEEPSEEK_MODEL in sseWriter.ts) for genuine cross-model
-// validation value — hardcoded, not read from DEEPSEEK_MODEL. Fail-open: if
-// the reviewer errors, we don't block.
+// facts. Deliberately a different model family from the DeepSeek writer so the
+// check is genuinely independent — hardcoded, never derived from the
+// generation model config. Fail-open: if the reviewer errors, we don't block.
 
 import type { ZiweiResult } from "./ziwei";
 import { detectMingge } from "./detectMingge";
@@ -15,7 +14,7 @@ import { withDeadline } from "./aiRetry";
 export interface ValidationResult {
   pass: boolean;
   issues: string[];
-  reviewed: boolean; // false if the DeepSeek reviewer was skipped (e.g. API error)
+  reviewed: boolean; // false if the Gemini reviewer was skipped (e.g. API error)
   // true when `pass` was decided by a deterministic (non-AI) check — e.g.
   // structuralCheck — so it's a genuine verdict even though reviewed is false.
   // Without this, a route can't tell that apart from the reviewer failing open
@@ -38,7 +37,7 @@ export function toClientValidation(result: ValidationResult): { pass: boolean | 
   };
 }
 
-const REVIEW_MODEL = "deepseek-v4-pro";
+export const REVIEW_MODEL = "gemini-2.5-flash";
 
 const pName = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
 
@@ -101,29 +100,27 @@ function minggeFabricationCheck(reading: string, ziwei: ZiweiResult): string[] {
   return issues.slice(0, 5);
 }
 
-/** Shared: run a complete prompt through DeepSeek v4-pro, parse {pass, issues}. Fail-open. */
-export async function deepseekJsonReview(prompt: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
-  const key = process.env.DEEPSEEK_API_KEY;
+/** Shared: run a complete prompt through the Gemini reviewer, parse {pass, issues}. Fail-open. */
+export async function jsonReview(prompt: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
+  const key = process.env.GOOGLE_API_KEY;
   if (!key) return { pass: true, issues: [], reviewed: false };
   try {
-    const OpenAI = (await import("openai")).default;
-    const client = new OpenAI({ apiKey: key, baseURL: "https://api.deepseek.com" });
-    // Called from three maxDuration=30 routes (validate, validate-bazi,
-    // validate-flowyear) — bounded well under that so a genuinely slow
-    // response still fails open here instead of relying solely on Vercel's
-    // hard platform-level kill. See aiRetry.ts / callAI.ts for the pattern.
-    const res = await withDeadline(client.chat.completions.create({
-      model: REVIEW_MODEL,
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(key);
+    // thinkingBudget:0 — a utility call, not a reading; keeps latency well
+    // inside the 20s deadline. Not in the SDK's GenerationConfig type yet, so
+    // built as a loose record (same pattern as callAI.ts).
+    const generationConfig: Record<string, unknown> = {
       temperature: 0,
-      // Suppress v4-pro's thinking phase (observed 55+s, see sseWriter.ts
-      // MODEL_DEFAULTS) — this is a 30s-budget utility call, not a reading.
-      // Cast because "none" isn't in OpenAI SDK's reasoning_effort union;
-      // same pattern as callAI.ts.
-      reasoning_effort: "none" as "low",
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content: prompt }],
-    }), 20_000);
-    const parsed = JSON.parse(res.choices[0]?.message?.content ?? "{}") as { pass?: boolean; issues?: string[] };
+      responseMimeType: "application/json",
+      maxOutputTokens: 1024,
+      thinkingConfig: { thinkingBudget: 0 },
+    };
+    const model = genAI.getGenerativeModel({ model: REVIEW_MODEL, generationConfig });
+    // Called from maxDuration=30 routes and the sseWriter gate — bounded well
+    // under that so a slow response fails open here. See aiRetry.ts.
+    const res = await withDeadline(model.generateContent(prompt), 20_000);
+    const parsed = JSON.parse(res.response.text() || "{}") as { pass?: boolean; issues?: string[] };
     return {
       pass: parsed.pass !== false,
       issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
@@ -133,13 +130,13 @@ export async function deepseekJsonReview(prompt: string): Promise<{ pass: boolea
       reviewed: typeof parsed.pass === "boolean",
     };
   } catch (err) {
-    console.warn("[review] deepseek review skipped:", (err as Error).message);
+    console.warn("[review] review skipped:", JSON.stringify({ reviewModel: REVIEW_MODEL, error: (err as Error).message }));
     return { pass: true, issues: [], reviewed: false }; // fail-open
   }
 }
 
-/** DeepSeek v4-pro cross-checks the reading against the authoritative 紫微 facts. */
-async function deepseekLogicReview(reading: string, facts: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
+/** Gemini cross-checks the reading against the authoritative 紫微 facts. */
+async function logicReview(reading: string, facts: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
   const prompt = `你是紫微斗數解讀的邏輯校驗員。下面【權威命盤事實】由確定性演算法（iztro）計算得出，是不可更改的事實；【待校驗解讀】由另一個AI生成。
 
 請只核查解讀是否與權威事實矛盾，重點：
@@ -160,7 +157,7 @@ ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return deepseekJsonReview(prompt);
+  return jsonReview(prompt);
 }
 
 export async function validateReading(reading: string, ziwei: ZiweiResult): Promise<ValidationResult> {
@@ -173,6 +170,6 @@ export async function validateReading(reading: string, ziwei: ZiweiResult): Prom
   if (fabricated.length) return { pass: false, issues: fabricated, reviewed: true };
 
   const facts = buildChartFacts(ziwei);
-  const review = await deepseekLogicReview(reading, facts);
+  const review = await logicReview(reading, facts);
   return { pass: review.pass, issues: review.issues, reviewed: review.reviewed };
 }
