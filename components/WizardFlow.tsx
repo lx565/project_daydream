@@ -447,6 +447,8 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   };
 
   const ck = (tab: string) => sessionId ? `${sessionId}_${tab}` : undefined;
+  // Year-dependent readings (age / current year in the prompt) must not be served from last year's local cache.
+  const ckY = (tab: string) => sessionId ? `${sessionId}_${tab}_${new Date().getFullYear()}` : undefined;
 
   // Free cross-domain synthesis (紫微 + 八字) — the new top of the 總覽 tab.
   const synthesis     = useSSEStream("/api/reading/synthesis",     ck("synthesis"), { validate: true });
@@ -455,11 +457,11 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   // The deep multi-school 紫微 reading — now a PAID deep-dive below the free teaser.
   const overview      = useSSEStream("/api/reading/overview",      ck("overview"), { validate: true });
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
-  const decades       = useSSEStream("/api/reading/decades",       ck("decades"), { validate: true });
-  const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"), { validate: true });
+  const decades       = useSSEStream("/api/reading/decades",       ckY("decades"), { validate: true });
+  const cautions      = useSSEStream("/api/reading/cautions",      ckY("cautions"), { validate: true });
   // Single scan across the next 10 flow years — AI picks 2–4 genuinely notable ones
   // and writes real critique only for those (replaces the old, removed, one-call-per-year design).
-  const flowYearHighlights = useSSEStream("/api/reading/flowyear", ck("flowyear"));
+  const flowYearHighlights = useSSEStream("/api/reading/flowyear", ckY("flowyear"));
   // 八字-only readings validate against the 八字 checker (validate-bazi), not the
   // 紫微 one — they were previously always posted to the default /api/reading/validate,
   // which expects `ziwei` and runs 紫微-specific checks irrelevant to a 八字 reading.
