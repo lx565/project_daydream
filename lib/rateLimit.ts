@@ -17,6 +17,7 @@ const memStore = new Map<string, RateLimitEntry>();
 export interface RateLimitConfig {
   limit: number; // max calls per day per IP
   keyPrefix?: string; // namespace for per-route limits
+  windowSec?: number; // counting window; defaults to "until UTC midnight"
 }
 
 export function clientIp(request: Request): string {
@@ -27,7 +28,8 @@ export function clientIp(request: Request): string {
   );
 }
 
-function rateLimitKey(keyPrefix: string, ip: string): string {
+function rateLimitKey(keyPrefix: string, ip: string, windowSec?: number): string {
+  if (windowSec) return `ratelimit:${keyPrefix}:${ip}:w${windowSec}:${Math.floor(Date.now() / (windowSec * 1000))}`;
   const day = new Date().toISOString().slice(0, 10); // yyyy-mm-dd (UTC)
   return `ratelimit:${keyPrefix}:${ip}:${day}`;
 }
@@ -39,13 +41,13 @@ function secondsUntilUtcMidnight(): number {
   return Math.max(1, Math.ceil((midnight.getTime() - Date.now()) / 1000));
 }
 
-function checkInMemory(key: string, limit: number): { allowed: boolean; remaining: number } {
+function checkInMemory(key: string, limit: number, windowSec?: number): { allowed: boolean; remaining: number } {
   const now = Date.now();
   const entry = memStore.get(key);
   if (!entry || now >= entry.resetAt) {
     const midnight = new Date();
     midnight.setUTCHours(24, 0, 0, 0);
-    memStore.set(key, { count: 1, resetAt: midnight.getTime() });
+    memStore.set(key, { count: 1, resetAt: windowSec ? now + windowSec * 1000 : midnight.getTime() });
     return { allowed: true, remaining: limit - 1 };
   }
   if (entry.count >= limit) return { allowed: false, remaining: 0 };
@@ -58,20 +60,20 @@ export async function checkRateLimit(
   config: RateLimitConfig
 ): Promise<{ allowed: boolean; remaining: number }> {
   const ip = clientIp(request);
-  const key = rateLimitKey(config.keyPrefix ?? "default", ip);
+  const key = rateLimitKey(config.keyPrefix ?? "default", ip, config.windowSec);
 
   try {
     const { kv } = await import("@vercel/kv");
     const count = await kv.incr(key);
     // First hit in this window — set the key to expire at UTC midnight.
     if (count === 1) {
-      await kv.expire(key, secondsUntilUtcMidnight());
+      await kv.expire(key, config.windowSec ?? secondsUntilUtcMidnight());
     }
     if (count > config.limit) return { allowed: false, remaining: 0 };
     return { allowed: true, remaining: config.limit - count };
   } catch {
     // KV not configured / transient error → fall back to per-instance memory.
-    return checkInMemory(`${config.keyPrefix ?? "default"}::${ip}`, config.limit);
+    return checkInMemory(`${config.keyPrefix ?? "default"}::${ip}`, config.limit, config.windowSec);
   }
 }
 
@@ -92,6 +94,21 @@ export async function refundRateLimit(ip: string, keyPrefix: string): Promise<vo
     const memKey = `${keyPrefix}::${ip}`;
     const entry = memStore.get(memKey);
     if (entry && entry.count > 0) entry.count -= 1;
+  }
+}
+
+// Global per-day counter (all callers combined). Returns false once `cap` is
+// exceeded. Fails open when KV is unavailable (the per-IP limits still apply).
+export async function incrDailyCap(name: string, cap: number): Promise<boolean> {
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `dailycap:${name}:${day}`;
+  try {
+    const { kv } = await import("@vercel/kv");
+    const count = await kv.incr(key);
+    if (count === 1) await kv.expire(key, secondsUntilUtcMidnight());
+    return count <= cap;
+  } catch {
+    return true;
   }
 }
 
