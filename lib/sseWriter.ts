@@ -1,7 +1,7 @@
 import type { Reference } from "./rag";
 import { createHash } from "crypto";
 import { withDeadline, withTwoPhaseDeadline, AttemptTimeoutError } from "./aiRetry";
-import { refundRateLimit } from "./rateLimit";
+import { refundRateLimit, shouldRefundRateLimit } from "./rateLimit";
 import { REVIEW_MODEL } from "./validateReading";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
@@ -397,6 +397,10 @@ export async function streamWithRefs(
   // time against the route's maxDuration, not just time spent in the provider call.
   const requestStartMs = Date.now();
 
+  // Monotonic (never reset by the truncation retry): once the provider has
+  // streamed any content, tokens were billed and the rate-limit unit is spent.
+  let providerBilled = false;
+
   try {
     // ── Check server-side cache ─────────────────────────────────────────────
     const cacheKey = opts.noCache ? null : makeCacheKey(opts);
@@ -440,6 +444,7 @@ export async function streamWithRefs(
     let sentAnyContent = false;
     const runAttempt = (attemptGen: number, tierOverride?: ModelTier, maxTokensOverride?: number, signal?: AbortSignal) => {
       const guardedWrite = async (obj: object) => {
+        if ("text" in obj && typeof (obj as { text: string }).text === "string") providerBilled = true;
         if (attemptGen !== gen) return;
         if ("text" in obj && typeof (obj as { text: string }).text === "string") {
           fullText += (obj as { text: string }).text;
@@ -610,7 +615,7 @@ export async function streamWithRefs(
     // UI/retry button takes over. Never send _done/[DONE] and never cache this text.
     const failIfIncomplete = async (): Promise<boolean> => {
       if (result.finishStatus === "complete") return false;
-      if (opts.rateLimit) {
+      if (opts.rateLimit && shouldRefundRateLimit({ cacheHit: false, providerBilled })) {
         refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
       }
       const message = result.finishStatus === "truncated"
@@ -683,7 +688,7 @@ export async function streamWithRefs(
     console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);
     // The generation never produced a usable reading — refund the rate-limit unit
     // so a slow/failed provider night doesn't burn the user's daily quota on retries.
-    if (opts.rateLimit) {
+    if (opts.rateLimit && shouldRefundRateLimit({ cacheHit: false, providerBilled })) {
       refundRateLimit(opts.rateLimit.ip, opts.rateLimit.keyPrefix).catch(() => {});
     }
     // Reached when the primary attempt AND the fast-tier fallback both

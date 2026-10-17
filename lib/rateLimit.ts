@@ -84,6 +84,14 @@ export async function checkRateLimit(
 // daily quota on retries that produced no reading, locking them out ("今日解讀次數
 // 已達上限"). Floored at 0 so a double-refund can't mint free quota. Best-effort:
 // a refund failure just means the (already-served or failed) request cost a unit.
+// Refund policy: only when the provider was never billed for content (cache hit,
+// or a failure before any tokens streamed). A truncated/blocked/timed-out
+// generation that already produced content is NOT refunded — otherwise forcing
+// a cut-off (tiny token limit, adversarial input) would give unlimited AI calls.
+export function shouldRefundRateLimit(ctx: { cacheHit: boolean; providerBilled: boolean }): boolean {
+  return ctx.cacheHit || !ctx.providerBilled;
+}
+
 export async function refundRateLimit(ip: string, keyPrefix: string): Promise<void> {
   const key = rateLimitKey(keyPrefix, ip);
   try {
