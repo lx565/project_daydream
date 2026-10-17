@@ -171,7 +171,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
   const envStd  = process.env[`${PROVIDER.toUpperCase()}_MODEL`];
   const envFast = process.env[`${PROVIDER.toUpperCase()}_MODEL_FAST`];
   const defaults = MODEL_DEFAULTS[PROVIDER];
-  if (tier === "fast") return envFast ?? envStd ?? defaults.fast;
+  if (tier === "fast") return envFast ?? defaults.fast; // never inherits the standard-tier override
   return envStd ?? defaults.standard;
 }
 

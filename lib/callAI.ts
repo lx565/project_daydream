@@ -29,7 +29,7 @@ interface CallAIResult {
   truncated: boolean;
 }
 
-async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
+async function callOnce(opts: CallAIOpts, signal?: AbortSignal): Promise<CallAIResult> {
   const { system, userMessage, maxTokens = 1500, temperature = 0.3, jsonMode = false, reasoningEffort = "none" } = opts;
 
   if (PROVIDER === "deepseek") {
@@ -41,8 +41,9 @@ async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
     const res = await client.chat.completions.create({
       // Match sseWriter's model policy: flash primary (v4-pro's thinking phase was
       // blowing past callAI's deadline → 500s on flowyears-scores), overridable via
-      // DEEPSEEK_MODEL. reasoning_effort cast because "none" isn't in OpenAI's union.
-      model: process.env.DEEPSEEK_MODEL ?? "deepseek-flash",
+      // DEEPSEEK_MODEL_FAST (deliberately NOT DEEPSEEK_MODEL, which sets the slow
+      // standard reading tier). reasoning_effort cast because "none" isn't in OpenAI's union.
+      model: process.env.DEEPSEEK_MODEL_FAST ?? "deepseek-flash",
       max_tokens: maxTokens,
       temperature,
       reasoning_effort: reasoningEffort as "low",
@@ -51,7 +52,7 @@ async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
         { role: "system", content: system },
         { role: "user", content: userMessage },
       ],
-    });
+    }, signal ? { signal } : undefined);
     const text = res.choices[0]?.message?.content ?? "";
     const finishReason = res.choices[0]?.finish_reason;
     return { text, truncated: finishReason !== "stop" };
@@ -65,7 +66,7 @@ async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
       max_tokens: maxTokens,
       system,
       messages: [{ role: "user", content: userMessage }],
-    });
+    }, signal ? { signal } : undefined);
     const block = msg.content[0];
     const text = block.type === "text" ? block.text : "";
     const truncated = msg.stop_reason !== "end_turn" && msg.stop_reason !== "stop_sequence";
@@ -82,7 +83,7 @@ async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
     systemInstruction: system,
     generationConfig,
   });
-  const result = await model.generateContent(userMessage);
+  const result = await model.generateContent(userMessage, signal ? { signal } : undefined);
   const text = result.response.text();
   const finishReason = result.response.candidates?.[0]?.finishReason;
   return { text, truncated: finishReason !== FinishReason.STOP };
@@ -95,14 +96,16 @@ async function callOnce(opts: CallAIOpts): Promise<CallAIResult> {
 // to the streaming path) for the full rationale.
 export async function callAI(opts: CallAIOpts): Promise<CallAIResult> {
   try {
-    return await withDeadline(callOnce(opts), 35_000);
+    const c1 = new AbortController();
+    return await withDeadline(callOnce(opts, c1.signal), 35_000, () => c1.abort());
   } catch (e) {
     if (!(e instanceof AttemptTimeoutError)) {
       console.error("[callAI]", PROVIDER, (e as Error)?.message ?? e);
       throw e;
     }
     try {
-      return await withDeadline(callOnce(opts), 15_000);
+      const c2 = new AbortController();
+      return await withDeadline(callOnce(opts, c2.signal), 15_000, () => c2.abort());
     } catch (e2) {
       console.error("[callAI] retry also failed:", PROVIDER, (e2 as Error)?.message ?? e2);
       throw e2;
