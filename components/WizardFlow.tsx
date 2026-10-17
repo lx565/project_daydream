@@ -396,6 +396,7 @@ interface WizardFlowProps {
   gender: string;
   birthYear: number;
   sessionId?: string;
+  legacySessionId?: string;
   name?: string;
   dateLabel?: string;
   timeLabel?: string;
@@ -418,7 +419,7 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
   return null;
 }
 
-export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
+export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, legacySessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   // null = not yet arrived; "" = arrived but empty/errored; string = content
   const [baziDecadesText, setBaziDecadesText] = useState<string | null>(null);
@@ -426,7 +427,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
-  const paywall = usePaywall(sessionId);
+  const paywall = usePaywall(sessionId, legacySessionId);
   const gated = paywall.enabled && !paywall.unlocked;
 
   // Detect Stripe return — set once on mount, stable for the component's lifetime
@@ -884,6 +885,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 initialContext={`你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`}
                 backgroundReadings={backgroundReadings}
                 chartId={sessionId ?? ""}
+                legacyChartId={legacySessionId}
                 maxQuestions={10}
               />
             </div>

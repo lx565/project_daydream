@@ -57,7 +57,9 @@ export interface PaywallState {
   loading: boolean;
 }
 
-export function usePaywall(chartId?: string): PaywallState {
+/** `legacyChartId`: pre-zero-padding ID of the same chart (see lib/chartId.ts); an unlock
+ *  stored under it counts, so purchases made before the ID format change keep working. */
+export function usePaywall(chartId?: string, legacyChartId?: string): PaywallState {
   const enabled = PAYWALL_ENABLED && !(chartId && (PERMANENTLY_FREE_TYPES.has(chartType(chartId)) || DISABLED_TYPES.has(chartType(chartId))));
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(enabled);
@@ -70,14 +72,18 @@ export function usePaywall(chartId?: string): PaywallState {
     }
     let cancelled = false;
 
-    async function check(): Promise<boolean> {
+    async function checkOne(id: string): Promise<boolean> {
       try {
-        const res = await fetch(`/api/unlock?chartId=${encodeURIComponent(chartId!)}`);
+        const res = await fetch(`/api/unlock?chartId=${encodeURIComponent(id)}`);
         const data = await res.json();
         return data.unlocked === true;
       } catch {
         return false;
       }
+    }
+    async function check(): Promise<boolean> {
+      if (await checkOne(chartId!)) return true;
+      return legacyChartId ? checkOne(legacyChartId) : false;
     }
 
     async function run() {
@@ -116,7 +122,7 @@ export function usePaywall(chartId?: string): PaywallState {
 
     run();
     return () => { cancelled = true; };
-  }, [chartId]);
+  }, [chartId, legacyChartId]);
 
   return { enabled, unlocked, loading };
 }

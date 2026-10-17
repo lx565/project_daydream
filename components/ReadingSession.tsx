@@ -14,6 +14,7 @@ interface Props {
   gender: string;
   birthYear: number;
   sessionId?: string;
+  legacySessionId?: string;
   name?: string;
   dateLabel?: string;
   timeLabel?: string;
@@ -21,7 +22,7 @@ interface Props {
 
 export default function ReadingSession(props: Props) {
   const [exportData, setExportData] = useState<ReadingEmailData | null>(null);
-  const { enabled, unlocked } = usePaywall(props.sessionId);
+  const { enabled, unlocked } = usePaywall(props.sessionId, props.legacySessionId);
   // Show export only when paywall is disabled (free mode) OR user has paid
   const exportAllowed = !enabled || unlocked;
 
@@ -48,6 +49,7 @@ export default function ReadingSession(props: Props) {
         gender={props.gender}
         birthYear={props.birthYear}
         sessionId={props.sessionId}
+        legacySessionId={props.legacySessionId}
         name={props.name}
         dateLabel={props.dateLabel}
         timeLabel={props.timeLabel}
