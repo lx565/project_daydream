@@ -298,6 +298,19 @@ export async function invalidateReadingCache(cacheKey: string, expectedText: str
 
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
+// Permanent daily validation tally (Vercel logs only keep ~30 min). Fire-and-forget.
+function tallyValidation(outcome: "pass" | "fail" | "unreviewed", route?: string): void {
+  (async () => {
+    const { kv } = await import("@vercel/kv");
+    const key = `stats:validation:${new Date().toISOString().slice(0, 10)}`;
+    const p = kv.pipeline();
+    p.hincrby(key, outcome, 1);
+    if (route) p.hincrby(key, `${route}:${outcome}`, 1);
+    p.expire(key, 90 * 24 * 3600);
+    await p.exec();
+  })().catch(() => {});
+}
+
 export function makeSSEResponse(
   handler: (writer: WritableStreamDefaultWriter<Uint8Array>, encoder: TextEncoder) => Promise<void>
 ): Response {
@@ -637,6 +650,7 @@ export async function streamWithRefs(
       const VALIDATOR_TIMEOUT_MS = 20_000; // matches lib/validateReading.ts's withDeadline(..., 20_000)
       if (!hasTimeForAnotherAttempt(requestStartMs, opts, VALIDATOR_TIMEOUT_MS)) {
         console.log(JSON.stringify({ event: "reading_validation", skipped: "no_time_budget", reviewModel: REVIEW_MODEL }));
+        tallyValidation("unreviewed", opts.rateLimit?.keyPrefix);
       } else {
         const verdict = await opts.validate(fullText);
         if (verdict === null) {
@@ -645,10 +659,13 @@ export async function streamWithRefs(
           // had never been passed (same documented policy as the pre-existing
           // client-side async validator). `validated` stays undefined: we don't
           // know it passed, so we don't claim it did.
+          tallyValidation("unreviewed", opts.rateLimit?.keyPrefix);
         } else if (verdict.pass) {
           validated = true;
+          tallyValidation("pass", opts.rateLimit?.keyPrefix);
         } else {
           console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length, reviewModel: REVIEW_MODEL }));
+          tallyValidation("fail", opts.rateLimit?.keyPrefix);
         }
       }
     }
