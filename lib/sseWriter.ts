@@ -2,6 +2,7 @@ import type { Reference } from "./rag";
 import { createHash } from "crypto";
 import { withDeadline, withTwoPhaseDeadline, AttemptTimeoutError } from "./aiRetry";
 import { refundRateLimit } from "./rateLimit";
+import { after } from "next/server";
 import { REVIEW_MODEL } from "./validateReading";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
@@ -640,6 +641,7 @@ export async function streamWithRefs(
     // safety net for a failed/skipped validation, exactly as it was before this
     // synchronous gate existed.
     let validated: boolean | undefined;
+    let failedIssues: string[] | undefined;
     if (opts.validate) {
       // The validator (jsonReview, lib/validateReading.ts) has its own
       // ~20s internal deadline that hasTimeForAnotherAttempt's default sizing
@@ -669,18 +671,27 @@ export async function streamWithRefs(
         } else {
           console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length, reviewModel: REVIEW_MODEL }));
           tallyValidation("fail", opts.rateLimit?.keyPrefix);
+          failedIssues = verdict.issues;
         }
       }
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
     if (validated) await safeWrite({ _validated: true });
+    // Additive event (web + iOS parsers ignore unknown keys): hands the genuine
+    // server-side verdict to the web client so it goes straight to the revision
+    // call instead of re-running the identical check.
+    if (failedIssues?.length) await safeWrite({ _validationIssues: failedIssues });
     await safeWrite({ _done: true });
     try { await writer.write(encoder.encode("data: [DONE]\n\n")); } catch {}
 
-    // ── Save to cache (non-blocking) ────────────────────────────────────────
-    if (fullText && cacheKey) {
-      kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [], ...(validated ? { validated: true } : {}) }).catch(() => {});
+    // ── Save to cache ───────────────────────────────────────────────────────
+    // A reading that genuinely failed validation is never cached — it would be
+    // replayed to every visitor for 30 days. Written via after() so the
+    // serverless instance isn't frozen before the KV write lands.
+    if (fullText && cacheKey && !failedIssues) {
+      const write = kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [], ...(validated ? { validated: true } : {}) });
+      try { after(write); } catch { await write; }
     }
   } catch (err) {
     console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);
