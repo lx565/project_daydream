@@ -115,6 +115,8 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   const [validation, setValidation] = useState<ValidationStatus>(cached?.validated ? "pass" : "idle");
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
+  const readingUrlRef = useRef(url);
+  readingUrlRef.current = url;
   const abortRef = useRef<AbortController | null>(null);
   const lastBodyRef = useRef<object | null>(null);
   const accText = useRef("");
@@ -159,6 +161,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   // Cross-model validation after a reading completes.
   const runValidation = useCallback(async (reading: string, body: object) => {
     const url = opts?.validateUrl ?? "/api/reading/validate";
+    const url0 = readingUrlRef.current;
     const isBaziValidator = url.includes("validate-bazi");
     const subject = isBaziValidator
       ? (body as { bazi?: unknown }).bazi
@@ -173,7 +176,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         body: JSON.stringify(
           isBaziValidator
             ? { reading, bazi: subject, cacheKey: serverCacheKeyRef.current }
-            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current }
+            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current, natalOnly: /\/(decades|niandu)(\/|$)/.test(url0) }
         ),
       });
       // A non-2xx response (e.g. a 429 rate-limit `{error}` body) has no `pass`
