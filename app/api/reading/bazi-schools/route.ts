@@ -6,6 +6,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { validateBaziReading } from "@/lib/validateBazi";
 import type { BaziResult } from "@/lib/bazi";
+import { inputGuard } from "@/lib/inputLimits";
 
 // B3 · 八字 tab — 各派視角 (祿命派 + 盲派)
 // Beside-mode: B1 already covers 旺衰+格局; this adds two non-overlapping lenses.
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { bazi, gender } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!bazi || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   // RAG: pull 祿命法 sources (納音/神煞) and 盲派 sources (直斷/意象). strict:true so

@@ -6,6 +6,7 @@ import { getFlowYears } from "@/lib/flowYears";
 import { callAI } from "@/lib/callAI";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const YEARS_AHEAD = 10;
 
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
   const { ziwei, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const currentYear = body.currentYear ?? new Date().getFullYear();

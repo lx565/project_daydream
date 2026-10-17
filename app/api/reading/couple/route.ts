@@ -11,6 +11,7 @@ import { detectMingge } from "@/lib/detectMingge";
 import { getFlowYears } from "@/lib/flowYears";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通紫微斗數與八字子平的資深合盤命理師。本次合盤的關係類型會在使用者資訊中給出，請始終扣住該關係類型的側重來解讀（情侶談感情、親子談教養、朋友談默契，不要套同一模板）。
 
@@ -198,6 +199,7 @@ export async function POST(request: NextRequest) {
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
 
   const cfg = getRelationshipConfig(relationshipType);
   const score = calcCoupleScoreV2(baziA, ziweiA, baziB, ziweiB, cfg.key);

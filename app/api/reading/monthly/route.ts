@@ -7,6 +7,7 @@ import { callAI } from "@/lib/callAI";
 import { SAFETY_GUARDRAIL, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowMonths, type FlowMonth } from "@/lib/flowMonths";
+import { inputGuard } from "@/lib/inputLimits";
 
 const MONTHS_AHEAD = 12;
 const BATCH_SIZE = 4; // 3 calls of 4 months each — avoids the truncation risk of one 12-month call
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
   let body: { ziwei: ZiweiResult; name?: string; batch: 1 | 2 | 3 };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
   const { ziwei, name, batch } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate) return Response.json({ error: "missing_fields" }, { status: 400 });
   if (![1, 2, 3].includes(batch)) return Response.json({ error: "invalid_batch" }, { status: 400 });
 

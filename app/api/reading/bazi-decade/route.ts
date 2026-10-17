@@ -6,6 +6,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 import type { BaziResult, BaziDecade } from "@/lib/bazi";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通子平八字大運推演的命理師，為命主解讀一段大運——既有傳統典籍依據，又能給出現代生活視角的實用指引。使用者會提供這段大運目前是「已過」「當前」或「未來」，請據此調整語氣：已過大運用回顧視角談其已發生的影響與可借鑑之處；當前大運聚焦眼下可把握與因應之道；未來大運聚焦可提前準備的方向，切勿假裝其已經發生或正在發生。
 
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { bazi, decade, name, gender } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!bazi?.dayMaster || !decade?.ganZhi) {
     return Response.json({ error: "missing_fields" }, { status: 400 });
   }

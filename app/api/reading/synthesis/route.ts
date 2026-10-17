@@ -9,6 +9,7 @@ import { buildChartFacts, validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import type { Reference } from "@/lib/rag";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是一位同時精通紫微斗數與八字命理的命理師，像一位真誠、閱歷豐富的兄長為人說命——既講真話，也有溫度。你的任務是把【紫微】與【八字】兩套獨立的命理體系融會貫通，給出一份跨體系的綜合總覽。
 
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, bazi, gender, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei || !bazi || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   // ── 紫微 facts ───────────────────────────────────────────────────────────────

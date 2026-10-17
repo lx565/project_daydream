@@ -6,6 +6,7 @@ import { getFlowMonths, flowMonthFactsFrom, type FlowMonth } from "@/lib/flowMon
 import { callAI } from "@/lib/callAI";
 import { SAFETY_GUARDRAIL, ACCESSIBLE_LANGUAGE_INSTRUCTION } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const MONTHS_AHEAD = 12;
 
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
   const { ziwei, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const flows = await getFlowMonths(ziwei.birth, MONTHS_AHEAD);

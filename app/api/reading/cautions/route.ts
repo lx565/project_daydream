@@ -9,6 +9,7 @@ import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowYears } from "@/lib/flowYears";
 import { buildStarPalaceMap, pickRiskYears } from "@/lib/flowRisk";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是紫微斗數命理師，像一位關心你的兄長，把命盤裡需要留意的地方如實說清楚。煞星、化忌、刑衝會照之處該提醒就提醒、不迴避不淡化——但出發點是關心，語氣溫和、就事論事，不誇大也不嚇人，且每點風險都給出可行的應對，讓人安心而非焦慮。
 
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { ziwei, birthYear, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate || !birthYear) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const currentYear = new Date().getFullYear();

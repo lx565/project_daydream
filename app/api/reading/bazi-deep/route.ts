@@ -6,6 +6,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { validateBaziReading } from "@/lib/validateBazi";
 import type { BaziResult } from "@/lib/bazi";
+import { inputGuard } from "@/lib/inputLimits";
 
 // Deep 八字 reading (B1 · 八字 tab) — distinct from the lighter 八字綜合 summary
 // (O3) on the 總覽 tab. Same engine facts, but more sections and depth.
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { bazi, gender } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!bazi || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const tenGods = [bazi.year.stem, bazi.month.stem, bazi.hour.stem].map((s) => tenGod(bazi.dayMaster, s)).filter(Boolean);

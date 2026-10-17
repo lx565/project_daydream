@@ -14,6 +14,7 @@ import { detectMingge } from "@/lib/detectMingge";
 import { yearBranchAffinity, dayBranchAffinity, dayStemCombination } from "@/lib/bazi-affinity";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const BRANCH_ZODIAC: Record<string, string> = {
   子:"鼠",丑:"牛",寅:"虎",卯:"兔",辰:"龍",巳:"蛇",午:"馬",未:"羊",申:"猴",酉:"雞",戌:"狗",亥:"豬",
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   const cfg = getRelationshipConfig(relationshipType);
   const score = calcCoupleScoreV2(baziA, ziweiA, baziB, ziweiB, cfg.key);
 

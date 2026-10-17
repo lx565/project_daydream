@@ -5,6 +5,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { validateFlowYearReading } from "@/lib/validateFlowYear";
 import { toClientValidation } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "validate-flowyear" })).allowed) return rateLimitResponse();
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { reading, ziwei, year } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!reading || !ziwei?.birth?.solarDate || !year) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const result = await validateFlowYearReading(reading, ziwei, year);

@@ -7,6 +7,7 @@ import { getSharedRetrieval } from "@/lib/rag";
 import type { Reference } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是一位精通紫微斗數的命理師，融會三合派（宮位星曜格局）與飛星派（四化飛星脈絡）兩種視角。這是"總覽"頁的紫薇綜合結論——綜合兩派所見，讓使用者先知道"這是什麼命"。
 
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, gender, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const soulPalace = ziwei.palaces.find((p) => p.isSoulPalace);

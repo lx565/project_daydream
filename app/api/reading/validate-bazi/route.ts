@@ -6,6 +6,7 @@ import { validateBaziReading } from "@/lib/validateBazi";
 import { toClientValidation } from "@/lib/validateReading";
 import { invalidateReadingCache } from "@/lib/sseWriter";
 import type { BaziResult } from "@/lib/bazi";
+import { inputGuard } from "@/lib/inputLimits";
 
 export async function POST(request: NextRequest) {
   if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "validate-bazi" })).allowed) return rateLimitResponse();
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { reading, bazi } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!reading || !bazi?.day?.stem) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const result = await validateBaziReading(reading, bazi);

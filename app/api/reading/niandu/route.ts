@@ -8,6 +8,7 @@ import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import { getNianduYear, nianduFactsFrom } from "@/lib/niandu";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是紫微斗數命理師，像一位關心你的朋友，把命主今年真正值得留意的幾件事說清楚——不是「本週水逆」那種通用文案，每一點都要能回推到命盤上一個具體的星曜落點。
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { ziwei, bazi, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate || !bazi?.summary) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const birthYear = parseInt(ziwei.birth.solarDate.slice(0, 4), 10);

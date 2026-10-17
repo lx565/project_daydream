@@ -5,6 +5,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { inputGuard, chatInputGuard } from "@/lib/inputLimits";
 
 const SYSTEM_BASE = `你是精通紫微斗數的命理師，像一位穩重、溫暖、親切的老師，就使用者的命盤為他耐心解惑。
 回答簡短（約120-180字），直接針對問題，據盤而論、利弊並陳，給出實用、可操作的提醒或建議；不空泛安慰、不恐嚇、不做極端斷言。
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, messages, remainingQuestions, backgroundReadings, name } = body;
+  { const bad = inputGuard(body) ?? chatInputGuard(messages, backgroundReadings); if (bad) return bad; }
   if (!ziwei || !messages || messages.length === 0) {
     return Response.json({ error: "missing_fields" }, { status: 400 });
   }
