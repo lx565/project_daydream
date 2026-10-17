@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const SHEETS_URL =
-  process.env.FEEDBACK_SCRIPT_URL_OVERRIDE ??
   "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 const MAX_DESCRIPTION = 2000;
@@ -45,6 +44,7 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(payload),
       redirect: "follow",
+      signal: AbortSignal.timeout(8000),
     });
     const text = await res.text();
     let confirmed = false;

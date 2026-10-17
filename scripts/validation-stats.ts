@@ -1,6 +1,10 @@
 // Daily Gemini-validator outcome tally (written by lib/sseWriter.ts into KV hashes
 // `stats:validation:YYYY-MM-DD`, UTC, 90-day expiry).
 //
+// Note: "unreviewed" counts readings the server could not check (no time budget, or
+// the checker failed). Readings that /api/reading/validate later checks from the
+// client are NOT tallied here.
+//
 // Usage: npx tsx scripts/validation-stats.ts [days]   (default 7)
 // Credentials: KV_REST_API_URL and KV_REST_API_TOKEN must be in the environment.
 // Get them locally with `vercel env pull .env.local` (then

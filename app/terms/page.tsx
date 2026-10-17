@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "免責宣告、使用條款與隱私權政策 · 命裡",
-  description: "命裡平臺的免責宣告與使用條款：內容僅供學習、研究與娛樂參考，不構成任何專業建議或決策依據。",
+  description: "命裡平臺的免責宣告、使用條款與隱私權政策：內容僅供學習、研究與娛樂參考，不構成任何專業建議或決策依據；並說明我們如何處理您提交的出生資料。",
   alternates: { canonical: "https://www.mingli.study/terms" },
 };
 
