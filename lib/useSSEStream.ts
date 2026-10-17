@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Reference } from "./rag";
 import { gtagEvent } from "./gtag";
 
@@ -105,14 +105,32 @@ function deleteCache(key: string) {
   try { localStorage.removeItem(CACHE_PREFIX + key); } catch {}
 }
 
-export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts): StreamResult {
-  const cached = cacheKey ? loadCache(cacheKey) : null;
+const MSG_NETWORK = "網路連線失敗，請重試";
+const MSG_SLOW = "這份解讀使用深度推理模型，運算時間較長，這次未能及時完成。請點『重試』，通常再試一次就會成功。";
 
-  const [status, setStatus] = useState<StreamStatus>(cached ? "done" : "idle");
-  const [text, setText] = useState(cached?.text ?? "");
-  const [refs, setRefs] = useState<Reference[]>(cached?.refs ?? []);
+// Intentional Chinese server messages (rate limit etc.) pass through unchanged;
+// raw technical errors ("Failed to fetch", "HTTP 504") become Traditional Chinese.
+function friendlyError(raw: string): string {
+  if (/[\u4e00-\u9fff]/.test(raw)) return raw;
+  if (/failed to fetch|load failed|networkerror|network request failed|err_internet|offline/i.test(raw)
+    || (typeof navigator !== "undefined" && navigator.onLine === false)) return MSG_NETWORK;
+  const http = /HTTP (\d{3})/.exec(raw);
+  if (http && http[1] === "429") return "請求過於頻繁，請稍後再試";
+  if (http && Number(http[1]) < 500) return "發生錯誤，請點『重試』再試一次";
+  return MSG_SLOW;
+}
+
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts): StreamResult {
+  // First render must match the server (no localStorage read during render →
+  // hydration error #418); the cache is restored in a layout effect below,
+  // before the browser paints, so there is no visible loading flash.
+  const [status, setStatus] = useState<StreamStatus>("idle");
+  const [text, setText] = useState("");
+  const [refs, setRefs] = useState<Reference[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
-  const [validation, setValidation] = useState<ValidationStatus>(cached?.validated ? "pass" : "idle");
+  const [validation, setValidation] = useState<ValidationStatus>("idle");
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -343,7 +361,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        const message = (err as Error).message ?? "未知錯誤";
+        const message = friendlyError((err as Error).message ?? "");
         setErrorMsg(message);
         setStatus("error");
         // Fired here rather than per-component so every reading route is covered
@@ -364,6 +382,18 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     [url, cacheKey, runValidation]
   );
   startRef.current = start;
+
+  useIsomorphicLayoutEffect(() => {
+    if (!cacheKey || abortRef.current || accText.current) return;
+    const cached = loadCache(cacheKey);
+    if (!cached) return;
+    accText.current = cached.text;
+    accRefs.current = cached.refs;
+    setText(cached.text);
+    setRefs(cached.refs);
+    setStatus("done");
+    setValidation(cached.validated ? "pass" : "idle");
+  }, [cacheKey]);
 
   // Cancel whatever this hook instance has in flight when it unmounts (e.g. a
   // hepan resubmit remounts HepanResultView from scratch). Without this, the
