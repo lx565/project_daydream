@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   // Log claim for reconciliation (non-blocking on failure — unlock already granted).
   try {
-    await fetch(SHEETS_URL, {
+    const res = await fetch(SHEETS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
       }),
       redirect: "follow",
     });
+    const text = await res.text();
+    let confirmed = false;
+    try { confirmed = JSON.parse(text)?.ok === true; } catch {}
+    if (!confirmed) console.error("[unlock/claim] script did not confirm", chartId, text.slice(0, 200));
   } catch (err) {
     console.error("[unlock/claim] log error:", err);
   }

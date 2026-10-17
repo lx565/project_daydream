@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const SHEETS_URL =
+  process.env.FEEDBACK_SCRIPT_URL_OVERRIDE ??
   "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 const MAX_DESCRIPTION = 2000;
@@ -22,20 +23,36 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "missing_description" }, { status: 400 });
   }
 
+  const payload = {
+    type: (body.type ?? "其他").slice(0, 100),
+    description: body.description.slice(0, MAX_DESCRIPTION),
+    page: (body.page ?? "").slice(0, 200),
+    sessionId: (body.sessionId ?? "").slice(0, 100),
+  };
+
+  // Backup first so a message survives any sheet failure.
+  try {
+    const { kv } = await import("@vercel/kv");
+    await kv.lpush("feedback:backup", JSON.stringify({ ts: new Date().toISOString(), ...payload }));
+    await kv.ltrim("feedback:backup", 0, 1999);
+  } catch (err) {
+    console.error("[feedback] kv backup failed:", err);
+  }
+
   try {
     const res = await fetch(SHEETS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        type: (body.type ?? "其他").slice(0, 100),
-        description: body.description.slice(0, MAX_DESCRIPTION),
-        page: (body.page ?? "").slice(0, 200),
-        sessionId: (body.sessionId ?? "").slice(0, 100),
-      }),
+      body: JSON.stringify(payload),
       redirect: "follow",
     });
-    // Apps Script returns 302 → echo URL; any 2xx/3xx means the script ran
-    if (res.status >= 400) throw new Error(`sheets ${res.status}`);
+    const text = await res.text();
+    let confirmed = false;
+    try { confirmed = JSON.parse(text)?.ok === true; } catch {}
+    if (!confirmed) {
+      console.error("[feedback] script did not confirm", text.slice(0, 200));
+      return Response.json({ error: "storage_error" }, { status: 500 });
+    }
   } catch (err) {
     console.error("[feedback] sheets error:", err);
     return Response.json({ error: "storage_error" }, { status: 500 });

@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "免責宣告與使用條款 · 命裡",
+  title: "免責宣告、使用條款與隱私權政策 · 命裡",
   description: "命裡平臺的免責宣告與使用條款：內容僅供學習、研究與娛樂參考，不構成任何專業建議或決策依據。",
   alternates: { canonical: "https://www.mingli.study/terms" },
 };
 
 const UPDATED = "2026年10月7日";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2.5">
+    <section id={id} className={`space-y-2.5${id ? " scroll-mt-24" : ""}`}>
       <div className="flex items-center gap-2">
         <div className="w-1 h-5 bg-vermillion rounded-full" />
         <h2 className="text-base font-bold text-ink tracking-wide">{title}</h2>
@@ -33,7 +33,10 @@ export default function TermsPage() {
         </Link>
 
         <div className="space-y-1.5">
-          <h1 className="text-xl font-bold text-ink tracking-wide">免責宣告與使用條款</h1>
+          <h1 className="text-xl font-bold text-ink tracking-wide">免責宣告、使用條款與隱私權政策</h1>
+          <p className="text-xs text-ink-3">
+            <a href="#privacy" className="underline hover:text-vermillion transition-colors">隱私權政策請見第九節</a>
+          </p>
           <p className="text-xs text-ink-4">最後更新：{UPDATED}</p>
         </div>
 
@@ -120,7 +123,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="九、資料與隱私">
+        <Section id="privacy" title="九、資料與隱私（隱私權政策）">
           <p>
             為提供解讀服務並做匿名的產品分析（如年齡、性別分佈與使用量統計），
             本平臺會記錄您提交的出生資料（出生日期、時辰、性別及可選的稱呼）。
