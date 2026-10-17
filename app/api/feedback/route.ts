@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { SHEETS_URL } from "@/lib/sheetsWebhook";
 
-const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 const MAX_DESCRIPTION = 2000;
 

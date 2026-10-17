@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { SHEETS_URL } from "@/lib/sheetsWebhook";
 
 // Same Google Apps Script webhook used by feedback + unlock reconciliation.
 // The script routes on `type`; add a `type === "birth"` branch that appends to a
 // "births" tab. Demographics (age/gender/daily counts) are analyzed in the sheet.
-const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 export async function POST(request: NextRequest) {
   const rl = await checkRateLimit(request, { limit: 60, keyPrefix: "track-birth" });
@@ -52,6 +51,7 @@ export async function POST(request: NextRequest) {
         relationshipType: (body.relationshipType ?? "").slice(0, 20),
       }),
       redirect: "follow",
+      signal: AbortSignal.timeout(8000),
     });
     if (res.status >= 400) throw new Error(`sheets ${res.status}`);
   } catch (err) {

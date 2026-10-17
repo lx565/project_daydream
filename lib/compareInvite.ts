@@ -59,15 +59,18 @@ export async function getInvite(inviteId: string): Promise<CompareInvite | null>
   }
 }
 
-export async function respondToInvite(inviteId: string, personB: PersonSnapshot): Promise<boolean> {
+export type RespondResult = "ok" | "not_found" | "already_responded" | "error";
+
+export async function respondToInvite(inviteId: string, personB: PersonSnapshot): Promise<RespondResult> {
   const existing = await getInvite(inviteId);
-  if (!existing) return false;
+  if (!existing) return "not_found";
+  if (existing.personB) return "already_responded";
   const updated: CompareInvite = { ...existing, personB: { ...personB, respondedAt: Date.now() } };
   try {
     const { kv } = await import("@vercel/kv");
     await kv.set(keyFor(inviteId), updated, { ex: TTL_SECONDS });
-    return true;
+    return "ok";
   } catch {
-    return false;
+    return "error";
   }
 }

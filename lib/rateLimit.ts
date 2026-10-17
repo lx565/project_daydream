@@ -44,8 +44,8 @@ export function clientIp(request: Request): string {
 // Routes that don't call a paid AI provider are exempt from the global
 // generation circuit breaker.
 const NON_AI_PREFIXES = new Set([
-  "vote", "track-birth", "checkout", "feedback", "bazi-candidates", "email-report",
-  "stats-readings", "cases-match", "compare-status", "compare-respond", "compare-invite",
+  "vote", "vote-get", "track-birth", "checkout", "feedback", "bazi-candidates", "email-report",
+  "stats-readings", "stats-readings-get", "cases-match", "compare-status", "compare-respond", "compare-invite",
 ]);
 
 const GLOBAL_GEN_CAP_NAME = "global-gen";

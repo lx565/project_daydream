@@ -37,8 +37,9 @@ export async function POST(
     name: name ? name.slice(0, 50) : undefined,
   };
 
-  const ok = await respondToInvite(inviteId, personB);
-  if (!ok) return Response.json({ error: "invite_not_found" }, { status: 404 });
+  const result = await respondToInvite(inviteId, personB);
+  if (result === "already_responded") return Response.json({ error: "already_responded" }, { status: 409 });
+  if (result !== "ok") return Response.json({ error: "invite_not_found" }, { status: 404 });
 
   return Response.json({ ok: true } satisfies RespondInviteResult);
 }
