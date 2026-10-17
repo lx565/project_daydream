@@ -170,8 +170,8 @@ export const MINGGE_LIST: MinggeEntry[] = [
     name: "貪武同行格",
     type: "吉格",
     stars: ["貪狼","武曲"],
-    brief: "貪狼與武曲同宮於醜宮或未宮，財藝並重，主商界或藝能界得財",
-    condition: "貪狼與武曲同坐醜宮或未宮，或在三方四正相會",
+    brief: "貪狼與武曲同宮於丑宮或未宮，財藝並重，主商界或藝能界得財",
+    condition: "貪狼與武曲同坐丑宮或未宮，或在三方四正相會",
     topic: "格局",
   },
   {

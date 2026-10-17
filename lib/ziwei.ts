@@ -15,7 +15,7 @@ export interface Palace {
                           // (only 命宮 carries the 宮 suffix — the other 11 names are
                           // unsuffixed; see lib/couple.ts's REAL_PALACE_NAMES/
                           // PALACE_ALIASES for the canonical list and 2026-10-02 audit)
-  earthlyBranch: string;  // 子醜寅卯辰巳午未申酉戌亥
+  earthlyBranch: string;  // 子丑寅卯辰巳午未申酉戌亥
   heavenlyStem: string;   // 甲乙丙丁戊己庚辛壬癸
   isBodyPalace: boolean;
   isSoulPalace: boolean;
