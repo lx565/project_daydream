@@ -24,10 +24,12 @@ export default function UnlockLoadingOverlay({ unlocked }: Props) {
 
   // Advance one step every 700 ms until the last step
   useEffect(() => {
-    if (activeStep >= LAST) return;
+    // Hold before the final "已準備完成" step until the unlock is actually confirmed
+    // (the payment webhook can lag for tens of seconds).
+    if (activeStep >= LAST || (activeStep === LAST - 1 && !unlocked)) return;
     const id = setTimeout(() => setActiveStep((s) => s + 1), 700);
     return () => clearTimeout(id);
-  }, [activeStep]);
+  }, [activeStep, unlocked]);
 
   // Once last step AND unlocked: wait 800 ms then fade out
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function UnlockLoadingOverlay({ unlocked }: Props) {
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-parchment"
       style={{ opacity: fading ? 0 : 1, transition: "opacity 400ms ease-out" }}
     >
-      <p className="text-xs tracking-widest text-ink-4 mb-8">解鎖進行中</p>
+      <p className="text-xs tracking-widest text-ink-4 mb-8">{activeStep === LAST - 1 && !unlocked ? "付款處理中…" : "解鎖進行中"}</p>
       <div className="flex flex-col gap-4">
         {STEPS.map((step, i) => {
           const active = i <= activeStep;

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { startCardCheckout } from "@/lib/checkout";
 import { gtagEvent } from "@/lib/gtag";
 import { chartType, CHART_PRICE_USD } from "@/lib/chartType";
+import { PAID_POLL_MS } from "@/lib/usePaywall";
 
 interface ProofItem { icon: string; stat: string; label: string }
 
@@ -58,6 +59,22 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const viewed = useRef(false);
+  // Returned from Stripe (?paid=1) but still locked: the webhook is lagging.
+  const [payState, setPayState] = useState<"none" | "processing" | "delayed">("none");
+
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("paid")) return;
+    setPayState("processing");
+    const t = setTimeout(() => setPayState("delayed"), PAID_POLL_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Back from Stripe restores this page from bfcache with the "跳轉中…" state frozen.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setLoading(false); };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
   const price = CHART_PRICE_USD[chartType(chartId)];
   const strip = proofStrip ?? DEFAULT_PROOF_STRIP;
 
@@ -130,7 +147,7 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
 
       <button
         onClick={handleCheckout}
-        disabled={loading}
+        disabled={loading || payState === "processing"}
         style={{ color: "#FDFCF8" }}
         className="w-full rounded-full bg-vermillion px-6 py-3 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
       >
@@ -143,6 +160,15 @@ export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_
           "立即解鎖 · 信用卡 / Apple Pay"
         )}
       </button>
+
+      {payState === "processing" && (
+        <p className="mt-2 text-xs text-ink-3 text-center">付款處理中…（通常數秒內完成，請勿重複付款）</p>
+      )}
+      {payState === "delayed" && (
+        <p className="mt-2 text-xs text-vermillion text-center leading-relaxed">
+          付款確認較慢，請稍候並重新整理頁面。若已付款但仍未解鎖，請聯絡 contact@mingli.study，我們會盡快處理。
+        </p>
+      )}
 
       {err && <p className="mt-2 text-xs text-vermillion text-center">{err}</p>}
 
