@@ -1,4 +1,5 @@
 import fs from "fs";
+import * as OpenCC from "opencc-js";
 import path from "path";
 import { getKnowledge } from "./rag";
 import { synthesize } from "./synthesize";
@@ -35,12 +36,37 @@ import type { SourceBook } from "./sourcesData";
 import type { StarMbtiEntry, MbtiEntry, StarZodiacEntry, ZodiacZiweiEntry } from "./personalityData";
 import { starMbtiGroundingBlock, mbtiZiweiGroundingBlock, starZodiacGroundingBlock, zodiacZiweiGroundingBlock } from "./personalityData";
 
+// Some folders were saved under Simplified filenames (七杀__命宫.json) while lookup keys
+// are Traditional (七殺__命宮). Match on a Simplified-normalized form so both spellings hit.
+let toSimplified: ((s: string) => string) | null = null;
+export function normSeoKey(s: string): string {
+  toSimplified ??= OpenCC.Converter({ from: "t", to: "cn" });
+  return toSimplified(s);
+}
+const seoIndexCache = new Map<string, Map<string, string>>();
+function seoFileIndex(dir: string): Map<string, string> {
+  let idx = seoIndexCache.get(dir);
+  if (!idx) {
+    idx = new Map();
+    for (const f of fs.readdirSync(dir)) {
+      if (f.endsWith(".json")) idx.set(normSeoKey(f.slice(0, -5)), f);
+    }
+    seoIndexCache.set(dir, idx);
+  }
+  return idx;
+}
+
 // Pre-generated, proofread content store. When a reviewed file exists it is served
 // verbatim (deterministic, no runtime AI). Missing file => fall back to live synth.
 function readPregenerated(kind: "star" | "palace" | "guide" | "mingge" | "assistantstar" | "personality" | "book" | "sources" | "shishen" | "tiangan" | "geju" | "baziguide" | "zodiac" | "qinggan" | "sihua" | "sihua-palace" | "xiong" | "liunian" | "liunian-2026" | "hunyin" | "shiye" | "caiyun" | "jibing" | "bazi-hunyin" | "bazi-shiye" | "bazi-caiyun" | "bazi-jibing" | "shensha", key: string): SeoContent | null {
   try {
-    const file = path.join(process.cwd(), "content", "seo", kind, `${key}.json`);
-    if (!fs.existsSync(file)) return null;
+    const dir = path.join(process.cwd(), "content", "seo", kind);
+    let file = path.join(dir, `${key}.json`);
+    if (!fs.existsSync(file)) {
+      const actual = seoFileIndex(dir).get(normSeoKey(key));
+      if (!actual) return null;
+      file = path.join(dir, actual);
+    }
     const data = JSON.parse(fs.readFileSync(file, "utf-8")) as { markdown?: string; refs?: Reference[] };
     if (!data.markdown || !data.markdown.trim()) return null;
     return { markdown: data.markdown, refs: data.refs ?? [] };
