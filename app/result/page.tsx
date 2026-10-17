@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { calculateBazi } from "@/lib/bazi";
@@ -10,6 +11,13 @@ import ChartSaver from "@/components/ChartSaver";
 import BugReportButton from "@/components/BugReportButton";
 import MbtiCard from "@/components/MbtiCard";
 import { detectMingge } from "@/lib/detectMingge";
+import { buildChartId, legacyChartId } from "@/lib/chartId";
+
+// robots.txt `/result/` does not match `/result?...`, so de-index via metadata.
+export const metadata: Metadata = {
+  title: "我的命盤結果 | 命裡",
+  robots: { index: false, follow: false },
+};
 
 function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -53,8 +61,12 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
 
   if (!date || !gender || (gender !== "male" && gender !== "female")) redirect("/");
 
-  const [year, month, day] = date.split("-").map(Number);
+  const dateMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
+  if (!dateMatch) redirect("/");
+  const [year, month, day] = [Number(dateMatch[1]), Number(dateMatch[2]), Number(dateMatch[3])];
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > new Date(year, month, 0).getDate()) redirect("/");
   const localHour = parseInt(hourStr ?? "0", 10);
+  if (!Number.isFinite(localHour) || localHour < 0 || localHour > 23) redirect("/");
   const tzOffset = parseFloat(params.tz ?? "8");
 
   // Convert to Beijing time if needed
@@ -67,7 +79,8 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
   const { calculateZiwei } = await import("@/lib/ziwei");
   const ziweiResult: ZiweiResult = await calculateZiwei(bjtYear, bjtMonth, bjtDay, hour, gender as "male" | "female");
 
-  const sessionId = `${bjtYear}${bjtMonth}${bjtDay}${hour}${gender}`;
+  const sessionId = buildChartId(bjtYear, bjtMonth, bjtDay, hour, gender);
+  const legacySessionId = legacyChartId(bjtYear, bjtMonth, bjtDay, hour, gender) ?? undefined;
 
   return (
     <main className="min-h-screen bg-parchment px-4 py-10">
@@ -197,6 +210,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
             gender={gender}
             birthYear={year}
             sessionId={sessionId}
+            legacySessionId={legacySessionId}
             name={name}
             dateLabel={formatDate(date)}
             timeLabel={shichenLabel(localHour)}
