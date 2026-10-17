@@ -9,7 +9,8 @@ import type { BaziResult } from "@/lib/bazi";
 import { inputGuard } from "@/lib/inputLimits";
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "validate-bazi" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 40, keyPrefix: "validate-bazi" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { reading: string; bazi: BaziResult; cacheKey?: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

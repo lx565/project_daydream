@@ -12,7 +12,8 @@ import { inputGuard } from "@/lib/inputLimits";
 // callers since the prompt and behavior are identical; only the input text
 // differs, and that alone already makes each cache key unique.
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "vernacular" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "vernacular" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { text?: string };
   try { body = await request.json(); }

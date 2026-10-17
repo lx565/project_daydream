@@ -22,8 +22,9 @@ const SYSTEM = `你是精通紫微斗數流月推斷的命理師。根據命主�
 只輸出總覽本文，不要標題、不要前綴。所有內容一律純文字，不得使用任何Markdown語法（不得用**加粗**、#標題等符號）。繁體中文。` + ACCESSIBLE_LANGUAGE_INSTRUCTION + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "monthly-summary" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "monthly-summary" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { ziwei: ZiweiResult; name?: string };

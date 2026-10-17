@@ -42,7 +42,8 @@ function cautionLine(ziwei: ZiweiResult, palaceName: string, label: string): str
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "couple-cautions" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "couple-cautions" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     baziA: BaziResult; ziweiA: ZiweiResult;

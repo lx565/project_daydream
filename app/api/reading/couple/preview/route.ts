@@ -76,7 +76,8 @@ ${pastLifeBlock}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "couple-preview" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "couple-preview" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     baziA: BaziResult; ziweiA: ZiweiResult;

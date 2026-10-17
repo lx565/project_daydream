@@ -20,7 +20,8 @@ const PRICE_ENV_BY_TYPE: Record<ChartType, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "checkout" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "checkout" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return Response.json({ error: "stripe_not_configured" }, { status: 503 });

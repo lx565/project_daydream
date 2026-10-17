@@ -10,8 +10,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ inviteId: string }> }
 ) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "compare-respond" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "compare-respond" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   const { inviteId } = await params;

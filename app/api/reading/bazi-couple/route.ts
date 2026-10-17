@@ -199,7 +199,8 @@ function dmRelationHint(baziA: BaziResult, baziB: BaziResult, labelA: string, la
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     baziA: BaziResult; ziweiA?: ZiweiResult;

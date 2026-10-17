@@ -17,8 +17,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ inviteId: string }> }
 ) {
-  if (!(await checkRateLimit(request, { limit: 60, keyPrefix: "compare-status" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 60, keyPrefix: "compare-status" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   const { inviteId } = await params;

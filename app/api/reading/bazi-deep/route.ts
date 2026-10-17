@@ -86,7 +86,8 @@ ${jqBlock}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-deep" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-deep" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

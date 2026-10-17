@@ -52,8 +52,9 @@ const SYSTEM = `你是紫微斗數流年推算專家。根據命主命盤和未�
 }` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 8, keyPrefix: "flowyears-scores" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 8, keyPrefix: "flowyears-scores" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { ziwei: ZiweiResult; currentYear?: number; name?: string };

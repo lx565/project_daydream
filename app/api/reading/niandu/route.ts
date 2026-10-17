@@ -52,7 +52,8 @@ const SYSTEM = `你是紫微斗數命理師，像一位關心你的朋友，把�
 鼓勵引用相關古訣、典籍原文或命理熟語為據（僅命理版，白話版不可出現任何引文或術語）。措辭專業、沉穩、典雅，帶老派命理師的分量感。繁體中文。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; bazi: BaziResult; name?: string };
   try { body = await request.json(); } catch {

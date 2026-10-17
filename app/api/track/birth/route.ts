@@ -8,8 +8,9 @@ const SHEETS_URL =
   "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 60, keyPrefix: "track-birth" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 60, keyPrefix: "track-birth" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: {

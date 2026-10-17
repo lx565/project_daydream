@@ -31,7 +31,8 @@ const TOPIC_MAP: Record<string, { palaces: string[]; label: string; topic: strin
 };
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 10, keyPrefix: "topic" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 10, keyPrefix: "topic" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; topic: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

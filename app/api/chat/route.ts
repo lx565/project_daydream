@@ -19,8 +19,9 @@ interface ChatMessage { role: "user" | "assistant"; content: string }
 export async function POST(request: NextRequest) {
   // Server-side abuse cap. remainingQuestions below is client UX only and must
   // never be trusted for billing protection — this is the real limit.
-  if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "chat" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 40, keyPrefix: "chat" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { ziwei: Partial<ZiweiResult>; messages: ChatMessage[]; remainingQuestions: number; backgroundReadings?: Record<string, string>; name?: string };

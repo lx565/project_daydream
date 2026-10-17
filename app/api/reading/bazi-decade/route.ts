@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
   // every legitimate visit (was 5/day, i.e. broken by design). Matches the
   // validate/validate-bazi/validate-flowyear routes' 40/day, which are sized
   // the same way for the same reason (many calls per real session).
-  if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "bazi-decade" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 40, keyPrefix: "bazi-decade" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { bazi: BaziResult; decade: BaziDecade; name?: string; gender: string };

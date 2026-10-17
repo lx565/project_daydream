@@ -8,7 +8,8 @@ import type { ZiweiResult } from "@/lib/ziwei";
 import { inputGuard } from "@/lib/inputLimits";
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 40, keyPrefix: "validate" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 40, keyPrefix: "validate" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { reading: string; ziwei: ZiweiResult; cacheKey?: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

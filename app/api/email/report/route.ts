@@ -60,8 +60,9 @@ export async function POST(req: NextRequest) {
   try {
     // Strict per-IP limit (3/hour) + global daily cap — this route sends real
     // mail from our domain, so it must not be usable as a relay.
-    if (!(await checkRateLimit(req, { limit: 3, keyPrefix: "email-report", windowSec: 3600 })).allowed) {
-      return rateLimitResponse();
+    const rl = await checkRateLimit(req, { limit: 3, keyPrefix: "email-report", windowSec: 3600 });
+    if (!rl.allowed) {
+      return rateLimitResponse(rl);
     }
 
     const body = await req.json();

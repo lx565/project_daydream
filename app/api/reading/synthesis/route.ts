@@ -81,7 +81,8 @@ ${jqBlock}`;
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "synthesis" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "synthesis" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; bazi: BaziResult; gender: string; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

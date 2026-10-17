@@ -48,7 +48,8 @@ interface DailyBody {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "daily" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "daily" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: DailyBody;
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

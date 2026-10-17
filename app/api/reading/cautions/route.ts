@@ -26,7 +26,8 @@ const SYSTEM = `你是紫微斗數命理師，像一位關心你的兄長，把�
 const CAUTION_STARS = ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫", "化忌", "破軍", "七殺", "廉貞"];
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "cautions" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "cautions" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; birthYear: number; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch {

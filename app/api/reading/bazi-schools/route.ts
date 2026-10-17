@@ -177,7 +177,8 @@ ${shensha.length ? shensha.join("\n") : "本命局未見天乙貴人、羊刃、
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-schools" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-schools" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }

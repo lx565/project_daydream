@@ -148,7 +148,8 @@ ${minggeBlock ? `\n${minggeBlock}` : ""}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "overview" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "overview" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; gender: string; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
