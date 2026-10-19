@@ -140,7 +140,7 @@ function RefList({ refs, refsRecorded = true, usesKnowledge = false, onRerun }: 
   );
 }
 
-function SourcesStrip({ sections }: { sections: SourceSection[] }) {
+function SourcesStrip({ sections, pending }: { sections: SourceSection[]; pending: boolean }) {
   const [open, setOpen] = useState(false);
   const sum = summarizeSources(sections);
   if (sum.chips.length === 0) return null;
@@ -194,6 +194,7 @@ function SourcesStrip({ sections }: { sections: SourceSection[] }) {
           )}
         </>
       )}
+      {pending && <p className="mt-2 text-xs text-ink-3">其他分頁載入後會一併計入</p>}
       <p className="mt-2 text-[11px] leading-relaxed text-ink-3">
         典籍依據是指：AI 撰寫前，系統從典籍中檢索並提供給 AI 的段落。這不代表每一句話都直接引自典籍。
       </p>
@@ -743,6 +744,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "overview":
         return (
           <div className="space-y-6">
+            <SourcesStrip sections={sourceSections} pending={!allSettled} />
             {/* FREE — cross-domain synthesis */}
             <div className="space-y-4">
               <SectionTitle>混合解讀</SectionTitle>
@@ -984,7 +986,6 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       <div className="no-print border border-t-0 border-border-warm rounded-b-xl bg-paper p-4 sm:p-5 min-h-[200px]">
         {activeTab !== "wenming" && (
           <>
-            <SourcesStrip sections={sourceSections} />
             {TAB_INTRO[activeTab] && <TabIntro>{TAB_INTRO[activeTab]}</TabIntro>}
             {renderContent()}
           </>
