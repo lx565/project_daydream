@@ -114,6 +114,7 @@ function friendlyError(raw: string): string {
   if (/[\u4e00-\u9fff]/.test(raw)) return raw;
   if (/failed to fetch|load failed|networkerror|network request failed|err_internet|offline/i.test(raw)
     || (typeof navigator !== "undefined" && navigator.onLine === false)) return MSG_NETWORK;
+  if (/^[a-z][a-z0-9_]{2,60}$/.test(raw.trim())) return "輸入內容過長或格式不正確，請調整後重試";
   const http = /HTTP (\d{3})/.exec(raw);
   if (http && http[1] === "429") return "請求過於頻繁，請稍後再試";
   if (http && Number(http[1]) < 500) return "發生錯誤，請點『重試』再試一次";
@@ -166,9 +167,10 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     if (retriedRef.current < 1) {
       retriedRef.current += 1;
       setValidation("reprocessing");
-      setValidationIssues(issues);
+      const shortIssues = issues.map((i) => String(i).slice(0, 500));
+      setValidationIssues(shortIssues);
       if (cacheKey) deleteCache(cacheKey);
-      await startRef.current({ ...body, revisionNotes: issues });
+      await startRef.current({ ...body, revisionNotes: shortIssues });
     } else {
       // Still flagged after one retry — surface softly, keep the reading.
       setValidation("fail");

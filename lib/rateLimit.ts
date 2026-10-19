@@ -52,7 +52,7 @@ const GLOBAL_GEN_CAP_NAME = "global-gen";
 let globalCapLogDay = "";
 
 function globalGenCap(): number {
-  return Number(process.env.GLOBAL_DAILY_GEN_CAP) || 4000;
+  return Number(process.env.GLOBAL_DAILY_GEN_CAP) || 10000;
 }
 
 function rateLimitKey(keyPrefix: string, ip: string, windowSec?: number): string {
@@ -165,7 +165,12 @@ export async function incrDailyCap(name: string, cap: number): Promise<boolean> 
     const { kv } = await import("@vercel/kv");
     const count = await kv.incr(key);
     if (count === 1) await kv.expire(key, secondsUntilUtcMidnight());
-    return count <= cap;
+    if (count > cap) {
+      // A denied request must not keep pushing the counter past the cap.
+      kv.decr(key).catch(() => {});
+      return false;
+    }
+    return true;
   } catch {
     return true;
   }
