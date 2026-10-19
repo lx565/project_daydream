@@ -15,7 +15,7 @@ const STATS = [
   { value: "百餘部", label: "命理典籍" },
   { value: "3萬+", label: "知識檢索塊" },
   { value: "雙系統", label: "紫微·八字" },
-  { value: "多模型", label: "AI交叉驗證" },
+  { value: "AI校驗", label: "對照命盤事實" },
 ];
 
 const QUOTES = [
@@ -94,18 +94,18 @@ const HEPAN_FEATURES = [
 const COMPARISON_ROWS = [
   {
     dim: "知識來源",
-    us: "百餘部命理典籍，即時檢索原著段落",
+    us: "百餘部命理典籍，即時檢索相關段落",
     them: "通用訓練資料，無專業典籍支撐",
   },
   {
     dim: "排盤精度",
-    us: "iztro引擎精確計算紫微星盤與八字",
-    them: "無法準確排盤，常出現星曜錯誤",
+    us: "以確定性演算法排紫微星盤與八字，不由 AI 猜測",
+    them: "排盤容易出錯，常見星曜落宮錯誤",
   },
   {
     dim: "準確性保障",
-    us: "多模型交叉驗證，矛盾處自動重推",
-    them: "單模型推演，易產生命理幻覺",
+    us: "第二個 AI 模型對照命盤事實輔助校驗",
+    them: "無校驗機制，易產生命理幻覺",
   },
   {
     dim: "命理深度",
@@ -113,8 +113,8 @@ const COMPARISON_ROWS = [
     them: "表面回答，無流派區分",
   },
   {
-    dim: "有據可查",
-    us: "每句解讀附原著出處，可追溯",
+    dim: "有典籍可循",
+    us: "依檢索到的典籍段落撰寫，總覽附引用典籍摘要",
     them: "答案無來源，無法核實",
   },
   {
@@ -128,7 +128,7 @@ const ARTICLE_AREAS = [
   {
     href: "/famous",
     label: "名人命盤",
-    badge: "33 位",
+    badge: "43 位",
     desc: "李小龍、王菲、馬雲、愛因斯坦……依據精確命盤，紫微 + 八字雙盤解讀傳奇人生。",
   },
   {
@@ -146,7 +146,7 @@ const ARTICLE_AREAS = [
   {
     href: "/bazi",
     label: "八字知識庫",
-    badge: "40 篇",
+    badge: "60+ 篇",
     desc: "從五行生剋、十神、日主到格局用神，子平八字從入門到精通。",
   },
   {
@@ -158,7 +158,7 @@ const ARTICLE_AREAS = [
   {
     href: "/guide",
     label: "學習中心",
-    badge: "24 篇",
+    badge: "27 篇",
     desc: "紫微入門、三合 / 四化 / 飛星三派、大限流年，系統梳理核心概念。",
   },
 ];
@@ -190,7 +190,7 @@ export default function Home() {
               className="hidden sm:flex items-center gap-1.5 text-sm text-ink-3 hover:text-vermillion transition-colors"
             >
               年度解讀
-              <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">免費</span>
+              <span className="text-[10px] font-bold text-white bg-vermillion px-1.5 py-0.5 rounded-full leading-none">限免</span>
             </Link>
             <Link
               href="/library"
@@ -242,7 +242,7 @@ export default function Home() {
               彙集眾多命理典籍，結合紫微、八字與 AI 輔助校驗，給你認真、清楚的解讀。
             </h1>
             <p className="text-base text-ink-3 leading-relaxed mb-6">
-              紫微斗數與八字雙系統推演，多模型 AI 交叉驗證——每一句解讀，都有出處，不空談。
+              紫微斗數與八字雙系統推演，AI 依檢索到的典籍段落撰寫，再由第二個模型對照命盤事實校驗——有典籍可循，不空談。
             </p>
             <div className="mb-8 flex justify-center lg:justify-start">
               <ReadingCount />
@@ -268,7 +268,11 @@ export default function Home() {
               <FortuneForm />
               <div className="mt-4 text-center">
                 <p className="text-xs text-ink-3">
-                  總覽免費 · 完整命書可永久保存
+                  總覽免費 · 完整命書一次解鎖，永久可重複查閱
+                </p>
+                <p className="text-[11px] text-ink-4 mt-2 leading-relaxed">
+                  資訊用於本次推算，並可能以匿名方式用於產品統計，詳見
+                  <Link href="/terms#privacy" className="underline hover:text-vermillion">隱私權政策</Link>。
                 </p>
               </div>
             </div>
@@ -328,10 +332,10 @@ export default function Home() {
       <section className="py-16 px-4">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-ink text-center mb-2">
-            為什麼命裡優於通用 AI？
+            命裡與通用 AI 有何不同？
           </h2>
           <p className="text-sm text-ink-3 text-center mb-10">
-            通用AI沒有專業命理知識，也無法準確排盤
+            通用 AI 沒有專門的典籍檢索，排盤也容易出錯
           </p>
           <div className="paper-card rounded-2xl border border-border-warm overflow-hidden">
             <table className="w-full border-collapse text-xs">
@@ -381,7 +385,7 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl font-bold text-ink text-center mb-2">
             五大解讀維度
           </h2>
-          <p className="text-sm text-ink-3 text-center mb-10">每一份解讀，由這五個部分組成</p>
+          <p className="text-sm text-ink-3 text-center mb-10">每一份解讀的五個核心部分，另有「注意」與「問命」追問</p>
           <div className="divide-y divide-border-warm border-t border-b border-border-warm">
             {TAB_SECTIONS.map((t, i) => (
               <div key={t.tab} className="flex items-baseline gap-4 sm:gap-6 py-5">
@@ -543,7 +547,7 @@ export default function Home() {
                 {[
                   { n: "1", title: "典籍OCR分割", desc: "原著掃描識別，按段落語義切分為逾3萬個檢索塊" },
                   { n: "2", title: "即時語義檢索", desc: "每次解讀，從知識庫中調取最相關的原著段落" },
-                  { n: "3", title: "AI引用生成", desc: "模型基於原文推演，不憑空作答，每句有出處" },
+                  { n: "3", title: "AI引用生成", desc: "模型依檢索到的原文段落撰寫，再由第二個模型對照命盤事實校驗" },
                 ].map((step) => (
                   <div key={step.n} className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded-full bg-vermillion-l border border-vermillion/30 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -626,7 +630,7 @@ export default function Home() {
           免費開始解讀 →
         </a>
         <p className="text-[11px] text-ink-4 leading-relaxed mt-12">
-          本平臺內容僅供學習參考與娛樂，不構成任何決策依據
+          本平台內容僅供學習參考與娛樂，不構成任何決策依據
           <br />
           命理是傳統文化的智慧結晶，請理性看待，切勿迷信
         </p>

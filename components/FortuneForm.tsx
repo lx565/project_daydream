@@ -140,7 +140,7 @@ export default function FortuneForm() {
                   ? "bg-vermillion text-white"
                   : "bg-paper text-ink-3 hover:text-vermillion"
               }`}>
-              {m === "solar" ? "公曆出生日期" : "八字四柱"}
+              {m === "solar" ? "西曆出生日期" : "八字四柱"}
             </button>
           ))}
         </div>
@@ -200,7 +200,7 @@ export default function FortuneForm() {
         ) : (
           <button type="button" onClick={() => setShowTz(true)}
             className="text-[11px] text-ink-4 hover:text-vermillion underline underline-offset-2 transition-colors">
-            出生地不在中國（UTC+8）？設定出生時區 →
+            出生地不在 UTC+8（台灣、香港、中國大陸等）時區？設定出生時區 →
           </button>
         )
       )}
