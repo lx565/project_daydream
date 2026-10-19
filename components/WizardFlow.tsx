@@ -41,7 +41,7 @@ const SCHOOL_LABELS: Record<string, string> = {
 
 // One-line description shown at the top of each tab.
 const TAB_INTRO: Partial<Record<Tab, React.ReactNode>> = {
-  overview: <>融合<span className="text-vermillion font-semibold">紫微斗數</span>與<span className="text-amber-600 font-semibold">八字命理</span>兩套獨立體系，經雙模型交叉校驗，生成全面而獨到的命格解讀。</>,
+  overview: <>融合<span className="text-vermillion font-semibold">紫微斗數</span>與<span className="text-amber-600 font-semibold">八字命理</span>兩套獨立體系，並由第二個 AI 模型核對命盤事實，生成全面而獨到的命格解讀。</>,
   palaces: "逐一拆解命盤十二宮，看主星、輔星與三方四正如何牽動你人生的各個領域。",
   decades: "以十年大限為脈絡，疊合流年起伏，把握運勢的節奏、機遇與轉折。",
   bazi: "以日主旺衰與五行喜忌為綱，深入排盤，詳論命局格局與大運走向；附歷代相似命造案例對照，及祿命法與盲派兩種歷史視角。",

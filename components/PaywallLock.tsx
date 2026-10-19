@@ -22,7 +22,7 @@ interface Props {
 
 const DEFAULT_PROOF_STRIP: ProofItem[] = [
   { icon: "📖", stat: "萬字以上", label: "深度解讀" },
-  { icon: "🔄", stat: "多模型", label: "交叉校對" },
+  { icon: "🔄", stat: "雙模型", label: "輔助校驗" },
   { icon: "📚", stat: "上百部", label: "命理典籍加持" },
   { icon: "⚡", stat: "雙體系", label: "紫微×八字印證" },
 ];
