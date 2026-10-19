@@ -48,7 +48,7 @@ export async function generateMetadata(
   const person = FAMOUS_PEOPLE.find(p => p.slug === slug);
   if (!person) return {};
 
-  const title = `${person.name}命盤解析 · ${person.formations[0]} — 命裡`;
+  const title = `${person.name}命盤解析 · ${person.formations[0] ?? "紫微斗數"} — 命裡`;
   const description = person.brief;
 
   return {
@@ -96,7 +96,7 @@ export default async function FamousPersonPage(
   const faq = [
     {
       question: `${person.name}的命宮主星是什麼？`,
-      answer: `${person.name}命宮為${person.soulPalace}宮，主星${person.mainStars}，具${person.formations.join("、")}格局。`,
+      answer: `${person.name}命宮為${person.soulPalace}宮，主星${person.mainStars}${person.formations.length ? `，具${person.formations.join("、")}格局` : "，命盤無特定成格"}。`,
     },
     {
       question: "名人命盤的出生時間準確嗎？",
@@ -159,7 +159,7 @@ export default async function FamousPersonPage(
             </div>
             <div>
               <span className="text-ink-4">格局：</span>
-              <span className="text-ink-2">{person.formations.join("、")}</span>
+              <span className="text-ink-2">{person.formations.length ? person.formations.join("、") : "無特定成格"}</span>
             </div>
           </div>
           <p className="text-sm text-ink-2 leading-relaxed border-t border-border-light pt-3">{person.brief}</p>

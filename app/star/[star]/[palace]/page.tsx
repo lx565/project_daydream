@@ -29,7 +29,7 @@ export async function generateMetadata(
   if (!starData || !palaceData) return {};
 
   const title = `${starData.name}在${palaceData.name} · 紫微斗數詳解 — 命裡`;
-  const description = `${starData.name}落於${palaceData.name}代表什麼？${palaceData.brief}。命裡依據逾百部紫微斗數典籍，深度解讀${starData.name}在${palaceData.name}的影響、與主星互動及實用建議。`;
+  const description = `${starData.name}落於${palaceData.name}代表什麼？${palaceData.brief.replace(/。+$/, "")}。命裡依據逾百部紫微斗數典籍，深度解讀${starData.name}在${palaceData.name}的影響、與主星互動及實用建議。`;
 
   return {
     title,
@@ -74,7 +74,7 @@ export default async function StarPalacePage(
   const faq = [
     {
       question: `${starData.name}在${palaceData.name}代表什麼？`,
-      answer: `${starBrief}，入${palaceData.name}：${palaceData.brief}。`,
+      answer: `${starBrief}，入${palaceData.name}：${palaceData.brief.replace(/。+$/, "")}。`,
     },
     {
       question: "同一顆主星，為什麼每個人表現不一樣？",

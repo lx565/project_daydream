@@ -143,9 +143,9 @@ export default function MinggeView({ entry, markdown, refs, faq, chartData, char
             </svg>
           </div>
           <div className="space-y-0.5">
-            <p className="text-[11px] text-ink-3 font-medium">多模型交叉審校</p>
+            <p className="text-[11px] text-ink-3 font-medium">AI 輔助校驗</p>
             <p className="text-[11px] text-ink-4 leading-relaxed">
-              本文內容經 Gemini · Claude · DeepSeek 三大模型多輪交叉稽核與驗證，確保命理準確性，力求為你呈現高質量的格局解讀。
+              本文依據典籍整理，並經 AI 輔助校驗，僅供學習參考。
             </p>
           </div>
         </div>

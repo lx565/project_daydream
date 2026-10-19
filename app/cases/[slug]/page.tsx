@@ -12,6 +12,22 @@ export const dynamic = "force-static";
 
 interface PageParams { slug: string }
 
+function caseNo(slug: string) {
+  const n = slug.match(/(\d+)$/)?.[1];
+  return n ? `#${Number(n)}` : "";
+}
+
+function caseHeading(c: { rizi: string; geju: string }) {
+  const g = tradDisplay(c.geju);
+  return `${c.rizi}${g ? `·${g}` : ""}`;
+}
+
+function caseDescription(c: { rizi: string; geju: string; yongshen: string; sourceLabel: string; outcome: string }) {
+  const g = tradDisplay(c.geju);
+  const y = tradDisplay(c.yongshen);
+  return `${tradDisplay(c.sourceLabel)}收錄的${c.rizi}日主${g ? `、${g}` : ""}命造案例${y ? `，取${y}為用` : ""}，${c.outcome ? "附應驗記錄，" : ""}供學習八字推命參考。`;
+}
+
 export async function generateStaticParams() {
   const index = loadCaseIndex();
   return index.map((c) => ({ slug: c.slug }));
@@ -24,8 +40,8 @@ export async function generateMetadata(
   const c = getCaseBySlug(slug);
   if (!c) return { title: "案例未找到" };
   return {
-    title: `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}命造案例 | 命裡`,
-    description: c.analysis.slice(0, 100),
+    title: `${caseHeading(c)}命造案例 ${caseNo(c.slug)} | 命裡`,
+    description: caseDescription(c),
     alternates: { canonical: `https://www.mingli.study/cases/${slug}` },
   };
 }
@@ -54,7 +70,7 @@ export default async function CaseDetailPage(
   const pageTitle = `${c.rizi}${tradDisplay(c.geju) ? `·${tradDisplay(c.geju)}` : ""}命造 | ${tradDisplay(c.sourceLabel)}`;
   const jsonld = articleSchema({
     headline: pageTitle,
-    description: c.analysis.slice(0, 100),
+    description: caseDescription(c),
     path: `/cases/${c.slug}`,
     section: "命造案例",
   });

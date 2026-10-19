@@ -31,7 +31,7 @@ export async function generateMetadata(
   if (!starData) return {};
 
   const title = `${starData.name}在十二宮 · 紫微斗數詳解 — 命裡`;
-  const description = `${starData.brief}。檢視${starData.name}落入命宮、財帛宮、夫妻宮等十二宮位時的詳細解讀，依據逾百部紫微斗數典籍。`;
+  const description = `${starData.brief.replace(/。+$/, "")}。檢視${starData.name}落入命宮、財帛宮、夫妻宮等十二宮位時的詳細解讀，依據逾百部紫微斗數典籍。`;
 
   return {
     title,
