@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isLibraryFileVisible } from "@/lib/libraryFilter";
 
 const FOLDER_BY_SLUG: Record<string, string> = {
   star: "star",
@@ -17,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ cate
   const dir = path.join(process.cwd(), "content", "seo", folder);
   let files: string[] = [];
   try {
-    files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+    files = fs.readdirSync(dir).filter((f) => f.endsWith(".json") && isLibraryFileVisible(folder, f));
   } catch {
     return Response.json({ articles: [] });
   }
