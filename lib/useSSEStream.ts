@@ -37,12 +37,14 @@ export interface StreamResult {
   status: StreamStatus;
   text: string;
   refs: Reference[];
+  /** false only when restored from an older cache entry that never stored `refs` (distinct from a recorded empty list). */
+  refsRecorded: boolean;
   errorMsg: string;
   validation: ValidationStatus;
   validationIssues: string[];
   start: (body: object) => Promise<void>;
   reset: () => void;
-  rerun: () => void;
+  rerun: (body?: object) => void;
 }
 
 export interface StreamOpts {
@@ -78,9 +80,10 @@ export interface StreamOpts {
 // of trusting the stale localStorage copy.
 const CACHE_PREFIX = "ziwei_rd_v29_";
 
-type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
+type CacheShape = { text: string; refs?: Reference[]; validated?: boolean };
+type LoadedCache = { text: string; refs: Reference[]; refsRecorded: boolean; validated?: boolean };
 
-function loadCache(key: string): CacheShape | null {
+function loadCache(key: string): LoadedCache | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
@@ -92,7 +95,10 @@ function loadCache(key: string): CacheShape | null {
     // otherwise a single bad generation freezes that chart blank for this
     // browser forever, with no error and no retry surfaced (see saveCache's
     // matching guard, which stops this from being written going forward).
-    if (typeof parsed.text === "string" && parsed.text.length > 0 && Array.isArray(parsed.refs)) return parsed;
+    if (typeof parsed.text === "string" && parsed.text.length > 0) {
+      const refsRecorded = Array.isArray(parsed.refs);
+      return { text: parsed.text, refs: refsRecorded ? parsed.refs : [], refsRecorded, validated: parsed.validated };
+    }
     return null;
   } catch { return null; }
 }
@@ -130,6 +136,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   const [status, setStatus] = useState<StreamStatus>("idle");
   const [text, setText] = useState("");
   const [refs, setRefs] = useState<Reference[]>([]);
+  const [refsRecorded, setRefsRecorded] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [validation, setValidation] = useState<ValidationStatus>("idle");
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
@@ -242,6 +249,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
           accRefs.current = restored.refs;
           setText(restored.text);
           setRefs(restored.refs);
+          setRefsRecorded(restored.refsRecorded);
           setErrorMsg("");
           setStatus("done");
           setValidation(restored.validated ? "pass" : "idle");
@@ -261,6 +269,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
       setStatus("streaming");
       setText("");
       setRefs([]);
+      setRefsRecorded(true);
       setErrorMsg("");
       // Only reset validation on a fresh (non-retry) run.
       if (retriedRef.current === 0) { setValidation("idle"); setValidationIssues([]); }
@@ -319,6 +328,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
               accRefs.current = [];
               setText("");
               setRefs([]);
+              setRefsRecorded(true);
               return;
             }
             if (typeof parsed.text === "string") {
@@ -415,6 +425,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     accRefs.current = cached.refs;
     setText(cached.text);
     setRefs(cached.refs);
+    setRefsRecorded(cached.refsRecorded);
     setStatus("done");
     setValidation(cached.validated ? "pass" : "idle");
   }, [cacheKey]);
@@ -432,16 +443,18 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     setStatus("idle");
     setText("");
     setRefs([]);
+    setRefsRecorded(true);
     setErrorMsg("");
     setValidation("idle");
     setValidationIssues([]);
   }, [cacheKey]);
 
-  const rerun = useCallback(() => {
+  const rerun = useCallback((body?: object) => {
     if (cacheKey) deleteCache(cacheKey);
     retriedRef.current = 0;
-    if (lastBodyRef.current) start(lastBodyRef.current);
+    const b = body ?? lastBodyRef.current;
+    if (b) start(b);
   }, [cacheKey, start]);
 
-  return { status, text, refs, errorMsg, validation, validationIssues, start, reset, rerun };
+  return { status, text, refs, refsRecorded, errorMsg, validation, validationIssues, start, reset, rerun };
 }

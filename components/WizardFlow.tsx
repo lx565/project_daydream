@@ -17,6 +17,7 @@ import { gtagEvent } from "@/lib/gtag";
 import ChartLoadingOverlay from "./ChartLoadingOverlay";
 import UnlockLoadingOverlay from "./UnlockLoadingOverlay";
 import ReadingFeedbackPrompt from "./ReadingFeedbackPrompt";
+import { summarizeSources, type SourceSection } from "@/lib/sourcesSummary";
 
 type Tab = "overview" | "palaces" | "decades" | "bazi" | "perspectives" | "cautions" | "wenming";
 
@@ -71,21 +72,62 @@ function SectionTitle({ children, accent = "vermillion" }: { children: React.Rea
 }
 
 // References collapsible
-function RefList({ refs }: { refs: Reference[] }) {
+interface RefListProps {
+  refs: Reference[];
+  refsRecorded?: boolean;
+  usesKnowledge?: boolean;
+  onRerun?: () => void;
+}
+
+function refProps(
+  stream: ReturnType<typeof useSSEStream>,
+  usesKnowledge: boolean,
+  body?: object,
+): RefListProps {
+  return {
+    refs: stream.refs,
+    refsRecorded: stream.refsRecorded,
+    usesKnowledge,
+    onRerun: () => stream.rerun(body),
+  };
+}
+
+function RefList({ refs, refsRecorded = true, usesKnowledge = false, onRerun }: RefListProps) {
   const [open, setOpen] = useState(false);
-  if (refs.length === 0) return null;
+  if (refs.length === 0) {
+    if (!usesKnowledge) return null;
+    if (!refsRecorded) {
+      return (
+        <div className="mt-4 pt-3 border-t border-border-light">
+          <span className="inline-block text-xs text-ink-3 border border-dashed border-border-warm rounded-full px-2.5 py-1">
+            此為較早生成的解讀，未記錄典籍依據
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div className="mt-4 pt-3 border-t border-border-light flex flex-wrap items-center gap-2">
+        <span className="inline-block text-xs text-ink-3 border border-dashed border-border-warm rounded-full px-2.5 py-1">
+          此段未引用典籍
+        </span>
+        {onRerun && (
+          <button type="button" onClick={onRerun} className="text-xs text-gold underline">重新推算</button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="mt-4 pt-3 border-t border-border-light">
-      <button onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-ink-4 hover:text-ink-3 transition-colors">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-ink-3 hover:text-ink-2 transition-colors">
         <span className="text-gold">📚</span>
         <span>參考典籍（{refs.length}部）</span>
-        <span className={`text-ink-4 transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+        <span aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
       {open && (
         <ul className="mt-2 space-y-1">
           {refs.map((r, i) => (
-            <li key={i} className="flex items-center gap-2 text-xs text-ink-4">
+            <li key={i} className="flex items-center gap-2 text-xs text-ink-3">
               <span className="px-1.5 py-0.5 rounded text-[10px] bg-paper-2 border border-border-light text-ink-3 flex-shrink-0">
                 {SCHOOL_LABELS[r.school] ?? r.school}
               </span>
@@ -94,6 +136,68 @@ function RefList({ refs }: { refs: Reference[] }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function SourcesStrip({ sections, pending }: { sections: SourceSection[]; pending: boolean }) {
+  const [open, setOpen] = useState(false);
+  const sum = summarizeSources(sections);
+  if (sum.chips.length === 0) return null;
+  return (
+    <div className="mb-4 border border-border-light rounded-lg bg-paper-2 px-3.5 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">
+        <span className="font-semibold text-ink">引用 {sum.bookCount} 部典籍</span>
+        {sum.total > 0 && <span>{sum.covered}／{sum.total} 個段落有典籍依據</span>}
+      </div>
+      {sum.schools.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {sum.schools.map((g) => (
+            <span key={g.school} className="px-1.5 py-0.5 rounded text-[10px] bg-paper border border-border-light text-ink-3">
+              {SCHOOL_LABELS[g.school] ?? g.school} · {g.count}
+            </span>
+          ))}
+        </div>
+      )}
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {sum.chips.map((c) => (
+          <li key={c.id} className={`px-2 py-0.5 rounded-full text-[11px] border ${
+            c.state === "ok" ? "border-gold/50 text-ink-2 bg-paper" : "border-dashed border-border-warm text-ink-3"
+          }`}>
+            {c.label} {c.state === "ok" ? "✓" : c.state === "none" ? "—" : "（未記錄）"}
+          </li>
+        ))}
+      </ul>
+      {sum.bySchool.length > 0 && (
+        <>
+          <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
+            className="mt-2 flex items-center gap-1.5 text-xs text-ink-3 hover:text-ink-2 transition-colors">
+            <span>{open ? "收起書目" : "查看書目"}</span>
+            <span aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+          </button>
+          {open && (
+            <div className="mt-2 space-y-2">
+              {sum.bySchool.map((g) => (
+                <div key={g.school}>
+                  <p className="text-[11px] font-semibold text-ink-2">{SCHOOL_LABELS[g.school] ?? g.school}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {g.books.map((b) => (
+                      <li key={b.book} className="text-xs text-ink-3">
+                        {b.book.replace(/-/g, " · ")}
+                        <span className="text-ink-3">　{b.sections.join("、")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {pending && <p className="mt-2 text-xs text-ink-3">其他分頁載入後會一併計入</p>}
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-3">
+        典籍依據是指：AI 撰寫前，系統從典籍中檢索並提供給 AI 的段落。這不代表每一句話都直接引自典籍。
+      </p>
     </div>
   );
 }
@@ -205,8 +309,10 @@ function ReadingCard({
   steps,
   children,
   onMount,
+  usesKnowledge = false,
 }: {
   stream: ReturnType<typeof useSSEStream>;
+  usesKnowledge?: boolean;
   skeleton?: string;
   steps?: string[];
   children?: React.ReactNode;
@@ -232,7 +338,7 @@ function ReadingCard({
     <div className="animate-fade-in space-y-1">
       <ClassicalMd text={stream.text} />
       {children}
-      <RefList refs={stream.refs} />
+      <RefList {...refProps(stream, usesKnowledge)} />
     </div>
   );
 
@@ -253,7 +359,7 @@ const OVERVIEW_SCHOOLS = [
 // mode controls which slice of the overview reading renders:
 //  "consensus" — intro + 綜合共識 only (總覽 · 紫微綜合, the holistic conclusion)
 //  "schools"   — the 3 派 breakdowns only (眾說 · 紫微三派詳解)
-function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs: Reference[]; mode?: "consensus" | "schools" }) {
+function OverviewDualView({ text, refList, mode = "schools" }: { text: string; refList: RefListProps; mode?: "consensus" | "schools" }) {
   // Consensus marker: Traditional (綜合共識) from overview, Simplified (综合共识) fallback
   const consensusMarker = text.includes("## 綜合共識") ? "## 綜合共識"
     : "## 综合共识";
@@ -272,7 +378,7 @@ function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs
     return (
       <div className="space-y-4 animate-fade-in">
         <ClassicalMd text={text} />
-        <RefList refs={refs} />
+        <RefList {...refList} />
       </div>
     );
   }
@@ -309,14 +415,14 @@ function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs
       {/* Consensus — "consensus" mode (O2 · 紫微綜合) renders plain, consistent with 八字綜合. */}
       {showConsensus && parts.consensus && <ClassicalMd text={parts.consensus} />}
 
-      <RefList refs={refs} />
+      <RefList {...refList} />
     </div>
   );
 }
 
 // Per-palace card view — parses the palaces reading so each 宮 shows as clean rows:
 // row 1 = 宮位 · 地支 + 主星, row 2 = 解讀. Avoids the "everything clustered" markdown blob.
-function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
+function PalacesView({ text, refList }: { text: string; refList: RefListProps }) {
   // Split on each "## " heading FIRST, on the raw untouched text — the first chunk may be
   // intro text (no heading). This must happen before any [現代] extraction: the model doesn't
   // always close that tag (see ShareCardBlock's matching comment in HepanResultView.tsx), and
@@ -375,7 +481,7 @@ function PalacesView({ text, refs }: { text: string; refs: Reference[] }) {
         );
       })}
       {modernBlock && <ModernBlock content={modernBlock} />}
-      <RefList refs={refs} />
+      <RefList {...refList} />
     </div>
   );
 }
@@ -602,6 +708,21 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   }, [allContentReady, gated]);
 
 
+  const sourceSections: SourceSection[] = ([
+    ["synthesis", "混合解讀", synthesis],
+    ["consensus", "紫微綜合", consensus],
+    ["bazi", "八字綜合", bazi_],
+    ["overview", "三派詳解", overview],
+    ["palaces", "宮位", palaces],
+    ["decades", "大運", decades],
+    ["flowyear", "流年", flowYearHighlights],
+    ["cautions", "注意", cautions],
+    ["bazideep", "八字詳批", baziDeep],
+    ["bazischools", "各派視角", baziSchools],
+  ] as const).map(([id, label, st]) => ({
+    id, label, usesKnowledge: true, status: st.status, refs: st.refs, refsRecorded: st.refsRecorded,
+  }));
+
   function renderContent() {
     // Gated tabs show the paywall instead of the (un-run) reading.
     if (isLocked(activeTab)) {
@@ -623,6 +744,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
       case "overview":
         return (
           <div className="space-y-6">
+            <SourcesStrip sections={sourceSections} pending={!allSettled} />
             {/* FREE — cross-domain synthesis */}
             <div className="space-y-4">
               <SectionTitle>混合解讀</SectionTitle>
@@ -631,7 +753,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               ) : synthesis.status === "done" ? (
                 <div>
                   <ClassicalMd text={synthesis.text} />
-                  <RefList refs={synthesis.refs} />
+                  <RefList {...refProps(synthesis, true, synthesisPayload)} />
                 </div>
               ) : synthesis.status === "error" ? (
                 <div className="space-y-2">
@@ -652,7 +774,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               ) : consensus.status === "done" ? (
                 <div>
                   <ClassicalMd text={consensus.text} />
-                  <RefList refs={consensus.refs} />
+                  <RefList {...refProps(consensus, true, ziweiPayload)} />
                 </div>
               ) : consensus.status === "error" ? (
                 <div className="space-y-2">
@@ -670,7 +792,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               {bazi_.status === "done" ? (
                 <div>
                   <ClassicalMd text={bazi_.text} />
-                  <RefList refs={bazi_.refs} />
+                  <RefList {...refProps(bazi_, true, baziPayload)} />
                   <ValidationBadge status={bazi_.validation} />
                 </div>
               ) : bazi_.status === "error" ? (
@@ -679,7 +801,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                   <button onClick={() => bazi_.start(baziPayload)} className="text-xs text-gold underline">重試</button>
                 </div>
               ) : (
-                <ReadingCard stream={bazi_} steps={BAZI_SUMMARY_STEPS}
+                <ReadingCard stream={bazi_} usesKnowledge steps={BAZI_SUMMARY_STEPS}
                   onMount={() => bazi_.status === "idle" && bazi_.start(baziPayload)} />
               )}
             </div>
@@ -722,9 +844,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 </button>
               </div>
             ) : palaces.status === "done" ? (
-              <PalacesView text={palaces.text} refs={palaces.refs} />
+              <PalacesView text={palaces.text} refList={refProps(palaces, true, { ziwei, name })} />
             ) : (
-              <ReadingCard stream={palaces} steps={PALACES_STEPS} />
+              <ReadingCard stream={palaces} usesKnowledge steps={PALACES_STEPS} />
             )}
             <ValidationBadge status={palaces.validation} />
           </div>
@@ -744,14 +866,14 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 </button>
               </div>
             ) : (
-              <ReadingCard stream={decades} steps={DECADES_STEPS} />
+              <ReadingCard stream={decades} usesKnowledge steps={DECADES_STEPS} />
             )}
             <ValidationBadge status={decades.validation} />
             {/* Per-year 流年 deep reading — moved here from the ziwei chart */}
             <FlowYearDetail ziwei={ziwei} birthYear={birthYear} name={name} onReady={setFlowYearsText} />
             <div className="pt-2 border-t border-parchment-2">
               <SectionTitle>流年重點詳批</SectionTitle>
-              <ReadingCard stream={flowYearHighlights} steps={FLOWYEAR_STEPS}
+              <ReadingCard stream={flowYearHighlights} usesKnowledge steps={FLOWYEAR_STEPS}
                 onMount={() => flowYearHighlights.status === "idle" && flowYearHighlights.start(ziweiWithBirth)} />
             </div>
           </div>
@@ -761,12 +883,12 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         return (
           <div className="space-y-6">
             <SectionTitle accent="gold">八字命理 · 深度詳批</SectionTitle>
-            <ReadingCard stream={baziDeep} steps={BAZI_DEEP_STEPS}
+            <ReadingCard stream={baziDeep} usesKnowledge steps={BAZI_DEEP_STEPS}
               onMount={() => baziDeep.status === "idle" && baziDeep.start(baziPayload)} />
             <div className="pt-2 border-t border-parchment-2">
               <SectionTitle>各派視角 · 祿命法與盲派</SectionTitle>
               <p className="text-xs text-ink-3 mb-3">以子平法（B1）為主軸，以下補充兩種歷史流派的獨特解讀視角，供對照參考。</p>
-              <ReadingCard stream={baziSchools} steps={BAZI_SCHOOLS_STEPS}
+              <ReadingCard stream={baziSchools} usesKnowledge steps={BAZI_SCHOOLS_STEPS}
                 onMount={() => baziSchools.status === "idle" && baziSchools.start({ bazi, gender, ziwei })} />
             </div>
             <BaziDecades bazi={bazi} name={name} gender={gender as "male" | "female"} sessionId={sessionId} preload={!gated} onReady={setBaziDecadesText} />
@@ -781,7 +903,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <div>
                 {/* mode="schools": only the 三合/四化/飛星/小眾 派 cards — the 綜合共識
                     conclusion lives solely in O2 (紫微綜合), so it isn't repeated here. */}
-                <OverviewDualView text={overview.text} refs={overview.refs} mode="schools" />
+                <OverviewDualView text={overview.text} refList={refProps(overview, true, ziweiPayload)} mode="schools" />
                 <ValidationBadge status={overview.validation} />
               </div>
             ) : overview.status === "error" ? (
@@ -790,7 +912,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 <button onClick={() => overview.start(ziweiPayload)} className="text-xs text-gold underline">重試</button>
               </div>
             ) : (
-              <ReadingCard stream={overview} steps={OVERVIEW_STEPS}
+              <ReadingCard stream={overview} usesKnowledge steps={OVERVIEW_STEPS}
                 onMount={() => overview.status === "idle" && overview.start(ziweiPayload)} />
             )}
           </div>
@@ -800,7 +922,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
         return (
           <div className="space-y-4">
             <SectionTitle accent="jade">特別注意 & 當前運勢</SectionTitle>
-            <ReadingCard stream={cautions} steps={CAUTIONS_STEPS}
+            <ReadingCard stream={cautions} usesKnowledge steps={CAUTIONS_STEPS}
               onMount={() => cautions.status === "idle" && cautions.start(ziweiWithBirth)} />
           </div>
         );
