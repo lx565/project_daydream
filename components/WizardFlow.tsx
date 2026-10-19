@@ -71,6 +71,24 @@ function SectionTitle({ children, accent = "vermillion" }: { children: React.Rea
   );
 }
 
+// Expectation-setting while readings generate: honest range + live elapsed seconds.
+function LoadingExpectation() {
+  const [sec, setSec] = React.useState(0);
+  React.useEffect(() => {
+    const id = setInterval(() => setSec((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const long = sec >= 100;
+  return (
+    <p className="mt-1.5 text-[11px] leading-relaxed text-ink-3">
+      {long
+        ? "仍在處理中——這次需要的時間比平常長，請再稍候；若超過 3 分鐘，可重新整理頁面再試。"
+        : "解讀由進階 AI 模型撰寫：先從百餘部典籍檢索相關段落，再對照命盤事實核對，通常約 30–90 秒，最久可能近 2 分鐘。請保持此頁開啟。"}
+      <span className="ml-1 tabular-nums">（已等待 {sec} 秒）</span>
+    </p>
+  );
+}
+
 // References collapsible
 interface RefListProps {
   refs: Reference[];
@@ -959,6 +977,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <div className="h-full bg-vermillion rounded-full transition-all duration-500"
                 style={{ width: `${(coreDone / coreTotal) * 100}%` }} />
             </div>
+            <LoadingExpectation />
           </div>
         </div>
       )}
