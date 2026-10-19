@@ -457,7 +457,7 @@ function PalacesView({ text, refList }: { text: string; refList: RefListProps })
           return <ClassicalMd key={i} text={block} />;
         }
         const nl = block.indexOf("\n");
-        const title = block.slice(2, nl < 0 ? undefined : nl).trim(); // 命宮 · 子宮
+        const title = block.slice(2, nl < 0 ? undefined : nl).replace(/\*+/g, "").trim(); // 命宮 · 子宮 (header is plain text: strip any ** the model put around a branch character)
         const rest = nl < 0 ? "" : block.slice(nl + 1).trim();
         // Pull the 主星 line out for the header row; leave the rest as 解讀.
         // Strip ** markers (header is plain text, so markdown bold would show literally).
