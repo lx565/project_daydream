@@ -80,7 +80,7 @@ export default async function ResultPage({ searchParams }: { searchParams: Promi
   const ziweiResult: ZiweiResult = await calculateZiwei(bjtYear, bjtMonth, bjtDay, hour, gender as "male" | "female");
 
   const sessionId = buildChartId(bjtYear, bjtMonth, bjtDay, hour, gender);
-  const legacySessionId = legacyChartId(bjtYear, bjtMonth, bjtDay, hour, gender) ?? undefined;
+  const legacySessionId = legacyChartId(bjtYear, bjtMonth, bjtDay, hour, gender);
 
   return (
     <main className="min-h-screen bg-parchment px-4 py-10">
