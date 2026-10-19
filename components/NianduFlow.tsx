@@ -177,7 +177,7 @@ export default function NianduFlow() {
       </button>
 
       <p className="text-center text-[11px] text-ink-4">
-        出生時間預設按北京時間（UTC+8）排盤 · 資訊僅用於本次推算與網站使用統計，不會用於其他用途
+        出生時間預設按北京時間（UTC+8）排盤 · 資訊用於本次推算，並可能以匿名方式用於產品統計，詳見隱私權政策
       </p>
     </form>
   );
