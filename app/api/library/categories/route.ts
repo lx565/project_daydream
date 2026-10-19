@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isLibraryFileVisible } from "@/lib/libraryFilter";
 
 const CATEGORIES: { slug: string; label: string; folder: string }[] = [
   { slug: "star", label: "主星解析", folder: "star" },
@@ -14,7 +15,7 @@ export async function GET() {
   const categories = CATEGORIES.map((c) => {
     let count = 0;
     try {
-      count = fs.readdirSync(path.join(base, c.folder)).filter((f) => f.endsWith(".json")).length;
+      count = fs.readdirSync(path.join(base, c.folder)).filter((f) => f.endsWith(".json") && isLibraryFileVisible(c.folder, f)).length;
     } catch {
       count = 0;
     }
