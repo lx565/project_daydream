@@ -28,6 +28,18 @@ const walk = (dir) => {
 };
 walk(path.join(root, "lib"));
 
+const walkSeo = (dir) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walkSeo(p);
+    else if (e.name.endsWith(".json")) {
+      const d = JSON.parse(fs.readFileSync(p, "utf8"));
+      for (const [k, v] of Object.entries(d)) if (typeof v === "string") report(`${path.relative(root, p)}[${k}]`, v);
+    }
+  }
+};
+if (fs.existsSync(path.join(root, "content", "seo"))) walkSeo(path.join(root, "content", "seo"));
+
 const chunks = path.join(root, "knowledge", "chunks.json");
 if (fs.existsSync(chunks)) {
   for (const c of JSON.parse(fs.readFileSync(chunks, "utf8"))) report(c.id, c.text);
