@@ -174,7 +174,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     if (retriedRef.current < 1) {
       retriedRef.current += 1;
       setValidation("reprocessing");
-      const shortIssues = issues.map((i) => String(i).slice(0, 500));
+      const shortIssues = issues.slice(0, 5).map((i) => String(i).slice(0, 500));
       setValidationIssues(shortIssues);
       if (cacheKey) deleteCache(cacheKey);
       await startRef.current({ ...body, revisionNotes: shortIssues });
@@ -203,7 +203,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         body: JSON.stringify(
           isBaziValidator
             ? { reading, bazi: subject, cacheKey: serverCacheKeyRef.current }
-            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current, natalOnly: /\/(decades|niandu)(\/|$)/.test(url0) }
+            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current, natalOnly: /\/(decades|niandu|cautions)(\/|$)/.test(url0) }
         ),
       });
       // A non-2xx response (e.g. a 429 rate-limit `{error}` body) has no `pass`
