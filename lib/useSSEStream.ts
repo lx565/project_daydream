@@ -76,7 +76,7 @@ export interface StreamOpts {
 // as "done" may actually have been truncated under the old logic; this forces a
 // fresh server round-trip (itself cache-missed under the new server key) instead
 // of trusting the stale localStorage copy.
-const CACHE_PREFIX = "ziwei_rd_v30_";
+const CACHE_PREFIX = "ziwei_rd_v29_";
 
 type CacheShape = { text: string; refs: Reference[]; validated?: boolean };
 
