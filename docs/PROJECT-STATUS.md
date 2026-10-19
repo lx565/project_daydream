@@ -87,3 +87,6 @@ Merge state per branch is unverified unless stated; check `git branch --merged m
 - Article drafts and review docs: `docs/content-drafts/` inside the `content/kb-*` worktrees (not on main)
 - Security/AI/frontend review reports: in the conversation, not as repo files (per the brief)
 - Older: `docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/ANALYTICS.md`, `docs/CONVERSION-PLAN.md`
+
+## Addendum 2026-10-19 (late)
+Checker fix DEPLOYED (merge of `fix/checker-strictness`): the checker now fails a reading only on a verified chart-fact error (quote + verbatim fact line + severity); `buildReviewFacts` gives it palace branches, 大限 ages and minor-star 四化; a free deterministic gate checks 五行局/命宮 branch/palace-header branch/大限 age ranges; thinkingBudget 1024 (avg 6s per check, max 11s). Measured on 44 real readings: fail rate 54.5% → 15.9%, 6/6 planted errors still caught. Live test: 3 fresh synthesis readings ≈26s each, `_validated`, no rewrite. Watch the KV tally (`npx tsx scripts/validation-stats.ts 3`) over the next days: expected fail rate ≈15–20%. Known gap: the deterministic 格局 check can still flag a valid 殺破狼 mention on decades readings. Analysis: `docs/checker-strictness-analysis.md`.
