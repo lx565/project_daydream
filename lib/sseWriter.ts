@@ -2,6 +2,7 @@ import type { Reference } from "./rag";
 import { createHash } from "crypto";
 import { withDeadline, withTwoPhaseDeadline, AttemptTimeoutError } from "./aiRetry";
 import { refundRateLimit, shouldRefundRateLimit } from "./rateLimit";
+import { after } from "next/server";
 import { REVIEW_MODEL } from "./validateReading";
 
 // "standard" = main readings, "fast" = cheap/quick sections (e.g. daily 黄历)
@@ -143,7 +144,7 @@ const DEEPSEEK_MAX_OUTPUT_TOKENS = 16384;
 // so standard-tier calls that think get this much extra headroom, capped at the
 // ceiling above. Routes already at the ceiling gain nothing; they rely on the
 // fast-tier truncation retry instead.
-const THINKING_HEADROOM_FACTOR = 1.35;
+const THINKING_HEADROOM_TOKENS = 4096;
 
 // Switch provider via AI_PROVIDER env var: "gemini" (default) | "anthropic" | "deepseek"
 const PROVIDER = (process.env.AI_PROVIDER ?? "gemini") as "gemini" | "anthropic" | "deepseek";
@@ -170,7 +171,7 @@ function resolveModel(tier: ModelTier = "standard"): string {
   const envStd  = process.env[`${PROVIDER.toUpperCase()}_MODEL`];
   const envFast = process.env[`${PROVIDER.toUpperCase()}_MODEL_FAST`];
   const defaults = MODEL_DEFAULTS[PROVIDER];
-  if (tier === "fast") return envFast ?? envStd ?? defaults.fast;
+  if (tier === "fast") return envFast ?? defaults.fast; // never inherits the standard-tier override
   return envStd ?? defaults.standard;
 }
 
@@ -299,7 +300,7 @@ export async function invalidateReadingCache(cacheKey: string, expectedText: str
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
 // Permanent daily validation tally (Vercel logs only keep ~30 min). Fire-and-forget.
-function tallyValidation(outcome: "pass" | "fail" | "unreviewed", route?: string): void {
+function tallyValidation(outcome: "pass" | "fail" | "unreviewed" | "truncated" | "fastFallback" | "truncRetryOk", route?: string): void {
   (async () => {
     const { kv } = await import("@vercel/kv");
     const key = `stats:validation:${new Date().toISOString().slice(0, 10)}`;
@@ -541,6 +542,7 @@ export async function streamWithRefs(
     let result = await runGenerationPass();
     let fastTierFallbackUsed = result.usedFallback;
     let fallbackReason = result.fallbackReason;
+    if (result.usedFallback) tallyValidation("fastFallback", opts.rateLimit?.keyPrefix);
 
     // Non-negotiable: a response the provider itself flagged as cut off by the
     // token budget must never reach the client marked as a complete reading —
@@ -551,6 +553,7 @@ export async function streamWithRefs(
     // from the retry, so nothing half-finished is ever left on screen as "done".
     let truncationRetryAttempted = false;
     if (result.finishStatus === "truncated") {
+      tallyValidation("truncated", opts.rateLimit?.keyPrefix);
       const retryMaxTokens = Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * 1.5));
       // The first attempt can already have eaten most of the route's maxDuration
       // budget before truncation is even detected (only known once the full
@@ -585,6 +588,7 @@ export async function streamWithRefs(
         result = await runGenerationPass(retryMaxTokens, true);
         fastTierFallbackUsed = fastTierFallbackUsed || result.usedFallback;
         fallbackReason = fallbackReason ?? result.fallbackReason;
+        if (result.finishStatus === "complete") tallyValidation("truncRetryOk", opts.rateLimit?.keyPrefix);
       }
     }
 
@@ -642,6 +646,7 @@ export async function streamWithRefs(
     // safety net for a failed/skipped validation, exactly as it was before this
     // synchronous gate existed.
     let validated: boolean | undefined;
+    let failedIssues: string[] | undefined;
     if (opts.validate) {
       // The validator (jsonReview, lib/validateReading.ts) has its own
       // ~20s internal deadline that hasTimeForAnotherAttempt's default sizing
@@ -671,18 +676,27 @@ export async function streamWithRefs(
         } else {
           console.log(JSON.stringify({ event: "reading_validation", pass: false, issuesCount: verdict.issues.length, reviewModel: REVIEW_MODEL }));
           tallyValidation("fail", opts.rateLimit?.keyPrefix);
+          failedIssues = verdict.issues;
         }
       }
     }
 
     if (opts.refs && opts.refs.length > 0) await safeWrite({ refs: opts.refs });
     if (validated) await safeWrite({ _validated: true });
+    // Additive event (web + iOS parsers ignore unknown keys): hands the genuine
+    // server-side verdict to the web client so it goes straight to the revision
+    // call instead of re-running the identical check.
+    if (failedIssues?.length) await safeWrite({ _validationIssues: failedIssues });
     await safeWrite({ _done: true });
     try { await writer.write(encoder.encode("data: [DONE]\n\n")); } catch {}
 
-    // ── Save to cache (non-blocking) ────────────────────────────────────────
-    if (fullText && cacheKey) {
-      kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [], ...(validated ? { validated: true } : {}) }).catch(() => {});
+    // ── Save to cache ───────────────────────────────────────────────────────
+    // A reading that genuinely failed validation is never cached — it would be
+    // replayed to every visitor for 30 days. Written via after() so the
+    // serverless instance isn't frozen before the KV write lands.
+    if (fullText && cacheKey && !failedIssues) {
+      const write = kvSet(cacheKey, { text: fullText, refs: opts.refs ?? [], ...(validated ? { validated: true } : {}) });
+      try { after(write); } catch { await write; }
     }
   } catch (err) {
     console.error("[streamWithRefs]", PROVIDER, (err as Error)?.message ?? err);
@@ -774,7 +788,7 @@ async function streamDeepSeek(
   const effort = tierOverride === "fast" ? "none" : (opts.reasoningEffort ?? "low");
   const thinks = effort !== "none";
   const maxTokens = thinks
-    ? Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, Math.round(opts.maxTokens * THINKING_HEADROOM_FACTOR))
+    ? Math.min(DEEPSEEK_MAX_OUTPUT_TOKENS, opts.maxTokens + THINKING_HEADROOM_TOKENS)
     : opts.maxTokens;
   const stream = await client.chat.completions.create({
     model: resolveModel(effectiveTier),

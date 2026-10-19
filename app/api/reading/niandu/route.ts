@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" });
   if (!rl.allowed) return rateLimitResponse(rl);
 
-  let body: { ziwei: ZiweiResult; bazi: BaziResult; name?: string };
+  let body: { ziwei: ZiweiResult; bazi: BaziResult; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
     topK: 5,
   });
 
+  const revision = body.revisionNotes?.length
+    ? `\n\n【重要·上一版校驗發現以下問題，請務必修正後重新輸出】\n${body.revisionNotes.join("\n")}`
+    : "";
   const nameStr = name ? `命主：${name} · ` : "";
   const userMessage = `${nameStr}命格：${ziwei.summary}
 ${nianduFactsFrom(ny)}
@@ -86,7 +89,7 @@ ${bazi.summary}
 
 參考資料：\n${context || "（暫無）"}
 
-請根據以上四化落點資料寫今年關鍵提醒，並根據八字資料寫八字流年開運。`;
+請根據以上四化落點資料寫今年關鍵提醒，並根據八字資料寫八字流年開運。${revision}`;
 
   return makeSSEResponse((writer, encoder) =>
     streamWithRefs(writer, encoder, {
@@ -109,6 +112,7 @@ ${bazi.summary}
       // deepseek-v4-pro's silent thinking phase (see lib/sseWriter.ts) — no
       // need to override them here.
       routeMaxDurationMs: 180_000,
+      skipCacheRead: !!body.revisionNotes?.length,
       rateLimit: { ip: clientIp(request), keyPrefix: "niandu" },
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],

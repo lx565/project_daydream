@@ -133,6 +133,8 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   const [validation, setValidation] = useState<ValidationStatus>("idle");
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
+  const readingUrlRef = useRef(url);
+  readingUrlRef.current = url;
   const abortRef = useRef<AbortController | null>(null);
   const lastBodyRef = useRef<object | null>(null);
   const accText = useRef("");
@@ -147,12 +149,37 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
   // validation in-process, before it was ever sent as done. When true, the
   // client skips its own redundant async re-check below.
   const serverValidatedRef = useRef(false);
+  // Set from the `_validationIssues` event: the server's own validator already
+  // ran and FAILED this reading, so the client goes straight to the revision
+  // call rather than re-running the identical check.
+  const serverIssuesRef = useRef<string[] | null>(null);
   // ref indirection so the post-stream validator can re-invoke start() (retry) without a circular dep
   const startRef = useRef<(body: object) => Promise<void>>(async () => {});
+
+  const takeServerIssues = (): string[] | null => {
+    const v = serverIssuesRef.current;
+    return v && v.length ? v : null;
+  };
+
+  // Failed review → tell the user it's being reprocessed, regenerate with the notes.
+  const reviseOrSurface = useCallback(async (issues: string[], body: object) => {
+    if (retriedRef.current < 1) {
+      retriedRef.current += 1;
+      setValidation("reprocessing");
+      setValidationIssues(issues);
+      if (cacheKey) deleteCache(cacheKey);
+      await startRef.current({ ...body, revisionNotes: issues });
+    } else {
+      // Still flagged after one retry — surface softly, keep the reading.
+      setValidation("fail");
+      setValidationIssues(issues);
+    }
+  }, [cacheKey]);
 
   // Cross-model validation after a reading completes.
   const runValidation = useCallback(async (reading: string, body: object) => {
     const url = opts?.validateUrl ?? "/api/reading/validate";
+    const url0 = readingUrlRef.current;
     const isBaziValidator = url.includes("validate-bazi");
     const subject = isBaziValidator
       ? (body as { bazi?: unknown }).bazi
@@ -167,7 +194,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         body: JSON.stringify(
           isBaziValidator
             ? { reading, bazi: subject, cacheKey: serverCacheKeyRef.current }
-            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current }
+            : { reading, ziwei: subject, cacheKey: serverCacheKeyRef.current, natalOnly: /\/(decades|niandu)(\/|$)/.test(url0) }
         ),
       });
       // A non-2xx response (e.g. a 429 rate-limit `{error}` body) has no `pass`
@@ -179,18 +206,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
         setValidation("pass");
         if (cacheKey) saveCache(cacheKey, { text: accText.current, refs: accRefs.current, validated: true });
       } else if (v.pass === false) {
-        if (retriedRef.current < 1) {
-          // Failed review → tell the user it's being reprocessed, regenerate with the notes.
-          retriedRef.current += 1;
-          setValidation("reprocessing");
-          setValidationIssues(v.issues ?? []);
-          if (cacheKey) deleteCache(cacheKey);
-          await startRef.current({ ...body, revisionNotes: v.issues ?? [] });
-        } else {
-          // Still flagged after one retry — surface softly, keep the reading.
-          setValidation("fail");
-          setValidationIssues(v.issues ?? []);
-        }
+        await reviseOrSurface(v.issues ?? [], body);
       } else {
         // pass is null/missing — the reviewer failed open, i.e. no verdict at
         // all. Never block the reading, but never mark it validated either.
@@ -199,7 +215,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
     } catch {
       setValidation("idle"); // validator unreachable → no badge, never block the reading
     }
-  }, [opts?.validate, opts?.validateUrl, cacheKey]);
+  }, [opts?.validate, opts?.validateUrl, cacheKey, reviseOrSurface]);
 
   const start = useCallback(
     async (body: object) => {
@@ -239,6 +255,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
       accRefs.current = [];
       serverCacheKeyRef.current = null;
       serverValidatedRef.current = false;
+      serverIssuesRef.current = null;
       setStatus("streaming");
       setText("");
       setRefs([]);
@@ -287,6 +304,9 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
             }
             if (parsed._done === true) sawDone = true;
             if (parsed._validated === true) serverValidatedRef.current = true;
+            if (Array.isArray(parsed._validationIssues) && parsed._validationIssues.length) {
+              serverIssuesRef.current = parsed._validationIssues.filter((x: unknown) => typeof x === "string");
+            }
             // Server detected its own response was cut off by the token budget
             // (see lib/sseWriter.ts's finish_reason==="length" check) and is
             // restarting the generation with a higher ceiling — discard
@@ -353,6 +373,8 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
           // Already passed the server's synchronous validate gate before this
           // reading was ever sent as done — skip the redundant client-side check.
           setValidation("pass");
+        } else if (opts?.validate && takeServerIssues()) {
+          void reviseOrSurface(takeServerIssues()!, body);
         } else {
           // Kick off cross-model validation (non-blocking for the reading display).
           // Safety net for routes/outcomes the synchronous server-side gate didn't
@@ -379,7 +401,7 @@ export function useSSEStream(url: string, cacheKey?: string, opts?: StreamOpts):
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [url, cacheKey, runValidation]
+    [url, cacheKey, runValidation, reviseOrSurface, opts?.validate]
   );
   startRef.current = start;
 

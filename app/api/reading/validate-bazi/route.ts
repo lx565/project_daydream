@@ -25,6 +25,6 @@ export async function POST(request: NextRequest) {
   // invalidateReadingCache verifies the cached entry actually matches `reading`
   // before deleting — cacheKey is client-supplied and unauthenticated, so without
   // that check a caller could delete any other chart's cache entry by name.
-  if (result.pass === false && body.cacheKey) invalidateReadingCache(body.cacheKey, reading).catch(() => {});
+  if (result.pass === false && body.cacheKey) await invalidateReadingCache(body.cacheKey, reading).catch(() => {});
   return Response.json(toClientValidation(result));
 }

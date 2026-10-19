@@ -49,7 +49,9 @@ export function buildChartFacts(ziwei: ZiweiResult): string {
     const minor = p.stars.filter((s) => s.type === "minor").map((s) => `${s.name}${bt(s.brightness)}`).join("、") || "無";
     const sf = ziwei.sanFangSiZheng?.[p.name];
     const sfTxt = sf ? `；三方四正→對宮${pName(sf.opposite)}/財${pName(sf.wealth)}/官${pName(sf.career)}` : "";
-    return `${pName(p.name)}[${p.heavenlyStem}]：主星${major}｜輔星${minor}${sfTxt}`;
+    const adj = p.stars.filter((s) => s.type === "adjective").map((s) => s.name);
+    const adjTxt = adj.length ? `｜雜耀${adj.join("、")}` : "";
+    return `${pName(p.name)}[${p.heavenlyStem}]：主星${major}｜輔星${minor}${adjTxt}${sfTxt}`;
   }).join("\n");
   return `五行局：${ziwei.fiveElementsClass}；命主${ziwei.mainStar}；身主${ziwei.bodyStar}\n${palaceLines}`;
 }
@@ -59,10 +61,6 @@ function structuralCheck(reading: string): string[] {
   const issues: string[] = [];
   const body = (reading ?? "").trim();
   if (body.length < 80) issues.push("解讀內容過短或為空");
-  // truncation heuristic: ends mid-sentence without terminal punctuation
-  if (body.length > 200 && !/[。！？”）\]]\s*$/.test(body) && !/\[\/現代\]\s*$/.test(body)) {
-    issues.push("解讀疑似被截斷（結尾不完整）");
-  }
   return issues;
 }
 
@@ -76,6 +74,16 @@ function structuralCheck(reading: string): string[] {
  * the bare name in quotes immediately followed by 格/變格/格局) so that
  * descriptive star-system mentions like "殺破狼系" are not false-flagged.
  */
+const NEGATION = /[未不無非沒]/;
+/** True if at least one match of `re` is not negated (未/不/無/非/沒 within the 4 chars before it). */
+function hasAffirmedClaim(text: string, re: RegExp): boolean {
+  for (const m of text.matchAll(re)) {
+    const before = text.slice(Math.max(0, (m.index ?? 0) - 4), m.index ?? 0);
+    if (!NEGATION.test(before)) return true;
+  }
+  return false;
+}
+
 function minggeFabricationCheck(reading: string, ziwei: ZiweiResult): string[] {
   if (!reading || !ziwei?.palaces?.length) return [];
   let verified: Set<string>;
@@ -92,7 +100,7 @@ function minggeFabricationCheck(reading: string, ziwei: ZiweiResult): string[] {
     if (!core || verified.has(full)) continue; // chart genuinely forms it → fine
 
     const quoted = new RegExp(`[“"'「『]${core}[”"'」』].{0,6}(變?格局?|格)`);
-    const claimed = reading.includes(full) || quoted.test(reading);
+    const claimed = hasAffirmedClaim(reading, new RegExp(`${full}|${quoted.source}`, "g"));
     if (claimed) {
       issues.push(`解讀杜撰了本命盤並不成立的格局「${core}」——該格有嚴格的星曜條件，本盤並未形成。請刪除此格局論斷，僅依據真實星曜組合分析，不要自創或套用格局名。`);
     }
@@ -136,7 +144,14 @@ export async function jsonReview(prompt: string): Promise<{ pass: boolean; issue
 }
 
 /** Gemini cross-checks the reading against the authoritative 紫微 facts. */
-async function logicReview(reading: string, facts: string): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
+const MAX_REVIEW_CHARS = 14000;
+/** Keep head and tail of a long reading so the tail isn't silently unchecked. */
+function reviewWindow(reading: string): string {
+  if (reading.length <= MAX_REVIEW_CHARS) return reading;
+  return `${reading.slice(0, 9000)}\n……（中段省略）……\n${reading.slice(-5000)}`;
+}
+
+async function logicReview(reading: string, facts: string, natalOnly = false): Promise<{ pass: boolean; issues: string[]; reviewed: boolean }> {
   const prompt = `你是紫微斗數解讀的邏輯校驗員。下面【權威命盤事實】由確定性演算法（iztro）計算得出，是不可更改的事實；【待校驗解讀】由另一個AI生成。
 
 請只核查解讀是否與權威事實矛盾，重點：
@@ -150,17 +165,18 @@ async function logicReview(reading: string, facts: string): Promise<{ pass: bool
 
 重要：解讀中涉及流年、大限、流耀、流年四化等"運限/動態"資訊**不在**下方本命事實範圍內——不要因為下方事實未列出這些動態資訊就判錯；只有當解讀與下方**已明確列出的本命事實直接衝突**時（例如說某主星在某宮、但事實並非如此）才判 pass=false。
 
+${natalOnly ? "\n本篇為大限／流年解讀：下方事實僅有本命盤，各大限、流年的星曜與四化是另行推算的，凡涉及某一大限或某一年的論斷，不得僅因與本命事實不一致就判錯；只核查其中明確涉及本命星曜落宮、亮度、本命四化的陳述。\n" : ""}
 返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
 
 【權威命盤事實】
 ${facts}
 
 【待校驗解讀】
-${reading.slice(0, 8000)}`;
+${reviewWindow(reading)}`;
   return jsonReview(prompt);
 }
 
-export async function validateReading(reading: string, ziwei: ZiweiResult): Promise<ValidationResult> {
+export async function validateReading(reading: string, ziwei: ZiweiResult, opts?: { natalOnly?: boolean }): Promise<ValidationResult> {
   const structural = structuralCheck(reading);
   if (structural.length) return { pass: false, issues: structural, reviewed: false, deterministic: true };
 
@@ -170,6 +186,6 @@ export async function validateReading(reading: string, ziwei: ZiweiResult): Prom
   if (fabricated.length) return { pass: false, issues: fabricated, reviewed: true };
 
   const facts = buildChartFacts(ziwei);
-  const review = await logicReview(reading, facts);
+  const review = await logicReview(reading, facts, opts?.natalOnly);
   return { pass: review.pass, issues: review.issues, reviewed: review.reviewed };
 }
