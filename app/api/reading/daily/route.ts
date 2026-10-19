@@ -5,6 +5,7 @@ import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 import { chinaToday } from "@/lib/huangli";
+import { inputGuard } from "@/lib/inputLimits";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Solar } = require("lunar-javascript") as {
   Solar: {
@@ -47,12 +48,14 @@ interface DailyBody {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "daily" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "daily" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: DailyBody;
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { summary, soulPalace, mainStar, fiveElementsClass, gender } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!summary) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const today = chinaToday(); // Taipei (UTC+8) wall-clock "today" — server runs in UTC

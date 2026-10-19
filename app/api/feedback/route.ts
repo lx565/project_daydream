@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { SHEETS_URL } from "@/lib/sheetsWebhook";
 
-const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbz88inF_BkCMIeHBuiLj-ajjsJKCmEoSKQfygW1FAqmZQMbg6EI5734FqibKmBkfDfdVw/exec";
 
 const MAX_DESCRIPTION = 2000;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "feedback" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "feedback" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { type?: string; description?: string; page?: string; sessionId?: string };

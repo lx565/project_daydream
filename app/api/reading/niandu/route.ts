@@ -8,6 +8,7 @@ import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 import type { BaziResult } from "@/lib/bazi";
 import { getNianduYear, nianduFactsFrom } from "@/lib/niandu";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是紫微斗數命理師，像一位關心你的朋友，把命主今年真正值得留意的幾件事說清楚——不是「本週水逆」那種通用文案，每一點都要能回推到命盤上一個具體的星曜落點。
 
@@ -51,7 +52,8 @@ const SYSTEM = `你是紫微斗數命理師，像一位關心你的朋友，把�
 鼓勵引用相關古訣、典籍原文或命理熟語為據（僅命理版，白話版不可出現任何引文或術語）。措辭專業、沉穩、典雅，帶老派命理師的分量感。繁體中文。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "niandu" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; bazi: BaziResult; name?: string };
   try { body = await request.json(); } catch {
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { ziwei, bazi, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate || !bazi?.summary) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const birthYear = parseInt(ziwei.birth.solarDate.slice(0, 4), 10);

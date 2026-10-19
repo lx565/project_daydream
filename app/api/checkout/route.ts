@@ -9,6 +9,9 @@ import { chartType, type ChartType } from "@/lib/chartType";
 
 export const runtime = "nodejs";
 
+// Fixed origin: never derive redirect targets from a client-supplied header.
+const SITE_ORIGIN = "https://www.mingli.study";
+
 // Each product type unlocks against a different Stripe Price ID. "monthly" uses
 // a generic env name (not e.g. STRIPE_PRICE_ID_MONTHLY) because it's meant to
 // cover any future $1.99 one-time short report, not just this one.
@@ -20,7 +23,8 @@ const PRICE_ENV_BY_TYPE: Record<ChartType, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "checkout" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "checkout" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return Response.json({ error: "stripe_not_configured" }, { status: 503 });
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest) {
   try {
     const StripeSDK = (await import("stripe")).default;
     const stripe = new StripeSDK(secret);
-    const origin = request.headers.get("origin") ?? "https://www.mingli.study";
+    const origin = SITE_ORIGIN;
     const sep = safeReturn.includes("?") ? "&" : "?";
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",

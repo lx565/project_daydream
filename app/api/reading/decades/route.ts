@@ -8,6 +8,7 @@ import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowYears } from "@/lib/flowYears";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通紫微斗數大限與流年推算的命理師，像一位真誠、閱歷豐富的兄長，據盤論斷、有據可依，也有溫度。
 
@@ -43,12 +44,14 @@ function parseAgeRange(range: string): [number, number] {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "decades" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "decades" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; birthYear?: number; name?: string; revisionNotes?: string[]; targetBranch?: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, name, targetBranch } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei || !ziwei.palaces?.length) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   // birthYear: prefer the value embedded in the chart, fall back to the legacy field.

@@ -7,6 +7,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { getFlowYears, type FlowYear } from "@/lib/flowYears";
+import { inputGuard } from "@/lib/inputLimits";
 
 const YEARS_AHEAD = 10; // same window as flowyears-scores, so the score grid and this critique line up
 const HIGHLIGHT_COUNT = 3; // fixed, deterministic — an LLM asked to "pick 2-4" was observed under-selecting (often just 1)
@@ -42,11 +43,13 @@ const SYSTEM = `你是精通紫微斗數流年推斷的命理師，像一位真�
 【加粗規則】只用**加粗**單個星曜名稱或四化符號（1–6字），不得加粗片語、句子或標題標籤。繁體中文。` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "flowyear" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "flowyear" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; birthYear: number; name?: string; currentYear?: number };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
   const { ziwei, birthYear, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate || !birthYear) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const currentYear = body.currentYear ?? new Date().getFullYear();

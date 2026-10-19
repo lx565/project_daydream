@@ -3,6 +3,7 @@
 
 import type { ZiweiResult } from "./ziwei";
 import { renderZiweiChartHtml } from "./chartHtml";
+import { escapeHtml as esc } from "./escapeHtml";
 
 export interface ReadingEmailData {
   name?: string;
@@ -59,8 +60,8 @@ function extractTables(md: string): { text: string; tables: string[] } {
   return { text, tables };
 }
 
-function mdToHtml(md: string): string {
-  const { text, tables } = extractTables(md);
+function mdToHtml(rawMd: string): string {
+  const { text, tables } = extractTables(esc(rawMd));
   let html = text
     .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:#8B1A1A;margin:24px 0 8px;padding-bottom:4px;border-bottom:1px solid #e8ddd0;">$1</h2>')
     .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:#5c4a2a;margin:16px 0 6px;">$1</h3>')
@@ -76,7 +77,7 @@ function mdToHtml(md: string): string {
 }
 
 export function buildReadingEmail(data: ReadingEmailData): { html: string; text: string } {
-  const greet = data.name ? `親愛的 ${data.name}，` : '您好，';
+  const greet = data.name ? `親愛的 ${esc(data.name)}，` : '您好，';
 
   // Sections ordered exactly by tab: 總覧 → 宮位 → 大運 → 八字 → 眾說 → 注意
   const sections: { title: string; content: string | undefined }[] = [
@@ -125,8 +126,8 @@ export function buildReadingEmail(data: ReadingEmailData): { html: string; text:
     <!-- Birth summary -->
     <div style="background:#2c1a0e;padding:20px 40px;">
       <div style="color:#c8a96e;font-size:12px;letter-spacing:2px;margin-bottom:6px;">命盤資訊</div>
-      <div style="color:#f5d98b;font-size:15px;font-weight:600;">${data.birthSummary}</div>
-      ${data.chartSummary ? `<div style="color:#e8c88a;font-size:13px;margin-top:4px;opacity:0.85;">${data.chartSummary}</div>` : ''}
+      <div style="color:#f5d98b;font-size:15px;font-weight:600;">${esc(data.birthSummary)}</div>
+      ${data.chartSummary ? `<div style="color:#e8c88a;font-size:13px;margin-top:4px;opacity:0.85;">${esc(data.chartSummary)}</div>` : ''}
     </div>
 
     <!-- Body -->

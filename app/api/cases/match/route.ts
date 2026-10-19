@@ -1,9 +1,13 @@
 import { NextRequest } from "next/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { findMatchingCases } from "@/lib/caseMatch";
 import { detectGeju } from "@/lib/detectGeju";
 import type { BaziResult } from "@/lib/bazi";
 
 export async function POST(request: NextRequest) {
+  const rl = await checkRateLimit(request, { limit: 60, keyPrefix: "cases-match" });
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   let body: { bazi: BaziResult };
   try {
     body = await request.json();

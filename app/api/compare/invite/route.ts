@@ -8,8 +8,9 @@ export interface CreateInviteResult {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "compare-invite" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "compare-invite" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { date?: string; hour?: number; gender?: string; name?: string; relType?: string };

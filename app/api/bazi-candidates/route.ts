@@ -10,8 +10,9 @@ export const maxDuration = 30;
 const MAX_ENRICHED = 12;
 
 export async function POST(req: NextRequest) {
-  if (!(await checkRateLimit(req, { limit: 20, keyPrefix: "bazi-candidates" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(req, { limit: 20, keyPrefix: "bazi-candidates" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { input?: string; gender?: "male" | "female" };

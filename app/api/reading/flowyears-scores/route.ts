@@ -6,6 +6,7 @@ import { getFlowYears } from "@/lib/flowYears";
 import { callAI } from "@/lib/callAI";
 import { SAFETY_GUARDRAIL } from "@/lib/modernInstruction";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const YEARS_AHEAD = 10;
 
@@ -51,8 +52,9 @@ const SYSTEM = `你是紫微斗數流年推算專家。根據命主命盤和未�
 }` + SAFETY_GUARDRAIL;
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 8, keyPrefix: "flowyears-scores" })).allowed) {
-    return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 8, keyPrefix: "flowyears-scores" });
+  if (!rl.allowed) {
+    return rateLimitResponse(rl);
   }
 
   let body: { ziwei: ZiweiResult; currentYear?: number; name?: string };
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
   const { ziwei, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei?.birth?.solarDate) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const currentYear = body.currentYear ?? new Date().getFullYear();

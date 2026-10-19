@@ -4,6 +4,7 @@
 // React component, so this reproduces the same grid via an HTML <table>
 // (the most reliable cross-email-client layout primitive) with inline styles.
 import type { ZiweiResult } from "./ziwei";
+import { escapeHtml as esc } from "./escapeHtml";
 
 // Same 0-indexed [row, col] mapping as ZiweiChart.tsx's BRANCH_POSITION.
 const BRANCH_POSITION: Record<string, [number, number]> = {
@@ -28,7 +29,7 @@ const MUTAGEN_STYLE: Record<string, string> = {
 function mutagenPill(mutagen?: string): string {
   if (!mutagen) return "";
   const style = MUTAGEN_STYLE[mutagen] ?? "background:#f5f0e6;color:#5c4a2a;border-color:#e8ddd0;";
-  return `<span style="display:inline-block;font-size:8px;line-height:1;padding:1px 3px;margin-left:2px;border-radius:2px;border:1px solid;${style}">${mutagen.replace("化", "")}</span>`;
+  return `<span style="display:inline-block;font-size:8px;line-height:1;padding:1px 3px;margin-left:2px;border-radius:2px;border:1px solid;${style}">${esc(mutagen.replace("化", ""))}</span>`;
 }
 
 interface StarLike { name: string; brightness: string; type: "major" | "minor" | "adjective"; mutagen?: string }
@@ -37,8 +38,8 @@ function starLine(s: StarLike, big: boolean): string {
   const color = BRIGHTNESS_COLOR[s.brightness] ?? "#8B1A1A";
   const weight = s.brightness === "旺" || s.brightness === "廟" ? "900" : "600";
   const size = big ? "11px" : "9px";
-  return `<span style="font-size:${size};font-weight:${weight};color:${color};">${s.name}</span>` +
-    (s.brightness ? `<span style="font-size:7px;font-weight:700;color:${color};margin-left:1px;">${s.brightness}</span>` : "") +
+  return `<span style="font-size:${size};font-weight:${weight};color:${color};">${esc(s.name)}</span>` +
+    (s.brightness ? `<span style="font-size:7px;font-weight:700;color:${color};margin-left:1px;">${esc(s.brightness)}</span>` : "") +
     mutagenPill(s.mutagen);
 }
 
@@ -53,7 +54,7 @@ function palaceCellHtml(palace: ZiweiResult["palaces"][number]): string {
   const minorHtml = minor.length
     ? `<div style="margin-top:2px;">${minor.map((s) => starLine(s, false)).join(" ")}</div>` : "";
   const adjHtml = adj.length
-    ? `<div style="margin-top:2px;font-size:7px;color:#8a7a5c;">${adj.map((s) => s.name).join(" ")}</div>` : "";
+    ? `<div style="margin-top:2px;font-size:7px;color:#8a7a5c;">${adj.map((s) => esc(s.name)).join(" ")}</div>` : "";
 
   const nameSize = palace.isSoulPalace ? "13px" : "11px";
   const nameWeight = palace.isSoulPalace ? "900" : "600";
@@ -66,8 +67,8 @@ function palaceCellHtml(palace: ZiweiResult["palaces"][number]): string {
   return `<td valign="top" style="width:25%;height:110px;border:1px solid ${border};background:${bg};padding:4px;">` +
     `<div style="min-height:70px;">${majorHtml}${minorHtml}${adjHtml}</div>` +
     `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">` +
-    `<span style="font-size:${nameSize};font-weight:${nameWeight};color:${nameColor};">${palace.name}${badges}</span>` +
-    `<span style="font-size:10px;font-weight:700;color:#8a7a5c;">${palace.earthlyBranch}</span>` +
+    `<span style="font-size:${nameSize};font-weight:${nameWeight};color:${nameColor};">${esc(palace.name)}${badges}</span>` +
+    `<span style="font-size:10px;font-weight:700;color:#8a7a5c;">${esc(palace.earthlyBranch)}</span>` +
     `</div></td>`;
 }
 
@@ -75,11 +76,11 @@ function centerCellHtml(ziwei: ZiweiResult, name: string | undefined, gender: "m
   return `<td colspan="2" rowspan="2" valign="middle" align="center" style="width:50%;height:220px;border:1px solid #e8ddd0;background:#FDFCF8;padding:8px;">` +
     `<div style="font-size:13px;font-weight:700;color:#8B1A1A;letter-spacing:1px;">命裡</div>` +
     `<div style="width:80%;height:1px;background:#8B1A1A;opacity:0.2;margin:6px auto;"></div>` +
-    `<div style="font-size:11px;color:#3d2f1f;">${name ?? "匿名"} · ${gender === "male" ? "男命" : "女命"}</div>` +
-    `<div style="font-size:10px;color:#5c4a2a;margin-top:2px;">${ziwei.fiveElementsClass}</div>` +
+    `<div style="font-size:11px;color:#3d2f1f;">${esc(name ?? "匿名")} · ${gender === "male" ? "男命" : "女命"}</div>` +
+    `<div style="font-size:10px;color:#5c4a2a;margin-top:2px;">${esc(ziwei.fiveElementsClass)}</div>` +
     `<div style="width:80%;height:1px;background:#8B1A1A;opacity:0.2;margin:6px auto;"></div>` +
-    `<div style="font-size:10px;color:#5c4a2a;">命主 <span style="color:#8B1A1A;font-weight:700;">${ziwei.mainStar}</span></div>` +
-    `<div style="font-size:10px;color:#5c4a2a;">身主 <span style="color:#d97706;font-weight:700;">${ziwei.bodyStar}</span></div>` +
+    `<div style="font-size:10px;color:#5c4a2a;">命主 <span style="color:#8B1A1A;font-weight:700;">${esc(ziwei.mainStar)}</span></div>` +
+    `<div style="font-size:10px;color:#5c4a2a;">身主 <span style="color:#d97706;font-weight:700;">${esc(ziwei.bodyStar)}</span></div>` +
     `</td>`;
 }
 

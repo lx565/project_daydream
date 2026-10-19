@@ -10,6 +10,7 @@ import { calcBaziCoupleScore } from "@/lib/baziCouple";
 import { getFlowYears } from "@/lib/flowYears";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通子平八字的資深命理師，以純八字視角做雙人合盤——不涉及紫微斗數，完全在子平框架內論斷。
 
@@ -198,7 +199,8 @@ function dmRelationHint(baziA: BaziResult, baziB: BaziResult, labelA: string, la
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "bazi-couple" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     baziA: BaziResult; ziweiA?: ZiweiResult;
@@ -211,6 +213,7 @@ export async function POST(request: NextRequest) {
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   const cfg = getRelationshipConfig(relationshipType);
   const score = calcBaziCoupleScore(baziA, baziB, cfg.key);
 

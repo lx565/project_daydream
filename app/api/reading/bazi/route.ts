@@ -6,6 +6,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { validateBaziReading } from "@/lib/validateBazi";
 import type { BaziResult } from "@/lib/bazi";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通子平八字的命理師。這是"總覽"的八字格局速讀——只聚焦命局的核心格局與用神方向，讓使用者先知道"這是什麼命"。性格底色、事業財運、婚姻六親的展開在"八字"標籤頁的深度詳批中，此處不重複那些內容。
 
@@ -63,12 +64,14 @@ ${jqBlock}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "bazi" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "bazi" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { bazi: BaziResult; gender: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { bazi, gender } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!bazi || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const tenGods = [bazi.year.stem, bazi.month.stem, bazi.hour.stem].map((s) => tenGod(bazi.dayMaster, s)).filter(Boolean);

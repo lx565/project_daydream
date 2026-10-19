@@ -4,6 +4,7 @@ export const maxDuration = 180;
 import { NextRequest } from "next/server";
 import { checkRateLimit, rateLimitResponse, clientIp } from "@/lib/rateLimit";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
+import { inputGuard } from "@/lib/inputLimits";
 
 // Shared "白話版" companion call for couple/route.ts + bazi-couple/route.ts —
 // takes their already-generated classical text (share card already stripped
@@ -11,13 +12,15 @@ import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 // callers since the prompt and behavior are identical; only the input text
 // differs, and that alone already makes each cache key unique.
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 20, keyPrefix: "vernacular" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 20, keyPrefix: "vernacular" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { text?: string };
   try { body = await request.json(); }
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { text } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!text || text.trim().length < 20) return Response.json({ error: "invalid_request" }, { status: 400 });
 
   const userMessage = `請把以下命理合盤解讀，依系統指示逐段改寫成白話版：\n\n${text.trim()}`;

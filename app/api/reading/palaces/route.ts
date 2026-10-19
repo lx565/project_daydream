@@ -6,6 +6,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { validateReading } from "@/lib/validateReading";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是紫微斗數命理師，三合派與四化派功底深厚，像一位真誠的兄長為你逐宮講解——有據可循，也有溫度。
 
@@ -53,12 +54,14 @@ function buildPalaceDetail(ziwei: ZiweiResult): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "palaces" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "palaces" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   // Birth year + age for age-appropriate modern framing

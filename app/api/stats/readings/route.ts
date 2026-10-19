@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 // Vanity counter for "命盤 generated so far". Real generations are tracked in
 // KV (key `stats:readings`); BASELINE seeds the count with historical traffic
@@ -17,11 +18,15 @@ async function currentCount(): Promise<number> {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rl = await checkRateLimit(request, { limit: 300, keyPrefix: "stats-readings-get" });
+  if (!rl.allowed) return rateLimitResponse(rl);
   return Response.json({ count: await currentCount() });
 }
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "stats-readings" });
+  if (!rl.allowed) return rateLimitResponse(rl);
   if (!process.env.KV_REST_API_URL) {
     return Response.json({ count: BASELINE });
   }

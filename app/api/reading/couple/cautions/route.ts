@@ -9,6 +9,7 @@ import { getRelationshipConfig } from "@/lib/coupleTypes";
 import { PALACE_ALIASES, isRealPalace } from "@/lib/couple";
 import type { BaziResult } from "@/lib/bazi";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是紫微斗數命理師，像一位關心你的兄長，把兩人相處中需要留意的地方如實說清楚。煞星、化忌落在相關宮位之處該提醒就提醒、不迴避不淡化——但出發點是關心，語氣溫和、就事論事，不誇大也不嚇人，且每點風險都給出可行的應對，讓人安心而非焦慮。
 
@@ -41,7 +42,8 @@ function cautionLine(ziwei: ZiweiResult, palaceName: string, label: string): str
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "couple-cautions" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "couple-cautions" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     baziA: BaziResult; ziweiA: ZiweiResult;
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { baziA, ziweiA, baziB, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziweiA?.palaces?.length || !ziweiB?.palaces?.length) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const cfg = getRelationshipConfig(relationshipType);

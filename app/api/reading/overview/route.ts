@@ -11,6 +11,7 @@ import type { Reference } from "@/lib/rag";
 import { detectMingge } from "@/lib/detectMingge";
 import { buildExampleGrounding } from "@/lib/minggeExampleUtils";
 import { assistantStarBriefs } from "@/lib/assistantStarData";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是一位精通三合派、四化派與飛星派的紫微斗數命理師，像一位真誠、閱歷豐富的兄長為人說命——既講真話，也有溫度。
 
@@ -147,12 +148,14 @@ ${minggeBlock ? `\n${minggeBlock}` : ""}
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 30, keyPrefix: "overview" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 30, keyPrefix: "overview" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; gender: string; name?: string; revisionNotes?: string[] };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziwei, gender, name } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei || !gender) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const soulPalace = ziwei.palaces.find((p) => p.isSoulPalace);

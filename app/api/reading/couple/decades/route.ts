@@ -7,6 +7,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import { getRelationshipConfig } from "@/lib/coupleTypes";
 import type { ZiweiResult } from "@/lib/ziwei";
+import { inputGuard } from "@/lib/inputLimits";
 
 const SYSTEM = `你是精通紫微斗數大限推算的資深合盤命理師，像一位真誠的兄長，把兩人各自的十年大限拿來對照——哪些年份兩人同步向上、哪些年份一方順一方逆，據盤論斷，也有溫度。
 
@@ -62,7 +63,8 @@ function overlapYears(a: DecadeWindow, b: DecadeWindow): { startYear: number; en
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 15, keyPrefix: "couple-decades" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 15, keyPrefix: "couple-decades" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: {
     ziweiA: ZiweiResult; ziweiB: ZiweiResult;
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
   catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
 
   const { ziweiA, ziweiB, nameA, nameB, genderA, genderB, relationshipType } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziweiA?.birth?.solarDate || !ziweiB?.birth?.solarDate) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const cfg = getRelationshipConfig(relationshipType);

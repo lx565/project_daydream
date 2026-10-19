@@ -7,6 +7,7 @@ import { getKnowledge } from "@/lib/rag";
 import { makeSSEResponse, streamWithRefs } from "@/lib/sseWriter";
 import type { ZiweiResult } from "@/lib/ziwei";
 import { assistantStarBriefs } from "@/lib/assistantStarData";
+import { inputGuard } from "@/lib/inputLimits";
 
 const pName = (n: string) => (n && !n.endsWith("宮") ? `${n}宮` : n);
 
@@ -30,11 +31,13 @@ const TOPIC_MAP: Record<string, { palaces: string[]; label: string; topic: strin
 };
 
 export async function POST(request: NextRequest) {
-  if (!(await checkRateLimit(request, { limit: 10, keyPrefix: "topic" })).allowed) return rateLimitResponse();
+  const rl = await checkRateLimit(request, { limit: 10, keyPrefix: "topic" });
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   let body: { ziwei: ZiweiResult; topic: string };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_request" }, { status: 400 }); }
   const { ziwei, topic } = body;
+  { const bad = inputGuard(body); if (bad) return bad; }
   if (!ziwei || !topic) return Response.json({ error: "missing_fields" }, { status: 400 });
 
   const cfg = TOPIC_MAP[topic] ?? TOPIC_MAP.career;
