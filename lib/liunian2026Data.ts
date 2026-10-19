@@ -123,7 +123,9 @@ function buildEntry(opts: {
     branch,
     relation,
     relationNote,
-    title: `2026丙午年屬${animal}運勢：與太歲${relation === "值太歲" ? "本命年" : `「${relationNote}」`}詳解`,
+    title: relationNote || relation === "值太歲"
+      ? `2026丙午年屬${animal}運勢：與太歲${relation === "值太歲" ? "本命年" : `「${relationNote}」`}詳解`
+      : `2026丙午年屬${animal}運勢詳解：與太歲沒有直接的沖合`,
     subtitle: `丙午年 · 生肖${animal} × 午 · ${relation} · 2026年運勢重點`,
     oneLine,
     intro: `2026年是農曆丙午年，太歲屬馬（午）。屬${animal}的你，本命地支${branch}與今年的午構成「${relationNote || relation}」——${introTail}本文從這層曆法關係講起，說明傳統上這代表什麼、2026年實際生活中可以留意的方向，以及怎麼理性看待、而不被「生肖運勢」四個字嚇到。`,
