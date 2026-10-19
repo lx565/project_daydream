@@ -109,7 +109,7 @@ const LOADING_STEPS = [
 // Per-reading narration, each step true for that route's pipeline:
 // RAG = getKnowledge/getSharedRetrieval; 驗證 = route passes opts.validate (sync gate).
 const SYNTHESIS_STEPS = ["正在讀取紫微命盤與八字四柱…", "檢索紫微與八字典籍…", "融合紫微與八字…", "核對命盤事實…", "生成混合解讀…"];
-const CONSENSUS_STEPS = ["正在讀取命盤資料…", "檢索三合派與飛星派典籍…", "比對兩派論斷…", "生成紫薇綜合解讀…"];
+const CONSENSUS_STEPS = ["正在讀取命盤資料…", "檢索三合派與飛星派典籍…", "比對兩派論斷…", "生成紫微綜合解讀…"];
 const BAZI_SUMMARY_STEPS = ["正在排列八字四柱…", "檢索子平八字典籍…", "核對命盤事實…", "生成八字綜合解讀…"];
 const PALACES_STEPS = ["正在讀取十二宮位星曜…", "檢索各宮主星典籍…", "逐宮梳理三方四正…", "核對命盤事實…", "生成逐宮解讀…"];
 const DECADES_STEPS = ["正在計算大運流年…", "檢索大運相關典籍…", "梳理各階段運勢脈絡…", "核對命盤事實…", "生成大運解讀…"];
@@ -251,7 +251,7 @@ const OVERVIEW_SCHOOLS = [
 ] as const;
 
 // mode controls which slice of the overview reading renders:
-//  "consensus" — intro + 綜合共識 only (總覽 · 紫薇綜合, the holistic conclusion)
+//  "consensus" — intro + 綜合共識 only (總覽 · 紫微綜合, the holistic conclusion)
 //  "schools"   — the 3 派 breakdowns only (眾說 · 紫微三派詳解)
 function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs: Reference[]; mode?: "consensus" | "schools" }) {
   // Consensus marker: Traditional (綜合共識) from overview, Simplified (综合共识) fallback
@@ -306,7 +306,7 @@ function OverviewDualView({ text, refs, mode = "schools" }: { text: string; refs
         </div>
       ))}
 
-      {/* Consensus — "consensus" mode (O2 · 紫薇綜合) renders plain, consistent with 八字綜合. */}
+      {/* Consensus — "consensus" mode (O2 · 紫微綜合) renders plain, consistent with 八字綜合. */}
       {showConsensus && parts.consensus && <ClassicalMd text={parts.consensus} />}
 
       <RefList refs={refs} />
@@ -396,6 +396,7 @@ interface WizardFlowProps {
   gender: string;
   birthYear: number;
   sessionId?: string;
+  legacySessionId?: string;
   name?: string;
   dateLabel?: string;
   timeLabel?: string;
@@ -418,7 +419,7 @@ function ValidationBadge({ status }: { status: import("@/lib/useSSEStream").Vali
   return null;
 }
 
-export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
+export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, legacySessionId, name, dateLabel, timeLabel, onExportReady }: WizardFlowProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   // null = not yet arrived; "" = arrived but empty/errored; string = content
   const [baziDecadesText, setBaziDecadesText] = useState<string | null>(null);
@@ -426,7 +427,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
 
   // Paywall: when enabled & not unlocked, non-free tabs are gated and their
   // (costly) AI sections are NOT auto-run until the chart is unlocked.
-  const paywall = usePaywall(sessionId);
+  const paywall = usePaywall(sessionId, legacySessionId);
   const gated = paywall.enabled && !paywall.unlocked;
 
   // Detect Stripe return — set once on mount, stable for the component's lifetime
@@ -447,19 +448,21 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   };
 
   const ck = (tab: string) => sessionId ? `${sessionId}_${tab}` : undefined;
+  // Year-dependent readings (age / current year in the prompt) must not be served from last year's local cache.
+  const ckY = (tab: string) => sessionId ? `${sessionId}_${tab}_${new Date().getFullYear()}` : undefined;
 
   // Free cross-domain synthesis (紫微 + 八字) — the new top of the 總覽 tab.
   const synthesis     = useSSEStream("/api/reading/synthesis",     ck("synthesis"), { validate: true });
-  // FREE — the cheap, single-conclusion 紫薇綜合 teaser (O2). No cross-model validation.
+  // FREE — the cheap, single-conclusion 紫微綜合 teaser (O2). No cross-model validation.
   const consensus     = useSSEStream("/api/reading/consensus",     ck("consensus"));
   // The deep multi-school 紫微 reading — now a PAID deep-dive below the free teaser.
   const overview      = useSSEStream("/api/reading/overview",      ck("overview"), { validate: true });
   const palaces       = useSSEStream("/api/reading/palaces",       ck("palaces"), { validate: true });
-  const decades       = useSSEStream("/api/reading/decades",       ck("decades"), { validate: true });
-  const cautions      = useSSEStream("/api/reading/cautions",      ck("cautions"), { validate: true });
+  const decades       = useSSEStream("/api/reading/decades",       ckY("decades"), { validate: true });
+  const cautions      = useSSEStream("/api/reading/cautions",      ckY("cautions"), { validate: true });
   // Single scan across the next 10 flow years — AI picks 2–4 genuinely notable ones
   // and writes real critique only for those (replaces the old, removed, one-call-per-year design).
-  const flowYearHighlights = useSSEStream("/api/reading/flowyear", ck("flowyear"));
+  const flowYearHighlights = useSSEStream("/api/reading/flowyear", ckY("flowyear"));
   // 八字-only readings validate against the 八字 checker (validate-bazi), not the
   // 紫微 one — they were previously always posted to the default /api/reading/validate,
   // which expects `ziwei` and runs 紫微-specific checks irrelevant to a 八字 reading.
@@ -514,7 +517,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
     : undefined;
 
   // The FREE sections always run on mount: cross-domain synthesis (混合解讀),
-  // the cheap 紫薇綜合 consensus teaser, and the bazi reading (八字綜合).
+  // the cheap 紫微綜合 consensus teaser, and the bazi reading (八字綜合).
   useEffect(() => {
     gtagEvent("reading_started");
     if (synthesis.status === "idle") synthesis.start(synthesisPayload);
@@ -530,7 +533,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
   useEffect(() => {
     if (paywall.loading || gated) return;
     // The heavy 6-school overview only runs post-unlock now — it feeds the paid
-    // 眾說 tab; the free 紫薇綜合 box uses the cheap `consensus` stream instead.
+    // 眾說 tab; the free 紫微綜合 box uses the cheap `consensus` stream instead.
     if (overview.status === "idle")     overview.start(ziweiPayload);
     if (palaces.status === "idle")      palaces.start({ ziwei, name });
     if (decades.status === "idle")      decades.start(ziweiWithBirth);
@@ -641,9 +644,9 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
               <ValidationBadge status={synthesis.validation} />
             </div>
 
-            {/* FREE — 紫薇綜合 (cheap standalone consensus teaser, /api/reading/consensus) */}
+            {/* FREE — 紫微綜合 (cheap standalone consensus teaser, /api/reading/consensus) */}
             <div className="space-y-4 pt-4 border-t border-border-light">
-              <SectionTitle accent="gold">紫薇綜合</SectionTitle>
+              <SectionTitle accent="gold">紫微綜合</SectionTitle>
               {consensus.status === "streaming" ? (
                 <LoadingSkeleton steps={CONSENSUS_STEPS} />
               ) : consensus.status === "done" ? (
@@ -777,7 +780,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
             {overview.status === "done" ? (
               <div>
                 {/* mode="schools": only the 三合/四化/飛星/小眾 派 cards — the 綜合共識
-                    conclusion lives solely in O2 (紫薇綜合), so it isn't repeated here. */}
+                    conclusion lives solely in O2 (紫微綜合), so it isn't repeated here. */}
                 <OverviewDualView text={overview.text} refs={overview.refs} mode="schools" />
                 <ValidationBadge status={overview.validation} />
               </div>
@@ -882,6 +885,7 @@ export default function WizardFlow({ ziwei, bazi, gender, birthYear, sessionId, 
                 initialContext={`你好，我已瞭解你的命盤（${ziwei.summary}）。可就性格、事業、感情、流年等追問，我會據盤而論、利弊並陳。`}
                 backgroundReadings={backgroundReadings}
                 chartId={sessionId ?? ""}
+                legacyChartId={legacySessionId}
                 maxQuestions={10}
               />
             </div>

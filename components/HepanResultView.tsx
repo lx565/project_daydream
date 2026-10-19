@@ -29,7 +29,7 @@ export interface HepanCharts {
 
 const COUPLE_INCLUDED = [
   "各自解讀 · 雙方獨立命盤解讀",
-  "合盤綫析 · 紫微＋八字雙系統",
+  "合盤線析 · 紫微＋八字雙系統",
   "飛化互入 · 彼此牽動的領域",
   "緣分時機 · 高峰與考驗階段",
   "相處之道 · 具體可行建議",
@@ -260,7 +260,7 @@ type Tab = "overview" | "solo" | "analysis" | "timing" | "deep_cautions";
 const TABS: { id: Tab; label: string; char: string }[] = [
   { id: "overview", label: "總覽", char: "緣" },
   { id: "solo", label: "各自", char: "個" },
-  { id: "analysis", label: "綫析", char: "合" },
+  { id: "analysis", label: "線析", char: "合" },
   { id: "timing", label: "時運", char: "時" },
   { id: "deep_cautions", label: "注意", char: "警" },
 ];
@@ -522,7 +522,7 @@ export default function HepanResultView({ charts, onReset }: { charts: HepanChar
                     </div>
                   )}
                   {coupleFull.status === "done" && baziCoupleFull.status === "done" && !ziweiTiming && !baziTiming && (
-                    <p className="text-sm text-ink-4">本次未取得時機分析，可至「綫析」頁查看完整解讀。</p>
+                    <p className="text-sm text-ink-4">本次未取得時機分析，可至「線析」頁查看完整解讀。</p>
                   )}
                 </>
               )}

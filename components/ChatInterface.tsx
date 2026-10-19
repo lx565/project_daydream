@@ -49,6 +49,7 @@ export default function ChatInterface({
   placeholder,
   backgroundReadings,
   chartId,
+  legacyChartId,
   name,
   maxQuestions,
 }: {
@@ -58,6 +59,7 @@ export default function ChatInterface({
   placeholder?: string;
   backgroundReadings?: Record<string, string>;
   chartId?: string;
+  legacyChartId?: string;
   name?: string;
   maxQuestions?: number;
 }) {
@@ -79,7 +81,7 @@ export default function ChatInterface({
   // Only push a paid upgrade when the paywall is actually on and this chart
   // isn't already unlocked — otherwise the limit turns into a warm hand-off to
   // the (free) deep-reading tabs instead of a sales pitch.
-  const { enabled: paywallOn, unlocked } = usePaywall(chartId);
+  const { enabled: paywallOn, unlocked } = usePaywall(chartId, legacyChartId);
   const showUpsell = paywallOn && !unlocked;
 
   useEffect(() => {

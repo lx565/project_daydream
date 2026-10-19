@@ -17,6 +17,9 @@ import { chartType, CHART_PRICE_USD, type ChartType } from "@/lib/chartType";
 //   loading  — true until the first unlock check resolves; callers should not
 //              start (pay for) gated AI sections while loading.
 
+// How long to keep polling for the Stripe webhook after returning with ?paid=1.
+export const PAID_POLL_MS = 45_000;
+
 const PAYWALL_ENABLED = process.env.NEXT_PUBLIC_PAYWALL_ENABLED === "true";
 
 // Permanent product decision (2026-09-11, Niki: "hepan stay free") — hepan
@@ -54,7 +57,9 @@ export interface PaywallState {
   loading: boolean;
 }
 
-export function usePaywall(chartId?: string): PaywallState {
+/** `legacyChartId`: pre-zero-padding ID of the same chart (see lib/chartId.ts); an unlock
+ *  stored under it counts, so purchases made before the ID format change keep working. */
+export function usePaywall(chartId?: string, legacyChartId?: string): PaywallState {
   const enabled = PAYWALL_ENABLED && !(chartId && (PERMANENTLY_FREE_TYPES.has(chartType(chartId)) || DISABLED_TYPES.has(chartType(chartId))));
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(enabled);
@@ -67,14 +72,18 @@ export function usePaywall(chartId?: string): PaywallState {
     }
     let cancelled = false;
 
-    async function check(): Promise<boolean> {
+    async function checkOne(id: string): Promise<boolean> {
       try {
-        const res = await fetch(`/api/unlock?chartId=${encodeURIComponent(chartId!)}`);
+        const res = await fetch(`/api/unlock?chartId=${encodeURIComponent(id)}`);
         const data = await res.json();
         return data.unlocked === true;
       } catch {
         return false;
       }
+    }
+    async function check(): Promise<boolean> {
+      if (await checkOne(chartId!)) return true;
+      return legacyChartId ? checkOne(legacyChartId) : false;
     }
 
     async function run() {
@@ -92,17 +101,19 @@ export function usePaywall(chartId?: string): PaywallState {
         return;
       }
 
-      // Webhook hasn't landed yet — poll a few times.
+      // Webhook hasn't landed yet — poll until it does (PaywallLock shows the pending state).
       if (justPaid && !polled.current) {
         polled.current = true;
-        for (let i = 0; i < 6 && !cancelled; i++) {
+        const deadline = Date.now() + PAID_POLL_MS;
+        while (!cancelled && Date.now() < deadline) {
           await new Promise((r) => setTimeout(r, 1500));
+          if (cancelled) break;
           if (await check()) {
             if (!cancelled) {
               setUnlocked(true);
               trackPurchaseOnce(chartId!);
-              break;
             }
+            break;
           }
         }
       }
@@ -111,7 +122,7 @@ export function usePaywall(chartId?: string): PaywallState {
 
     run();
     return () => { cancelled = true; };
-  }, [chartId]);
+  }, [chartId, legacyChartId]);
 
   return { enabled, unlocked, loading };
 }

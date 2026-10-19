@@ -28,7 +28,7 @@ export default function ReadingFeedbackPrompt({ sessionId }: { sessionId?: strin
     <div className="no-print rounded-2xl border border-border-warm bg-paper-2 p-4 sm:p-5 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-ink-2 tracking-wide">這份解讀對你有幫助嗎？有什麼想法都可以告訴我們</p>
-        <button onClick={() => setDismissed(true)} className="text-ink-4 hover:text-ink text-lg leading-none shrink-0 ml-2">×</button>
+        <button onClick={() => setDismissed(true)} aria-label="關閉" className="text-ink-4 hover:text-ink text-lg leading-none shrink-0 ml-2">×</button>
       </div>
 
       {status === "done" ? (

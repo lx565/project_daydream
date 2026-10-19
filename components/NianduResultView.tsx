@@ -168,7 +168,7 @@ export default function NianduResultView({ charts, onReset }: { charts: NianduCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  const full = useSSEStream("/api/reading/niandu", `${chartId}_full`, { validate: true });
+  const full = useSSEStream("/api/reading/niandu", `${chartId}_${new Date().getFullYear()}_full`, { validate: true });
   const fullStarted = useRef(false);
   useEffect(() => {
     if (!gated && !paywall.loading && !fullStarted.current) {

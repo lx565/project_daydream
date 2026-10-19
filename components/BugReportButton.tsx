@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const TYPES = ["排盤有誤", "解讀問題", "功能異常", "使用建議", "其他"] as const;
 
@@ -32,6 +32,13 @@ export default function BugReportButton({ sessionId, page }: { sessionId?: strin
     setType("排盤有誤");
   }
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       {/* Floating button */}
@@ -46,10 +53,10 @@ export default function BugReportButton({ sessionId, page }: { sessionId?: strin
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={close} />
-          <div className="relative w-full max-w-sm bg-parchment rounded-2xl border border-border-warm p-5 space-y-4 shadow-xl">
+          <div role="dialog" aria-modal="true" aria-label="意見反饋" className="relative w-full max-w-sm bg-parchment rounded-2xl border border-border-warm p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-ink tracking-wide">意見反饋</h3>
-              <button onClick={close} className="text-ink-4 hover:text-ink text-lg leading-none">×</button>
+              <button onClick={close} aria-label="關閉" className="text-ink-4 hover:text-ink text-lg leading-none">×</button>
             </div>
 
             {status === "done" ? (

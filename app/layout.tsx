@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Serif_SC } from "next/font/google";
+import { Noto_Serif_TC } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import "./globals.css";
@@ -10,9 +10,8 @@ import { websiteSchema, organizationSchema } from "@/lib/jsonld";
 
 const GA_ID = "G-RNR3P73EBR";
 
-const notoSerif = Noto_Serif_SC({
+const notoSerif = Noto_Serif_TC({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
   display: "swap",
   variable: "--font-serif",
 });
@@ -21,9 +20,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.mingli.study"),
   title: "命裡 · 紫微斗數 + 八字 AI命理解讀",
   description: "命裡 · 紫微斗數與八字雙系統線上排盤，多模型AI即時推演，自動交叉驗證。依據121部命理典籍深度解讀命格、大限、感情與事業。",
-  // Bing Webmaster verification — replace the token with the real one from
-  // bing.com/webmasters (Add site → verify via meta tag) for verification to pass.
-  verification: { other: { "msvalidate.01": "REPLACE_WITH_BING_WEBMASTER_TOKEN" } },
   openGraph: {
     siteName: "命裡",
     locale: "zh_TW",
@@ -49,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh" className={notoSerif.variable}>
+    <html lang="zh-Hant" className={notoSerif.variable}>
       <body className="min-h-screen font-serif antialiased flex flex-col" style={{ background: "#F5F0E6", color: "#2C1A10" }}>
         <JsonLd data={[websiteSchema(), organizationSchema()]} />
         <StarField />

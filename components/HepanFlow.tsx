@@ -369,7 +369,7 @@ export default function HepanFlow() {
     return (
       <form onSubmit={onSubmitInvite} className="space-y-6">
         <div className="space-y-2">
-          <label className={labelClass}>關係型別 <span className="text-vermillion">*</span></label>
+          <label className={labelClass}>關係類型 <span className="text-vermillion">*</span></label>
           <div className="grid grid-cols-3 gap-2">
             {Object.values(RELATIONSHIP_TYPES).map((r) => (
               <button key={r.key} type="button" onClick={() => setRelType(r.key)}
@@ -411,7 +411,7 @@ export default function HepanFlow() {
         還不知道對方生辰？改成邀請朋友自己填 →
       </button>
       <div className="space-y-2">
-        <label className={labelClass}>關係型別 <span className="text-vermillion">*</span></label>
+        <label className={labelClass}>關係類型 <span className="text-vermillion">*</span></label>
         <div className="grid grid-cols-3 gap-2">
           {Object.values(RELATIONSHIP_TYPES).map((r) => (
             <button key={r.key} type="button" onClick={() => setRelType(r.key)}
