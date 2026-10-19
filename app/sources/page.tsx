@@ -10,10 +10,10 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "命理典籍知識庫 — 命裡收錄書目全覽 — 命裡",
   description:
-    "命裡 AI 讀過的全部命理典籍：三合派·四化派·飛星派·倪師學派·八字子平·祿命法·盲派等，共逾百部典籍、逾三萬條知識。點選任意書目瞭解詳細內容與流派背景。",
+    "命裡知識庫收錄百餘部命理典籍、3萬+段知識，本頁精選書目涵蓋三合派·四化派·飛星派·倪師學派·八字子平·祿命法·盲派等。點選任意書目瞭解詳細內容與流派背景。",
   openGraph: {
     title: "命理典籍知識庫 — 命裡收錄書目全覽",
-    description: "命裡 AI 讀過的全部命理典籍：三合、四化、飛星、八字子平、祿命法……逾百部典籍收錄。",
+    description: "命裡知識庫收錄百餘部命理典籍：三合、四化、飛星、八字子平、祿命法……精選書目全覽。",
     url: "https://www.mingli.study/sources",
     siteName: "命裡",
     locale: "zh_TW",
@@ -36,7 +36,7 @@ const SCHOOL_COLORS: Record<string, { accent: string; bar: string }> = {
 const FAQ = [
   {
     question: "命裡的解讀有典籍依據嗎？",
-    answer: "有。命裡 AI 的每一條解讀都基於收錄的命理典籍原文提煉而成，涵蓋紫微斗數三合派、四化派、飛星派、倪師學派，以及八字子平、祿命法、盲派等主流與旁參流派，不憑空杜撰。",
+    answer: "有。命裡 AI 的解讀依據收錄的命理典籍整理而成，並經 AI 輔助校驗，涵蓋紫微斗數三合派、四化派、飛星派、倪師學派，以及八字子平、祿命法、盲派等主流與旁參流派，不憑空杜撰。",
   },
   {
     question: "命裡收錄了哪些流派的典籍？",
@@ -47,7 +47,6 @@ const FAQ = [
 export default function SourcesPage() {
   const bySchool = getSourcesBySchool();
   const totalBooks = SOURCE_BOOKS.length;
-  const totalChunks = SOURCE_BOOKS.reduce((s, b) => s + b.chunks, 0).toLocaleString();
 
   return (
     <>
@@ -59,7 +58,7 @@ export default function SourcesPage() {
         ]),
         collectionPageSchema({
           name: "命理典籍知識庫 — 命裡收錄書目全覽",
-          description: "命裡 AI 讀過的全部命理典籍：三合派·四化派·飛星派·倪師學派·八字子平·祿命法·盲派等，共逾百部典籍、逾三萬條知識。",
+          description: "命裡知識庫收錄百餘部命理典籍、3萬+段知識，本頁精選書目涵蓋三合派·四化派·飛星派·倪師學派·八字子平·祿命法·盲派等。",
           path: "/sources",
         }),
         faqSchema(FAQ),
@@ -85,9 +84,9 @@ export default function SourcesPage() {
           </h1>
           <p className="text-xs text-ink-4 tracking-widest">命裡 · 收錄書目全覽</p>
           <p className="text-sm text-ink-3 max-w-md mx-auto leading-relaxed pt-1">
-            命裡 AI 閱讀並學習了 <span className="text-vermillion font-semibold">{totalBooks} 部</span>命理典籍，
-            涵蓋紫微斗數與八字命理各大流派，共提煉 <span className="text-vermillion font-semibold">{totalChunks}</span> 條知識片段。
-            每一條解讀背後都有典籍依據。
+            命裡知識庫收錄百餘部命理典籍，本頁精選介紹其中 <span className="text-vermillion font-semibold">{totalBooks} 部</span>，
+            涵蓋紫微斗數與八字命理各大流派。
+            解讀依據典籍整理，並經 AI 輔助校驗。
           </p>
         </div>
 

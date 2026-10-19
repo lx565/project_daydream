@@ -28,7 +28,7 @@ export async function generateMetadata(
   if (!entry) return {};
 
   const title = `${entry.name} · 紫微斗數格局詳解 — 命裡`;
-  const description = `${entry.name}是什麼？${entry.brief}。命裡依據逾百部紫微斗數典籍，深度解析${entry.name}的入格條件、命運特質與吉凶影響。`;
+  const description = `${entry.name}是什麼？${entry.brief.replace(/。+$/, "")}。命裡依據逾百部紫微斗數典籍，深度解析${entry.name}的入格條件、命運特質與吉凶影響。`;
 
   return {
     title,

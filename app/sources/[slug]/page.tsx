@@ -47,7 +47,7 @@ export async function generateMetadata(
   if (!book) return {};
 
   const title = `${book.title} · ${SCHOOL_LABELS[book.school]}典籍介紹 — 命裡`;
-  const description = book.intro.slice(0, 120) + "…";
+  const description = book.intro.length > 120 ? book.intro.slice(0, 119) + "…" : book.intro;
 
   return {
     title,

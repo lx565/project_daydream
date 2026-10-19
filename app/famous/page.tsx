@@ -10,7 +10,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "名人命盤解析 · 紫微斗數 — 命裡",
-  description: "從李小龍、莫札特到愛因斯坦，命裡依據紫微斗數典籍與精確命盤資料，深度解讀名人的命格格局與人生軌跡。",
+  description: "從李小龍、莫札特到愛因斯坦，命裡依據紫微斗數典籍與命盤排算，整理名人的命格格局與人生軌跡。",
   openGraph: {
     title: "名人命盤解析 · 紫微斗數 — 命裡",
     description: "李小龍、莫札特、愛因斯坦的紫微斗數命格解析。",
@@ -57,7 +57,7 @@ export default function FamousPage() {
         ]),
         collectionPageSchema({
           name: "名人命盤解析 · 紫微斗數",
-          description: "從李小龍、莫札特到愛因斯坦，命裡依據紫微斗數典籍與精確命盤資料，深度解讀名人的命格格局與人生軌跡。",
+          description: "從李小龍、莫札特到愛因斯坦，命裡依據紫微斗數典籍與命盤排算，整理名人的命格格局與人生軌跡。",
           path: "/famous",
         }),
         faqSchema(FAQ),
@@ -75,7 +75,7 @@ export default function FamousPage() {
           </h1>
           <p className="text-xs text-ink-4 tracking-widest">命裡 · 典籍知識庫</p>
           <p className="text-sm text-ink-3 max-w-sm mx-auto leading-relaxed pt-1">
-            依據精確命盤計算與紫微斗數典籍，解讀歷史名人的格局與人生軌跡。
+            依據命盤排算與紫微斗數典籍，整理名人的格局與人生軌跡。
           </p>
         </div>
 

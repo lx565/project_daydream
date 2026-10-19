@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GUIDE_TOPICS } from "@/lib/guideTopics";
+import { FAMOUS_PEOPLE } from "@/lib/famousData";
 import ToolCTA from "@/components/ToolCTA";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumbSchema, collectionPageSchema } from "@/lib/jsonld";
@@ -8,7 +10,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "命理知識庫 — 紫微斗數 · 八字 — 命裡",
-  description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據百餘部經典整理，超過3萬個知識檢索塊。",
+  description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據百餘部經典整理，3萬+段典籍片段。",
   openGraph: {
     title: "命理知識庫 — 紫微斗數 · 八字 — 命裡",
     description: "格局 · 星曜 · 宮位 · 學習指南 · 名人命盤 · 書單，依據百餘部典籍整理。",
@@ -36,7 +38,7 @@ const FOUNDATION_CATEGORIES: Cat[] = [
     label: "學習中心",
     subtitle: "從入門到進階，含常見疑問",
     desc: "紫微斗數入門、三合 / 四化 / 飛星三大流派、大限流年，以及「準不準」「該用紫微還是八字」等常見疑問解答。",
-    count: 19,
+    count: GUIDE_TOPICS.length,
     countLabel: "篇指南",
     accent: "border-jade/40 hover:border-jade/70",
     badge: "bg-jade/10 text-jade",
@@ -216,9 +218,9 @@ const RESOURCE_CATEGORIES: Cat[] = [
   {
     href: "/famous",
     label: "名人命盤",
-    subtitle: "33 位歷史名人的命盤解析",
-    desc: "李小龍、王菲、馬雲、愛因斯坦……依據精確命盤計算，紫微斗數 + 八字雙盤呈現，深度解讀格局如何塑造傳奇人生。",
-    count: 33,
+    subtitle: `${FAMOUS_PEOPLE.length} 位名人的命盤解析`,
+    desc: "李小龍、王菲、馬雲、愛因斯坦……依據命盤排算，紫微斗數 + 八字雙盤呈現，解讀格局與人生軌跡的對照。",
+    count: FAMOUS_PEOPLE.length,
     countLabel: "位名人",
     accent: "border-border-warm hover:border-ink-4/40",
     badge: "bg-paper-2 text-ink-3",
@@ -237,9 +239,9 @@ const RESOURCE_CATEGORIES: Cat[] = [
     href: "/sources",
     label: "典籍知識庫",
     subtitle: "命裡收錄書目全覽",
-    desc: "命裡 AI 讀過的全部典籍：三合、四化、飛星、八字子平、祿命法……共 78 部，每本附詳細介紹與流派背景。",
+    desc: "命裡知識庫收錄百餘部典籍，本頁精選 78 部：三合、四化、飛星、八字子平、祿命法……每本附詳細介紹與流派背景。",
     count: 78,
-    countLabel: "部典籍",
+    countLabel: "部精選",
     accent: "border-jade/30 hover:border-jade/60",
     badge: "bg-jade/10 text-jade",
   },
