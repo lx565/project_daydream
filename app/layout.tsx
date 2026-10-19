@@ -19,7 +19,7 @@ const notoSerif = Noto_Serif_TC({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.mingli.study"),
   title: "命裡 · 紫微斗數 + 八字 AI命理解讀",
-  description: "命裡 · 紫微斗數與八字雙系統線上排盤，多模型AI即時推演，自動交叉驗證。依據121部命理典籍深度解讀命格、大限、感情與事業。",
+  description: "命裡 · 紫微斗數與八字雙系統線上排盤，多模型AI即時推演，自動交叉驗證。依據百餘部命理典籍深度解讀命格、大限、感情與事業。",
   openGraph: {
     siteName: "命裡",
     locale: "zh_TW",

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 // ── Data constants ──────────────────────────────────────────────
 
 const STATS = [
-  { value: "121部", label: "命理典籍" },
+  { value: "百餘部", label: "命理典籍" },
   { value: "3萬+", label: "知識檢索塊" },
   { value: "雙系統", label: "紫微·八字" },
   { value: "多模型", label: "AI交叉驗證" },
@@ -94,7 +94,7 @@ const HEPAN_FEATURES = [
 const COMPARISON_ROWS = [
   {
     dim: "知識來源",
-    us: "121部命理典籍，即時引用原著段落",
+    us: "百餘部命理典籍，即時檢索原著段落",
     them: "通用訓練資料，無專業典籍支撐",
   },
   {
@@ -239,7 +239,7 @@ export default function Home() {
               科技 · 智慧 · 傳承 · 古典
             </p>
             <h1 className="text-2xl sm:text-3xl lg:text-[2rem] font-bold text-ink leading-snug mb-5">
-              彙集百位命理名家的智慧，融合紫微、八字與 AI 多模型驗證，給予最嚴謹認真的解讀。
+              彙集眾多命理典籍，結合紫微、八字與 AI 輔助校驗，給你認真、清楚的解讀。
             </h1>
             <p className="text-base text-ink-3 leading-relaxed mb-6">
               紫微斗數與八字雙系統推演，多模型 AI 交叉驗證——每一句解讀，都有出處，不空談。
@@ -500,7 +500,7 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl font-bold text-ink text-center mb-2">
             知識庫來源
           </h2>
-          <p className="text-sm text-ink-3 text-center mb-10">121部典籍，每句解讀有據可查</p>
+          <p className="text-sm text-ink-3 text-center mb-10">百餘部典籍，讓解讀有典籍可循</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {/* Left: authors & books */}
             <div className="paper-card rounded-2xl border border-border-warm p-6 space-y-5">
@@ -523,7 +523,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 pt-2">
-                {["121部典籍", "逾12位名家", "3萬+知識塊"].map((chip) => (
+                {["百餘部典籍", "逾12位名家", "3萬+知識塊"].map((chip) => (
                   <span
                     key={chip}
                     className="text-xs bg-vermillion-l text-vermillion px-3 py-1 rounded-full"
@@ -568,7 +568,7 @@ export default function Home() {
             深入閱讀 · 命理知識庫
           </h2>
           <p className="text-sm text-ink-3 text-center mb-10">
-            依據 121 部典籍整理，數百篇可免費閱讀的深度文章
+            依據百餘部典籍整理，數百篇可免費閱讀的深度文章
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {ARTICLE_AREAS.map((a) => (

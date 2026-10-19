@@ -8,10 +8,10 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "命理知識庫 — 紫微斗數 · 八字 — 命裡",
-  description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據121部經典整理，超過3萬個知識檢索塊。",
+  description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據百餘部經典整理，超過3萬個知識檢索塊。",
   openGraph: {
     title: "命理知識庫 — 紫微斗數 · 八字 — 命裡",
-    description: "格局 · 星曜 · 宮位 · 學習指南 · 名人命盤 · 書單，依據121部典籍整理。",
+    description: "格局 · 星曜 · 宮位 · 學習指南 · 名人命盤 · 書單，依據百餘部典籍整理。",
     url: "https://www.mingli.study/library",
     siteName: "命裡",
     locale: "zh_TW",
@@ -263,7 +263,7 @@ export default function LibraryPage() {
         ]),
         collectionPageSchema({
           name: "命理知識庫 — 紫微斗數 · 八字",
-          description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據121部經典整理。",
+          description: "命裡知識庫涵蓋紫微斗數與八字命理，包含格局、星曜、宮位、學習指南、名人命盤與書單推薦，依據百餘部經典整理。",
           path: "/library",
         }),
       ]} />
@@ -288,7 +288,7 @@ export default function LibraryPage() {
             命理知識庫
           </h1>
           <p className="text-sm text-ink-3 max-w-sm mx-auto leading-relaxed pt-1">
-            依據121部古今典籍整理 · 紫微斗數 · 八字命理 · 名人命盤 · 書單
+            依據百餘部古今典籍整理 · 紫微斗數 · 八字命理 · 名人命盤 · 書單
           </p>
         </div>
 

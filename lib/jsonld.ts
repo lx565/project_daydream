@@ -14,7 +14,7 @@ export function websiteSchema() {
     alternateName: "命裡 紫微斗數",
     url: SITE,
     inLanguage: "zh-TW",
-    description: "紫微斗數線上排盤與 AI 詳批，三合·四化·飛星三派合參，依據84部命理典籍。",
+    description: "紫微斗數線上排盤與 AI 詳批，三合·四化·飛星三派合參，依據百餘部命理典籍。",
   };
 }
 
