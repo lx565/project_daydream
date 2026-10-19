@@ -159,15 +159,16 @@ function SourcesStrip({ sections, pending }: { sections: SourceSection[]; pendin
           ))}
         </div>
       )}
-      <ul className="mt-2 flex flex-wrap gap-1.5">
-        {sum.chips.map((c) => (
-          <li key={c.id} className={`px-2 py-0.5 rounded-full text-[11px] border ${
-            c.state === "ok" ? "border-gold/50 text-ink-2 bg-paper" : "border-dashed border-border-warm text-ink-3"
-          }`}>
-            {c.label} {c.state === "ok" ? "✓" : c.state === "none" ? "—" : "（未記錄）"}
-          </li>
-        ))}
-      </ul>
+      {(() => {
+        const none = sum.chips.filter((c) => c.state === "none").map((c) => c.label);
+        const unrecorded = sum.chips.filter((c) => c.state !== "ok" && c.state !== "none").map((c) => c.label);
+        return (
+          <>
+            {none.length > 0 && <p className="mt-2 text-xs text-ink-3">未引用典籍的段落：{none.join("、")}</p>}
+            {unrecorded.length > 0 && <p className="mt-2 text-xs text-ink-3">較早生成、未記錄典籍依據的段落：{unrecorded.join("、")}</p>}
+          </>
+        );
+      })()}
       {sum.bySchool.length > 0 && (
         <>
           <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
