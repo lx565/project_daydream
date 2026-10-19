@@ -4,7 +4,7 @@
 // (流年命宮落宮 / 流年四化 / 流耀 / 三方四正). Reuses the shared Gemini review helper. Fail-open.
 import type { ZiweiResult } from "./ziwei";
 import { getFlowYears, flowYearFactsFrom } from "./flowYears";
-import { jsonReview, type ValidationResult } from "./validateReading";
+import { jsonReview, REVIEW_OUTPUT_SPEC, type ValidationResult } from "./validateReading";
 
 /** Gemini cross-checks a single-year 流年 reading against its authoritative 流年 facts. */
 export async function validateFlowYearReading(
@@ -19,23 +19,21 @@ export async function validateFlowYearReading(
   if (!flow) return { pass: true, issues: [], reviewed: false }; // compute failed → don't block
 
   const facts = flowYearFactsFrom(flow);
-  const prompt = `你是紫微斗數流年解讀的邏輯校驗員。下面【權威流年事實】由確定性演算法（iztro）計算得出，是不可更改的事實；【待校驗解讀】由另一個AI生成，只針對這一個流年。
+  const prompt = `你是紫微斗數流年解讀的事實校驗員。下面【權威流年事實】由確定性演算法（iztro）計算得出，是不可更改的事實；【待校驗解讀】由另一個AI生成，只針對這一個流年。
 
-請只核查解讀是否與權威流年事實矛盾，重點：
-- 流年命宮落在本命哪一宮是否搞錯（說落某宮，但事實並非如此）
-- 流年四化（化祿/權/科/忌）所屬星曜是否錯誤（說某星化某，但事實並非如此）
-- 流耀、流年命宮三方四正會照是否與事實衝突
-- 解讀是否自相矛盾
+你的唯一任務：找出解讀中與【已明確列出的流年事實】直接矛盾的陳述，例如：
+- 流年命宮落在本命哪一宮說錯
+- 流年四化（化祿/權/科/忌）所屬星曜說錯
+- 流耀、流年命宮三方四正會照的星曜說錯
 
-不要評判文采、詳略或觀點；輕微措辭差異、合理引申不算錯誤。只抓硬性事實錯誤。
-注意：本命層面的泛論（如命主性格）不在下方流年事實範圍內，不要因此判錯；只有當解讀與下方**已明確列出的流年事實直接衝突**時才判 pass=false。
+以下一律不是錯誤（最多標 note）：文采、詳略、語氣、詮釋與引申、本命層面的泛論（如命主性格）、解讀沒提到某項事實、各學派斷語差異。
 
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
+${REVIEW_OUTPUT_SPEC}
 
 【權威流年事實】
 ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return jsonReview(prompt);
+  return jsonReview(prompt, reading, facts);
 }

@@ -2,7 +2,7 @@
 // computed 八字 chart (四柱 / 日主 / 五行 / 大運). The 紫微 validator (lib/validateReading.ts)
 // can't do this: 八字 has no stars/palaces. Reuses the shared Gemini review helper. Fail-open.
 import type { BaziResult } from "./bazi";
-import { jsonReview, type ValidationResult } from "./validateReading";
+import { jsonReview, REVIEW_OUTPUT_SPEC, type ValidationResult } from "./validateReading";
 
 /** Authoritative, deterministic 八字 facts the reading must not contradict. */
 export function buildBaziFacts(bazi: BaziResult): string {
@@ -24,25 +24,22 @@ export function buildBaziFacts(bazi: BaziResult): string {
 export async function validateBaziReading(reading: string, bazi: BaziResult): Promise<ValidationResult> {
   if (!reading || !bazi?.day?.stem) return { pass: true, issues: [], reviewed: false };
   const facts = buildBaziFacts(bazi);
-  const prompt = `你是八字命理解讀的邏輯校驗員。下面【權威八字事實】由確定性演算法排盤得出，是不可更改的事實；【待校驗解讀】由另一個AI生成。
+  const prompt = `你是八字命理解讀的事實校驗員。下面【權威八字事實】由確定性演算法排盤得出，是不可更改的事實；【待校驗解讀】由另一個AI生成。
 
-請只核查解讀是否與權威事實矛盾，重點：
-- 四柱干支是否搞錯（說某柱是某干支，但事實並非如此）
-- 日主（日元）是否搞錯（說日主是某五行/天干，但事實並非如此）
-- 大運干支或起止年齡是否與事實衝突
-- 五行多寡的明顯誤斷（如說某五行最旺，但事實個數為0）
-- 解讀是否自相矛盾
+你的唯一任務：找出解讀中與【已明確列出的事實】直接矛盾的陳述，例如：
+- 說某柱是某干支，但事實並非如此
+- 說日主（日元）是某天干/五行，但事實並非如此
+- 大運干支或起止年齡與事實衝突
+- 五行個數的明顯誤斷（如說某五行最旺，但事實個數為0）
 
-不要評判文采、詳略或流派觀點；輕微措辭差異、合理引申不算錯誤。只抓硬性事實錯誤。
+以下一律不是錯誤（最多標 note）：文采、詳略、語氣、流派觀點差異、旺衰/用神/格局/十神/神煞的推斷與詮釋、流年與具體年份吉凶、地支藏干的細節說法、合理引申、解讀沒提到某項事實。
 
-重要：解讀中涉及流年、具體年份吉凶、神煞、十神引申等**推斷性**內容不在下方"事實"範圍內——只有當解讀與下方**已明確列出的事實直接衝突**時（例如說日主為甲木、但事實為庚金）才判 pass=false。
-
-返回 JSON：{"pass": true/false, "issues": ["具體問題簡短中文", ...]}。無明顯事實錯誤則 pass=true、issues 為空。issues 最多 8 項，每項務必簡短（一句話）。
+${REVIEW_OUTPUT_SPEC}
 
 【權威八字事實】
 ${facts}
 
 【待校驗解讀】
 ${reading.slice(0, 8000)}`;
-  return jsonReview(prompt);
+  return jsonReview(prompt, reading, facts);
 }

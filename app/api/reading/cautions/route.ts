@@ -115,7 +115,7 @@ ${riskYearLines}
       skipCacheRead: !!body.revisionNotes?.length,
       validate: async (fullText: string) => {
         try {
-          const r = await validateReading(fullText, ziwei);
+          const r = await validateReading(fullText, ziwei, { natalOnly: true });
           // r.reviewed === false means the Gemini reviewer itself failed open
           // and never actually checked the content — propagate as null so
           // sseWriter.ts's fail-open handling runs instead of a false pass.
