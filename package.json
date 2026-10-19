@@ -15,7 +15,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/kv": "^3.0.0",
     "html2canvas": "^1.4.1",
-    "iztro": "^2.3.5",
+    "iztro": "2.6.1",
     "lunar-javascript": "^1.7.7",
     "next": "15",
     "openai": "^6.42.0",
