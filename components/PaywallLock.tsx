@@ -22,8 +22,8 @@ interface Props {
 
 const DEFAULT_PROOF_STRIP: ProofItem[] = [
   { icon: "📖", stat: "萬字以上", label: "深度解讀" },
-  { icon: "🔄", stat: "多模型", label: "交叉校對" },
-  { icon: "📚", stat: "上百部", label: "命理典籍加持" },
+  { icon: "🔄", stat: "AI輔助", label: "對照命盤校驗" },
+  { icon: "📚", stat: "百餘部", label: "命理典籍加持" },
   { icon: "⚡", stat: "雙體系", label: "紫微×八字印證" },
 ];
 
@@ -52,7 +52,7 @@ const DEFAULT_INCLUDED = [
   "眾說紛紜 · 三派各自論斷",
   "特別注意 · 風險與化解",
   "問命追問 · 可向模型深度追問命盤細節",
-  "永久保存 · 可重複查閱",
+  "永久解鎖 · 可重複查閱",
 ];
 
 export default function PaywallLock({ chartId, sectionLabel, included = DEFAULT_INCLUDED, personalizedHint, proofStrip }: Props) {
